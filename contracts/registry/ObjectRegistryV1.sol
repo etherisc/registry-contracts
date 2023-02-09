@@ -5,14 +5,13 @@ import "@openzeppelin-upgradeable/contracts/utils/StringsUpgradeable.sol";
 import "@openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import "@openzeppelin-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
-import "../shared/BaseTypes.sol";
+import "../shared/VersionedOwnable.sol";
 
-type NftType is uint16;
+type NftType is uint8;
 
 contract ObjectRegistryV1 is
     ERC721EnumerableUpgradeable,
-    BaseTypes,
-    OwnableUpgradeable
+    VersionedOwnable
 {
     using StringsUpgradeable for uint;
     using StringsUpgradeable for address;
@@ -21,17 +20,17 @@ contract ObjectRegistryV1 is
     string public constant SYMBOL = "DIPR";
     
     NftType public constant UNDEFINED = NftType.wrap(0);
-    NftType public constant PROTOCOL = NftType.wrap(100);
-    NftType public constant REGISTRY = NftType.wrap(101);
+    NftType public constant PROTOCOL = NftType.wrap(1);
+    NftType public constant REGISTRY = NftType.wrap(2);
 
-    NftType public constant INSTANCE = NftType.wrap(200);
-    NftType public constant PRODUCT = NftType.wrap(201);
-    NftType public constant ORACLE = NftType.wrap(202);
-    NftType public constant RISKPOOL = NftType.wrap(203);
-    NftType public constant BUNDLE = NftType.wrap(204);
-    NftType public constant POLICY = NftType.wrap(205);
+    NftType public constant INSTANCE = NftType.wrap(10);
+    NftType public constant PRODUCT = NftType.wrap(11);
+    NftType public constant ORACLE = NftType.wrap(12);
+    NftType public constant RISKPOOL = NftType.wrap(13);
+    NftType public constant BUNDLE = NftType.wrap(14);
+    NftType public constant POLICY = NftType.wrap(15);
 
-    NftType public constant STAKE = NftType.wrap(300);
+    NftType public constant STAKE = NftType.wrap(100);
 
     mapping(uint256 tokenId => Blocknumber number) private _mintedIn;
     mapping(uint256 tokenId => bytes data) private _data;
@@ -40,24 +39,22 @@ contract ObjectRegistryV1 is
     mapping(NftType t => bool isSupported) private _typeIsSupported;
 
     uint256 private _chainId;
-    uint256 private _version;
 
     uint256 private _idNext;
     string private _baseDid;
 
-    // https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-    constructor() {
-            _disableInitializers();
+
+    // IMPORTANT 1. version needed for upgradable versions
+    // _activate is using this to check if this is a new version
+    // and if this version is higher than the last activated version
+    function version() public override virtual pure returns(Version) {
+        return toVersion(toPart(0), toPart(0), toPart(1));
     }
 
-    // IMPORTANT initilizeer for upgradable logig
-    function initialize() public virtual initializer {
-        __ERC721_init(NAME, SYMBOL);
-        __Ownable_init();
-
-        // version handling
-        _version = 0;
-        _increaseVersion();
+    // IMPORTANT 2. activate implementation needed
+    // is used by proxy admin in its upgrade function
+    function activate(address implementation) external override virtual { 
+        _activate(implementation);
 
         // set main internal variables
         _chainId = block.chainid;
@@ -80,12 +77,6 @@ contract ObjectRegistryV1 is
         _safeMintObject(owner(), REGISTRY, data);
     }
 
-    function tryToIncreaseVersion() public returns(uint256) {
-        _increaseVersion();
-        return _version;
-    }
-
-    function version() public view returns(uint256) { return _version; }
 
     function getToken(uint256 tokenId)
         external 
@@ -95,7 +86,7 @@ contract ObjectRegistryV1 is
             address owner,
             NftType t,
             bytes memory data,
-            Blocknumber mintedInBlock
+            Blocknumber mintedIn
         )
     {
         return (
@@ -110,11 +101,8 @@ contract ObjectRegistryV1 is
     function encodeRegistryData(uint256 chainId) public pure returns(bytes memory data) { return abi.encode(chainId); }
     function decodeRegistryData(bytes memory data) external pure returns(uint256 chainId) { return abi.decode(data, (uint256)); }
 
-    function toNftType(uint256 t) public pure returns(NftType) { return NftType.wrap(uint16(t)); }
+    function toNftType(uint256 t) public pure returns(NftType) { return NftType.wrap(uint8(t)); }
 
-    function _increaseVersion() internal onlyInitializing {
-        _version += 1;
-    }
 
     function _safeMintObject(address to, NftType t, bytes memory data) 
         internal 
