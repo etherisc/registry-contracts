@@ -1,0 +1,55 @@
+# secrets management via .env (excluded via .gitignore)
+dotenv: .env
+
+networks:
+    default: development
+    development:
+        gas_price: 1 # (1 wei)
+        cmd_settings:
+            # without this explicit setting chainid==1 is returend by block.chainid
+            accounts: 20
+            chain_id: 1337
+
+# brownie default values made explicit
+compiler:
+    evm_version: null
+    solc:
+        version: 0.8.18
+        optimizer:
+            enabled: true
+            runs: 200
+        # https://eth-brownie.readthedocs.io/en/stable/compile.html#compiler-settings
+        remappings:
+            - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.8.1"
+            - "@openzeppelin-upgradeable=OpenZeppelin/openzeppelin-contracts-upgradeable@4.8.1"
+
+# packages below will be added to brownie
+# you may use 'brownie pm list' after 'brownie compile' 
+# to list the packages installed via the dependency list below
+dependencies:
+    # **Important**: If you update any version here, please also update them in .vscode/settings.json section 'solidity.remappingsUnix'
+    # github dependency format: <owner>/<repository>@<release>
+    - OpenZeppelin/openzeppelin-contracts@4.8.1
+    - OpenZeppelin/openzeppelin-contracts-upgradeable@4.8.1
+
+# exclude open zeppeling contracts  when calculating test coverage
+# https://eth-brownie.readthedocs.io/en/v1.10.3/config.html#exclude_paths
+reports:
+  exclude_contracts:
+    # chainlink
+    - Operator
+    # openzeppelin
+    - AccessControl
+    - AccessControlEnumerable
+    - Context
+    - Ownable
+    - EnumerableMap
+    - EnumerableSet
+    - ERC1967Proxy
+    - ERC20
+    - ERC721
+    - IERC20
+    - IERC721
+    - Initializable
+    - SafeERC20
+    - Strings
