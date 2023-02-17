@@ -31,6 +31,39 @@ External links regarding DID for NFT
 
 https://github.com/briangershon/openzeppelin-erc721-upgradeable
 
+
+## Chain Registry
+
+### Sample Brownie Console Session
+
+Start the console
+```bash
+brownie console
+```
+
+In the console play around with the upgradable demo contracts
+```python
+from scripts.util import contract_from_address
+
+pao = accounts[0] # proxy admin owner
+ro = accounts[1] # registry owner
+
+a = accounts[10] # some random account
+
+fpao = {'from':pao}
+fro = {'from':ro}
+
+# deploy the initial registry logic
+r = ChainRegistryV01.deploy(fpao)
+
+# deploy the proxy admin and provide the 
+# registry implementation its initial owner
+pa = OwnableProxyAdmin.deploy(r, ro, fpao)
+p = contract_from_address(ChainRegistryV01, pa.getProxy())
+
+# deploy the two next versions
+i1 = DemoV1.deploy(fio)
+
 ## Upgradability with VersionedOwnable
 
 VersionedOwnable: Base contract for versioned owned upgradable contracts. 
@@ -137,40 +170,4 @@ brownie test -n 8
 
 ```bash
 brownie console
-```
-
-In the console use the following steps.
-
-```python
-from scripts.deploy_fire import help
-help()
-```
-
-The help command then shows an example session.
-```python
-from scripts.deploy_fire import all_in_1, verify_deploy, create_bundle, create_policy, help
-
-(customer, customer2, product, oracle, riskpool, riskpoolWallet, investor, usdc, instance, instanceService, instanceOperator, bundleId, processId, d) = all_in_1(deploy_all=True)
-
-verify_deploy(d, usdc, product)
-```
-
-### Deploy to differnt Network with existing Instance
-
-As an example use the Ganache chain that runs in the background of this devcontainer setup.
-
-```bash
-brownie console --network=ganache
-```
-
-With an existing instance set parameter `deploy_all=False`.
-In this case the file `gif_instance_address.txt` needs to exist and contain the addresses of the instance registry.
-The file should be automatically created during the devconainer setup procedure of this repository.
-
-```python
-from scripts.deploy_fire import all_in_1, verify_deploy, create_bundle, create_policy, help
-
-(customer, customer2, product, oracle, riskpool, riskpoolWallet, investor, usdc, instance, instanceService, instanceOperator, bundleId, processId, d) = all_in_1(deploy_all=False)
-
-verify_deploy(d, usdc, product)
 ```

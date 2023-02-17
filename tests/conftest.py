@@ -4,10 +4,11 @@ from brownie import (
     interface,
     Wei,
     Contract, 
-    Usdc,
-    FireProduct,
-    FireOracle,
-    FireRiskpool
+    BaseTypes,
+    Versionable,
+    OwnableProxyAdmin,
+    ChainRegistryV01,
+    ChainRegistryV02,
 )
 
 from brownie.network import accounts
@@ -27,6 +28,7 @@ from scripts.const import (
     CUSTOMER1,
     CUSTOMER2,
     REGISTRY_OWNER,
+    PROXY_ADMIN_OWNER,
     STAKER,
     OUTSIDER,
     GIF_ACTOR
@@ -35,26 +37,13 @@ from scripts.const import (
 from scripts.util import (
     get_account,
     get_package,
+    contract_from_address,
 )
 
-from scripts.instance import (
-    GifRegistry,
-    GifInstance,
-)
-
-from scripts.product import (
-    GifProduct,
-    GifOracle,
-    GifRiskpool,
-    GifProductComplete,
-)
-
-PRODUCT_BASE_NAME = 'Fire'
-
-CONTRACT_CLASS_TOKEN = Usdc
-CONTRACT_CLASS_PRODUCT = FireProduct
-CONTRACT_CLASS_ORACLE = FireOracle
-CONTRACT_CLASS_RISKPOOL = FireRiskpool
+# from scripts.instance import (
+#     GifRegistry,
+#     GifInstance,
+# )
 
 
 INITIAL_ACCOUNT_FUNDING = '1 ether'
@@ -130,58 +119,66 @@ def customer2(accounts) -> Account:
     return get_filled_account(accounts, GIF_ACTOR[CUSTOMER2])
 
 @pytest.fixture(scope="module")
+def registryOwner(accounts) -> Account:
+    return get_filled_account(accounts, GIF_ACTOR[REGISTRY_OWNER])
+
+@pytest.fixture(scope="module")
+def proxyAdmin(accounts) -> Account:
+    return get_filled_account(accounts, GIF_ACTOR[PROXY_ADMIN])
+
+@pytest.fixture(scope="module")
+def proxyAdminOwner(accounts) -> Account:
+    return get_filled_account(accounts, GIF_ACTOR[PROXY_ADMIN_OWNER])
+
+@pytest.fixture(scope="module")
 def theOutsider(accounts) -> Account:
     return get_filled_account(accounts, GIF_ACTOR[OUTSIDER])
 
+#=== base contract fixtures ==================================================#
+
+@pytest.fixture(scope="module")
+def baseTypes(theOutsider) -> BaseTypes:
+    return BaseTypes.deploy({'from': theOutsider})
+
+@pytest.fixture(scope="module")
+def versionable(theOutsider) -> Versionable:
+    return Versionable.deploy({'from': theOutsider})
+
+#=== chain registry fixtures ==================================================#
+
+@pytest.fixture(scope="module")
+def chainRegistryV01Implementation(theOutsider) -> ChainRegistryV01:
+    return ChainRegistryV01.deploy({'from': theOutsider})
+
+@pytest.fixture(scope="module")
+def proxyAdmin(
+    chainRegistryV01Implementation,
+    registryOwner,
+    proxyAdminOwner
+) -> OwnableProxyAdmin:
+    return OwnableProxyAdmin.deploy(
+        chainRegistryV01Implementation,
+        registryOwner,
+        {'from': proxyAdminOwner});
+
+@pytest.fixture(scope="module")
+def chainRegistryV01(proxyAdmin) -> ChainRegistryV01:
+    return contract_from_address(
+        ChainRegistryV01, 
+        proxyAdmin.getProxy())
+
 #=== gif instance fixtures ====================================================#
 
-@pytest.fixture(scope="module")
-def registry(instanceOperator) -> GifRegistry: return GifRegistry(instanceOperator, None)
+# @pytest.fixture(scope="module")
+# def instanceRegistry(instanceOperator) -> GifRegistry: return GifRegistry(instanceOperator, None)
 
-@pytest.fixture(scope="module")
-def instance(instanceOperator, instanceWallet) -> GifInstance: return GifInstance(instanceOperator, instanceWallet)
+# @pytest.fixture(scope="module")
+# def instance(instanceOperator, instanceWallet) -> GifInstance: return GifInstance(instanceOperator, instanceWallet)
 
-@pytest.fixture(scope="module")
-def instanceService(instance): return instance.getInstanceService()
+# @pytest.fixture(scope="module")
+# def instanceService(instance): return instance.getInstanceService()
 
 #=== stable coin fixtures ============================================#
 
-@pytest.fixture(scope="module")
-def token(instanceOperator) -> CONTRACT_CLASS_TOKEN: return CONTRACT_CLASS_TOKEN.deploy({'from': instanceOperator})
-
-#=== fire contracts fixtures ========================================#
-
-@pytest.fixture(scope="module")
-def gifProductDeploy(
-    instance: GifInstance, 
-    productOwner: Account, 
-    investor: Account, 
-    token: CONTRACT_CLASS_TOKEN,
-    oracleProvider: Account, 
-    riskpoolKeeper: Account, 
-    riskpoolWallet: Account
-) -> GifProductComplete:
-    return GifProductComplete(
-        instance, 
-        CONTRACT_CLASS_PRODUCT,
-        CONTRACT_CLASS_ORACLE,
-        CONTRACT_CLASS_RISKPOOL,
-        productOwner, 
-        oracleProvider, 
-        riskpoolKeeper, 
-        riskpoolWallet,
-        investor,
-        token,
-        name=PRODUCT_BASE_NAME)
-
-@pytest.fixture(scope="module")
-def gifProduct(gifProductDeploy) -> GifProduct: return gifProductDeploy.getProduct()
-
-@pytest.fixture(scope="module")
-def product(gifProduct) -> CONTRACT_CLASS_PRODUCT: return gifProduct.getContract()
-
-@pytest.fixture(scope="module")
-def oracle(gifProduct) -> CONTRACT_CLASS_ORACLE: return gifProduct.getOracle().getContract()
-
-@pytest.fixture(scope="module")
-def riskpool(gifProduct) -> CONTRACT_CLASS_RISKPOOL: return gifProduct.getRiskpool().getContract()
+# @pytest.fixture(scope="module")
+# def token(instanceOperator) -> CONTRACT_CLASS_TOKEN: return CONTRACT_CLASS_TOKEN.deploy({'from': instanceOperator})

@@ -25,31 +25,36 @@ contract Versionable is
     Version [] private _versions;
 
     // controlled activation for controller contract
-    constructor() {
-        _activateFromConstructor();
-    }
+    // constructor() {
+    //     _activate(address(this));
+    // }
 
     // IMPORTANT this function needs to be implemented by each new version
     // and needs to call internal function call _activate() 
-    function activate(address implementation) 
+    function activate(address implementation)
         external 
         virtual
     { 
         _activate(implementation);
     }
 
-    function _activateFromConstructor() internal {
-        if(!isActivated(version())) {
-            _activate(address(this));
-        }
-    }
+
+    // function _activateFromConstructor() internal {
+    //     if(!isActivated(version())) {
+    //         _activate(address(this));
+    //     }
+    // }
 
 
     // can only be called once per contract
     // needs bo be called inside the proxy upgrade tx
-    function _activate(address implementation) internal {
+    function _activate(
+        address implementation
+    )
+        internal
+    {
+        address activatedBy = tx.origin;
         Version thisVersion = version();
-        address proxyAdmin = msg.sender;
 
         require(
             !isActivated(thisVersion),
@@ -71,12 +76,12 @@ contract Versionable is
             thisVersion,
             toString(thisVersion),
             implementation,
-            proxyAdmin,
+            activatedBy,
             blockNumber(),
             blockTimestamp()
         );
 
-        emit LogVersionableActivated(thisVersion, implementation, proxyAdmin);
+        emit LogVersionableActivated(thisVersion, implementation, activatedBy);
     }
 
 

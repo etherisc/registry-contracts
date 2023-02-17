@@ -3,6 +3,9 @@ dotenv: .env
 
 networks:
     default: development
+    mainnet-fork:
+        cmd_settings:
+            accounts: 20
     development:
         gas_price: 1 # (1 wei)
         cmd_settings:

@@ -69,11 +69,6 @@ contract OwnableProxyAdmin is
     }
 
 
-    function getImplementationOwner() external view returns(address) {
-        return _implementation.owner();
-    }
-
-
     function getProxy() external view returns(TransparentUpgradeableProxy) {
         return _proxy;
     }

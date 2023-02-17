@@ -3,7 +3,7 @@ pragma solidity ^0.8.18;
 
 import "../shared/VersionedOwnable.sol";
 
-contract DemoV1 is
+contract DemoV10 is
     VersionedOwnable
 {
 
@@ -16,26 +16,36 @@ contract DemoV1 is
         return toVersion(toPart(1), toPart(0), toPart(0));
     }
 
+
     // IMPORTANT 2. activate implementation needed
     // is used by proxy admin in its upgrade function
-    function activate(address implementation) external override virtual { 
-        _activate(implementation);
+    function activateAndSetOwner(address implementation, address newOwner)
+        external
+        virtual override
+        initializer
+    {
+        // ensure proper version history
+        _activateAndSetOwner(implementation, newOwner);
+
+        // set main internal variables
         _message = "special message - as initialized";
     }
 
-    function setSpecialMessage(string memory message) external onlyOwner {
-        _message = message;
+
+    // function _initialize() internal virtual override {
+    //     __Ownable_init();
+    // }
+
+
+    function setMessage(string memory newMessage) external onlyOwner {
+        _message = newMessage;
     }
 
-    function specialMessage() external view returns(string memory) {
+    function message() external view returns(string memory) {
         return _message;
     }
 
-    function nonUpgradableDemo1() external view returns(string memory) {
-        return "hi from nonUpgradableDemo1()";
-    }
-
-    function upgradableDemo() public virtual view returns(string memory) {
+    function upgradable() public virtual view returns(string memory) {
         return "hey from upgradableDemo - DemoV1";
     }
 }
