@@ -161,6 +161,3 @@ def test_registry_basics(
     assert info['versionString'] == 'v0.1.0'
     assert info['implementation'] == chainRegistryV01Implementation
     assert info['activatedBy'] == pao
-
-    assert False
-

@@ -32,11 +32,6 @@ contract DemoV10 is
     }
 
 
-    // function _initialize() internal virtual override {
-    //     __Ownable_init();
-    // }
-
-
     function setMessage(string memory newMessage) external onlyOwner {
         _message = newMessage;
     }
@@ -46,6 +41,6 @@ contract DemoV10 is
     }
 
     function upgradable() public virtual view returns(string memory) {
-        return "hey from upgradableDemo - DemoV1";
+        return "hey from upgradableDemo - Demo v1.0.0";
     }
 }

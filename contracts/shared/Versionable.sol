@@ -24,10 +24,11 @@ contract Versionable is
     mapping(Version version => VersionInfo info) private _versionHistory;
     Version [] private _versions;
 
+
     // controlled activation for controller contract
-    // constructor() {
-    //     _activate(address(this));
-    // }
+    constructor() {
+        _activate(address(this));
+    }
 
     // IMPORTANT this function needs to be implemented by each new version
     // and needs to call internal function call _activate() 
@@ -37,13 +38,6 @@ contract Versionable is
     { 
         _activate(implementation);
     }
-
-
-    // function _activateFromConstructor() internal {
-    //     if(!isActivated(version())) {
-    //         _activate(address(this));
-    //     }
-    // }
 
 
     // can only be called once per contract
