@@ -3,7 +3,10 @@ import pytest
 from brownie import (
     interface,
     Wei,
-    Contract, 
+    Contract,
+    USD1,
+    USD2,
+    DIP,
     BaseTypes,
     Versionable,
     OwnableProxyAdmin,
@@ -133,6 +136,17 @@ def proxyAdminOwner(accounts) -> Account:
 @pytest.fixture(scope="module")
 def theOutsider(accounts) -> Account:
     return get_filled_account(accounts, GIF_ACTOR[OUTSIDER])
+
+#=== stable coin fixtures ============================================#
+
+@pytest.fixture(scope="module")
+def usd1(instanceOperator) -> USD1: return USD1.deploy({'from': instanceOperator})
+
+@pytest.fixture(scope="module")
+def usd2(instanceOperator) -> USD2: return USD2.deploy({'from': instanceOperator})
+
+@pytest.fixture(scope="module")
+def dip(instanceOperator) -> DIP: return DIP.deploy({'from': instanceOperator})
 
 #=== base contract fixtures ==================================================#
 

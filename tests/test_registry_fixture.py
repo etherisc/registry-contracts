@@ -7,9 +7,15 @@ from brownie import (
     history,
     interface,
     web3,
+    USD1,
+    USD2,
+    DIP,
     OwnableProxyAdmin,
     ChainRegistryV01
 )
+
+from scripts.const import ZERO_ADDRESS
+
 
 # enforce function isolation for tests below
 @pytest.fixture(autouse=True)
@@ -46,7 +52,6 @@ def test_registry_implementation(
     assert info['versionString'] == 'v0.1.0'
     assert info['implementation'] == chainRegistryV01Implementation
     assert info['activatedBy'] == theOutsider
-
 
 
 def test_registry_basics(
@@ -104,12 +109,12 @@ def test_registry_basics(
         assert info['version'] == r.version()
 
     # check chain nft
-    chainTokenId = r.getChainTokenId(web3.chain_id)
-    assert r.ownerOf(chainTokenId) == ro
-    assert r.getTokenId(nfts - 2) == chainTokenId
+    chainNftId = r.getChainNftId(web3.chain_id)
+    assert r.ownerOf(chainNftId) == ro
+    assert r.getNftId(nfts - 2) == chainNftId
 
-    info = r.getTokenInfo(chainTokenId).dict()
-    assert info['id'] == chainTokenId
+    info = r.getNftInfo(chainNftId).dict()
+    assert info['id'] == chainNftId
     assert info['t'] == r.CHAIN()
     assert info['chain'] == hex(web3.chain_id)
     assert info['mintedIn'] == history[-1].block_number
@@ -117,19 +122,19 @@ def test_registry_basics(
     assert info['version'] == r.version()
 
     # check registry nft
-    registryTokenId = r.getRegistryForChain(web3.chain_id)
-    assert r.ownerOf(registryTokenId) == ro
-    assert r.getTokenId(nfts - 1) == registryTokenId
+    registryNftId = r.getRegistryForChain(web3.chain_id)
+    assert r.ownerOf(registryNftId) == ro
+    assert r.getNftId(nfts - 1) == registryNftId
 
-    info = r.getTokenInfo(registryTokenId).dict()
-    assert info['id'] == registryTokenId
+    info = r.getNftInfo(registryNftId).dict()
+    assert info['id'] == registryNftId
     assert info['t'] == r.REGISTRY()
     assert info['chain'] == hex(web3.chain_id)
     assert info['mintedIn'] == history[-1].block_number
     assert info['updatedIn'] == history[-1].block_number
     assert info['version'] == r.version()
 
-    meta = r.getTokenMetadata(registryTokenId).dict()
+    meta = r.getNftMetadata(registryNftId).dict()
     assert meta['chainId'] == web3.chain_id
     assert meta['t'] == r.REGISTRY()
     assert meta['owner'] == ro
@@ -141,7 +146,7 @@ def test_registry_basics(
     (_, _, _, uri_chain, uri_contract) = meta['uri'].split(':')
     assert uri_chain.split('_')[0] == str(web3.chain_id)
     assert uri_contract.split('_')[0] == r
-    assert uri_contract.split('_')[1] == registryTokenId
+    assert uri_contract.split('_')[1] == registryNftId
 
     # check current version
     assert r.version() == 2 ** 16
@@ -161,3 +166,59 @@ def test_registry_basics(
     assert info['versionString'] == 'v0.1.0'
     assert info['implementation'] == chainRegistryV01Implementation
     assert info['activatedBy'] == pao
+
+
+def test_register_token(
+    usd1: USD1,
+    usd2: USD2,
+    proxyAdmin: OwnableProxyAdmin,
+    proxyAdminOwner: Account,
+    chainRegistryV01: ChainRegistryV01,
+    registryOwner: Account,
+    theOutsider: Account
+):
+    chain_id = chainRegistryV01.getChainId(0)
+
+    with brownie.reverts('Ownable: caller is not the owner'):
+        chainRegistryV01.registerToken(
+            chain_id,
+            usd1,
+            {'from': theOutsider})
+
+    chain_id_other = chainRegistryV01.toChainId(web3.chain_id + 1)
+
+    with brownie.reverts('ERROR:ORG-020:CHAIN_NOT_SUPPORTED'):
+        chainRegistryV01.registerToken(
+            chain_id_other,
+            usd1,
+            {'from': registryOwner})
+
+    with brownie.reverts('ERROR:ORG-020:TOKEN_ADDRESS_ZERO'):
+        chainRegistryV01.registerToken(
+            chain_id,
+            ZERO_ADDRESS,
+            {'from': registryOwner})
+
+    assert chainRegistryV01.tokens(chain_id) == 0
+
+    chainRegistryV01.registerToken(
+        chain_id,
+        usd1,
+        {'from': registryOwner})
+
+    assert chainRegistryV01.tokens(chain_id) == 1
+
+    tokenNftId = chainRegistryV01.getTokenNftId(chain_id, 0)
+    info = chainRegistryV01.getNftInfo(tokenNftId).dict()
+    assert info['id'] == tokenNftId
+    assert info['chain'] == chain_id
+    assert info['t'] == chainRegistryV01.TOKEN()
+
+    with brownie.reverts('ERROR:ORG-062:INDEX_TOO_LARGE'):
+        chainRegistryV01.getTokenNftId(chain_id, 1)
+
+    with brownie.reverts('ERROR:ORG-020:TOKEN_ALREADY_REGISTERED'):
+        chainRegistryV01.registerToken(
+            chain_id,
+            usd1,
+            {'from': registryOwner})
