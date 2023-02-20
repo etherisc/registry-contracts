@@ -4,13 +4,13 @@ pragma solidity ^0.8.18;
 import "@openzeppelin-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 import "../shared/VersionedOwnable.sol";
-import "./IChainRegistry.sol";
+
+type NftType is uint8;
 
 // registers dip relevant objects for this chain
-contract ChainRegistryV1 is
+contract ChainRegistryV01X is
     ERC721EnumerableUpgradeable,
-    VersionedOwnable,
-    IChainRegistry
+    VersionedOwnable
 {
     using StringsUpgradeable for uint;
     using StringsUpgradeable for address;
@@ -20,40 +20,40 @@ contract ChainRegistryV1 is
     string public constant BASE_URI = "did:nft:eip155:";
     
     // responsibility of dip foundation
-    ObjectType public constant UNDEFINED = ObjectType.wrap(0); // detection of uninitialized variables
-    ObjectType public constant PROTOCOL = ObjectType.wrap(1); // dip ecosystem overall
-    ObjectType public constant CHAIN = ObjectType.wrap(2); // dip ecosystem reach: a registry per chain
-    ObjectType public constant REGISTRY = ObjectType.wrap(3); // dip ecosystem reach: a registry per chain
-    ObjectType public constant TOKEN = ObjectType.wrap(4); // dip ecosystem token whitelisting (premiums, risk capital)
+    NftType public constant UNDEFINED = NftType.wrap(0); // detection of uninitialized variables
+    NftType public constant PROTOCOL = NftType.wrap(1); // dip ecosystem overall
+    NftType public constant CHAIN = NftType.wrap(2); // dip ecosystem reach: a registry per chain
+    NftType public constant REGISTRY = NftType.wrap(3); // dip ecosystem reach: a registry per chain
+    NftType public constant TOKEN = NftType.wrap(4); // dip ecosystem token whitelisting (premiums, risk capital)
 
     // involvement of dip holders
-    ObjectType public constant STAKE = ObjectType.wrap(10);
+    NftType public constant STAKE = NftType.wrap(10);
 
     // responsibility of instance operators
-    ObjectType public constant INSTANCE = ObjectType.wrap(20);
-    ObjectType public constant PRODUCT = ObjectType.wrap(21);
-    ObjectType public constant ORACLE = ObjectType.wrap(22);
-    ObjectType public constant RISKPOOL = ObjectType.wrap(23);
+    NftType public constant INSTANCE = NftType.wrap(20);
+    NftType public constant PRODUCT = NftType.wrap(21);
+    NftType public constant ORACLE = NftType.wrap(22);
+    NftType public constant RISKPOOL = NftType.wrap(23);
 
     // responsibility of product owners
-    ObjectType public constant POLICY = ObjectType.wrap(30);
+    NftType public constant POLICY = NftType.wrap(30);
 
     // responsibility of riskpool keepers
-    ObjectType public constant BUNDLE = ObjectType.wrap(40);
+    NftType public constant BUNDLE = NftType.wrap(40);
 
-    // struct NftInfo {
-    //     uint256 id;
-    //     ChainId chain;
-    //     ObjectType t;
-    //     bytes data;
-    //     Blocknumber mintedIn;
-    //     Blocknumber updatedIn;
-    //     Version version;
-    // }
+    struct NftInfo {
+        uint256 id;
+        ChainId chain;
+        NftType t;
+        bytes data;
+        Blocknumber mintedIn;
+        Blocknumber updatedIn;
+        Version version;
+    }
 
     mapping(uint256 nftId => NftInfo info) private _info; // keep track of nft onchain meta data
     mapping(uint256 nftId => address deployedAt) private _contract; // related contract address, if any
-    mapping(ObjectType t => bool isSupported) private _typeSupported; // which nft types are currently supported for minting
+    mapping(NftType t => bool isSupported) private _typeSupported; // which nft types are currently supported for minting
 
     // keep track of chains
     mapping(ChainId chain => uint256 chainNftId) private _chain;
@@ -121,11 +121,6 @@ contract ChainRegistryV1 is
         _mintRegistry(newOwner, _chainId, address(this));
 
         transferOwnership(newOwner);
-    }
-
-    // TODO implement...
-    function register(ChainId chain, address implementation) external returns(uint256 nftId) {
-
     }
 
 
@@ -226,7 +221,7 @@ contract ChainRegistryV1 is
             string memory uri,
             address owner,
             uint256 chainId,
-            ObjectType t,
+            NftType t,
             bytes memory data,
             Blocknumber mintedIn,
             Blocknumber updatedIn,
@@ -291,8 +286,8 @@ contract ChainRegistryV1 is
     }
 
 
-    function toObjectType(uint256 t) public pure returns(ObjectType) { 
-        return ObjectType.wrap(uint8(t));
+    function toNftType(uint256 t) public pure returns(NftType) { 
+        return NftType.wrap(uint8(t));
     }
 
     function toString(uint256 i) public view returns(string memory) {
@@ -391,7 +386,7 @@ contract ChainRegistryV1 is
     function _safeMintObject(
         address to,
         ChainId chain,
-        ObjectType t,
+        NftType t,
         bytes memory data
     )
         internal 

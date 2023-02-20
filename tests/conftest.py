@@ -7,6 +7,8 @@ from brownie import (
     USD1,
     USD2,
     DIP,
+    DummyInstance,
+    DummyRegistry,
     BaseTypes,
     Versionable,
     OwnableProxyAdmin,
@@ -183,11 +185,15 @@ def chainRegistryV01(proxyAdmin) -> ChainRegistryV01:
 
 #=== gif instance fixtures ====================================================#
 
-# @pytest.fixture(scope="module")
-# def instanceRegistry(instanceOperator) -> GifRegistry: return GifRegistry(instanceOperator, None)
+@pytest.fixture(scope="module")
+def dummyInstance(instanceOperator) -> DummyInstance: 
+    return DummyInstance.deploy({'from': instanceOperator})
 
-# @pytest.fixture(scope="module")
-# def instance(instanceOperator, instanceWallet) -> GifInstance: return GifInstance(instanceOperator, instanceWallet)
+@pytest.fixture(scope="module")
+def dummyRegistry(dummyInstance): 
+    return contract_from_address(
+        DummyRegistry,
+        dummyInstance.getRegistry())
 
 # @pytest.fixture(scope="module")
 # def instanceService(instance): return instance.getInstanceService()

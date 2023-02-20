@@ -10,6 +10,8 @@ from brownie import (
     USD1,
     USD2,
     DIP,
+    DummyInstance,
+    DummyRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01
 )
@@ -109,9 +111,9 @@ def test_registry_basics(
         assert info['version'] == r.version()
 
     # check chain nft
-    chainNftId = r.getChainNftId(web3.chain_id)
+    chainId = r.toChainId(web3.chain_id)
+    chainNftId = r.getNftId(chainId, r.CHAIN(), 0)
     assert r.ownerOf(chainNftId) == ro
-    assert r.getNftId(nfts - 2) == chainNftId
 
     info = r.getNftInfo(chainNftId).dict()
     assert info['id'] == chainNftId
@@ -122,9 +124,8 @@ def test_registry_basics(
     assert info['version'] == r.version()
 
     # check registry nft
-    registryNftId = r.getRegistryForChain(web3.chain_id)
+    registryNftId = r.getNftId(chainId, r.REGISTRY(), 0)
     assert r.ownerOf(registryNftId) == ro
-    assert r.getNftId(nfts - 1) == registryNftId
 
     info = r.getNftInfo(registryNftId).dict()
     assert info['id'] == registryNftId
@@ -166,59 +167,3 @@ def test_registry_basics(
     assert info['versionString'] == 'v0.1.0'
     assert info['implementation'] == chainRegistryV01Implementation
     assert info['activatedBy'] == pao
-
-
-def test_register_token(
-    usd1: USD1,
-    usd2: USD2,
-    proxyAdmin: OwnableProxyAdmin,
-    proxyAdminOwner: Account,
-    chainRegistryV01: ChainRegistryV01,
-    registryOwner: Account,
-    theOutsider: Account
-):
-    chain_id = chainRegistryV01.getChainId(0)
-
-    with brownie.reverts('Ownable: caller is not the owner'):
-        chainRegistryV01.registerToken(
-            chain_id,
-            usd1,
-            {'from': theOutsider})
-
-    chain_id_other = chainRegistryV01.toChainId(web3.chain_id + 1)
-
-    with brownie.reverts('ERROR:ORG-020:CHAIN_NOT_SUPPORTED'):
-        chainRegistryV01.registerToken(
-            chain_id_other,
-            usd1,
-            {'from': registryOwner})
-
-    with brownie.reverts('ERROR:ORG-020:TOKEN_ADDRESS_ZERO'):
-        chainRegistryV01.registerToken(
-            chain_id,
-            ZERO_ADDRESS,
-            {'from': registryOwner})
-
-    assert chainRegistryV01.tokens(chain_id) == 0
-
-    chainRegistryV01.registerToken(
-        chain_id,
-        usd1,
-        {'from': registryOwner})
-
-    assert chainRegistryV01.tokens(chain_id) == 1
-
-    tokenNftId = chainRegistryV01.getTokenNftId(chain_id, 0)
-    info = chainRegistryV01.getNftInfo(tokenNftId).dict()
-    assert info['id'] == tokenNftId
-    assert info['chain'] == chain_id
-    assert info['t'] == chainRegistryV01.TOKEN()
-
-    with brownie.reverts('ERROR:ORG-062:INDEX_TOO_LARGE'):
-        chainRegistryV01.getTokenNftId(chain_id, 1)
-
-    with brownie.reverts('ERROR:ORG-020:TOKEN_ALREADY_REGISTERED'):
-        chainRegistryV01.registerToken(
-            chain_id,
-            usd1,
-            {'from': registryOwner})

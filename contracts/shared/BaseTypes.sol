@@ -3,16 +3,6 @@ pragma solidity ^0.8.18;
 
 import "./IBaseTypes.sol";
 
-// // restriction: uint<n> n needs to be different for each type to support function overloading
-// type VersionPart is uint16;
-// type Version is uint48; // to concatenate major,minor,patch version parts
-
-// type ChainId is bytes3;
-// type Blocknumber is uint32;
-// type Timestamp is uint40;
-
-// type Amount is uint128;
-
 
 contract BaseTypes is IBaseTypes {
 
