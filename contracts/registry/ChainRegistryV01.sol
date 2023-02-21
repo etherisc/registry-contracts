@@ -46,27 +46,21 @@ contract ChainRegistryV01 is
     ObjectType public constant BUNDLE = ObjectType.wrap(40);
 
     mapping(uint256 nftId => NftInfo info) private _info; // keep track of nft onchain meta data
-    mapping(uint256 nftId => address deployedAt) private _contract; // related contract address, if any
     mapping(ObjectType t => bool isSupported) private _typeSupported; // which nft types are currently supported for minting
 
     // keep track of chains
-    mapping(ChainId chain => uint256 chainNftId) private _chain;
+    mapping(ChainId chain => uint256 nftId) private _chain;
     ChainId [] private _chainIds;
 
     // keep track of objects per chain and type
     mapping(ChainId chain => mapping(ObjectType t => uint256 [] nftId)) private _object; // which erc20 on which chains are currently supported for minting
 
-    // keep track of registries
-    mapping(ChainId chain => uint256 registryNftId) private _registry;
-    uint256 [] private _registryNftIds;
-
-    // keep track of erc20 tokens
-    mapping(ChainId chain => mapping(address token => uint256 tokenNftId)) private _token; // which erc20 on which chains are currently supported for minting
-    mapping(ChainId chain => uint256 [] tokenNftIds) private _tokenNftIds;
+    // keep track of objects with a contract address (registries, tokens, instances)
+    mapping(ChainId chain => mapping(address implementation => uint256 nftId)) private _contractObjectNftId; // which erc20 on which chains are currently supported for minting
+    mapping(uint256 nftId => ContractObject object) private _contractObject; // which erc20 on which chains are currently supported for minting
 
     // keep track of instances
-    mapping(bytes32 instanceId => uint256 tokenNftId) private _instance; // which erc20 on which chains are currently supported for minting
-    mapping(ChainId chain => uint256 [] instanceNftIds) private _instanceNftIds;
+    mapping(bytes32 instanceId => uint256 nftId) private _instance; // which erc20 on which chains are currently supported for minting
 
     // registy data
     ChainId private _chainId;
@@ -75,8 +69,28 @@ contract ChainRegistryV01 is
     // needs to be updated by all derived contracts
     Version internal _version;
 
-    // for debugging
-    uint256 [] _nftIds;
+
+    modifier onlyRegisteredToken(ChainId chain, address token) {
+        uint256 nftId = _contractObjectNftId[chain][token];
+        require(nftId > 0, "ERROR:CRG-001:TOKEN_NOT_REGISTERED");
+        ContractObject memory object = _contractObject[nftId];
+        require(isSameType(object.t, TOKEN), "ERROR:CRG-002:ADDRESS_NOT_TOKEN");
+        _;
+    }
+
+
+    modifier onlyRegisteredInstance(bytes32 instanceId) {
+        require(_instance[instanceId] > 0, "ERROR:CRG-005:INSTANCE_NOT_REGISTERED");
+        _;
+    }
+
+
+    modifier onlySameChain(bytes32 instanceId) {
+        uint256 nftId = _instance[instanceId];
+        require(nftId > 0, "ERROR:CRG-010:INSTANCE_NOT_REGISTERED");
+        require(block.chainid == toInt(_info[nftId].chain), "ERROR:CRG-011:DIFFERENT_CHAIN_NOT_SUPPORTED");
+        _;
+    }
 
     // IMPORTANT 1. version needed for upgradable versions
     // _activate is using this to check if this is a new version
@@ -152,20 +166,17 @@ contract ChainRegistryV01 is
         onlyOwner
         returns(uint256 nftId)
     {
-        require(_chain[chain] > 0, "ERROR:ORG-020:CHAIN_NOT_SUPPORTED");
-        require(_token[chain][token] == 0, "ERROR:ORG-020:TOKEN_ALREADY_REGISTERED");
-        require(token != address(0), "ERROR:ORG-020:TOKEN_ADDRESS_ZERO");
+        require(_chain[chain] > 0, "ERROR:CRG-040:CHAIN_NOT_SUPPORTED");
+        require(_contractObjectNftId[chain][token] == 0, "ERROR:CRG-041:TOKEN_ALREADY_REGISTERED");
+        require(token != address(0), "ERROR:CRG-042:TOKEN_ADDRESS_ZERO");
 
         // mint token for the new erc20 token
         nftId = _safeMintObject(
             owner(),
             chain,
             TOKEN,
-            abi.encode(token));
-
-        // keep track of registered tokens
-        _token[chain][token] = nftId;
-        _tokenNftIds[chain].push(nftId);
+            abi.encode(token),
+            token);
     }
 
 
@@ -178,7 +189,7 @@ contract ChainRegistryV01 is
         onlyOwner
         returns(uint256 nftId)
     {
-        require(instanceRegistry != address(0), "ERROR:ORG-020:REGISTRY_ADDRESS_ZERO");
+        require(instanceRegistry != address(0), "ERROR:CRG-050:REGISTRY_ADDRESS_ZERO");
 
         // check instance via provided registry
         (
@@ -190,19 +201,19 @@ contract ChainRegistryV01 is
             // don't care about instanceservice
         ) = probeInstance(instanceRegistry);
 
-        require(isContract, "ERROR:ORG-020:REGISTRY_NOT_CONTRACT");
-        require(hasValidId, "ERROR:ORG-020:INSTANCE_ID_INVALID");
+        require(isContract, "ERROR:CRG-051:REGISTRY_NOT_CONTRACT");
+        require(hasValidId, "ERROR:CRG-052:INSTANCE_ID_INVALID");
 
         // mint token for the new erc20 token
         nftId = _safeMintObject(
             owner(),
             chain,
             INSTANCE,
-            abi.encode(instanceRegistry, instanceId));
+            abi.encode(instanceRegistry, instanceId),
+            instanceRegistry);
 
         // keep track of registered instances
         _instance[instanceId] = nftId;
-        _instanceNftIds[chain].push(nftId);
     }
 
 
@@ -247,7 +258,7 @@ contract ChainRegistryV01 is
     }
 
     function getChainId(uint256 idx) external virtual override view returns(ChainId chain) {
-        require(idx < _chainIds.length, "ERROR:ORG-040:INDEX_TOO_LARGE");
+        require(idx < _chainIds.length, "ERROR:CRG-100:INDEX_TOO_LARGE");
         return _chainIds[idx];
     }
 
@@ -255,14 +266,15 @@ contract ChainRegistryV01 is
         return _object[chain][t].length;
     }
 
+
     function getNftId(ChainId chain, ObjectType t, uint256 idx) external view returns(uint256 nftId) {
-        require(idx < _object[chain][t].length, "ERROR:ORG-040:INDEX_TOO_LARGE");
+        require(idx < _object[chain][t].length, "ERROR:CRG-110:INDEX_TOO_LARGE");
         return _object[chain][t][idx];
     }
 
 
     function getNftInfo(uint256 nftId) external virtual override view returns(NftInfo memory) {
-        require(_info[nftId].id > 0, "ERROR:ORG-031:NFT_ID_INVALID");
+        require(_info[nftId].id > 0, "ERROR:CRG-120:NFT_ID_INVALID");
         return _info[nftId];
     }
 
@@ -305,6 +317,30 @@ contract ChainRegistryV01 is
     }
 
 
+    function getNftId(
+        ChainId chain,
+        address implementation
+    )
+        external
+        virtual override
+        view
+        returns(uint256 nftId)
+    {
+        return _contractObjectNftId[chain][implementation];
+    }
+
+
+    function getContractObject(uint256 nftId)
+        external
+        virtual override
+        view
+        returns(ContractObject memory object)
+    {
+        require(_contractObject[nftId].id > 0, "ERROR:CRG-150:CONTRACT_NOT_REGISTERED");
+        return _contractObject[nftId];
+    }
+
+
     function tokenURI(uint256 nftId) 
         public 
         view 
@@ -324,7 +360,7 @@ contract ChainRegistryV01 is
         _requireMinted(nftId);
 
         NftInfo memory info = _info[nftId];
-        uint256 registryNftId = _registry[info.chain];
+        uint256 registryNftId = _object[info.chain][REGISTRY][0];
         address registryAt = abi.decode(
             _info[registryNftId].data, 
             (address));
@@ -339,6 +375,10 @@ contract ChainRegistryV01 is
                 toString(nftId)));
     }
 
+
+    function isSameType(ObjectType a, ObjectType b) public virtual override pure returns(bool) {
+        return ObjectType.unwrap(a) == ObjectType.unwrap(b);
+    }
 
     function toObjectType(uint256 t) public pure returns(ObjectType) { 
         return ObjectType.wrap(uint8(t));
@@ -362,15 +402,16 @@ contract ChainRegistryV01 is
         virtual
         returns(uint256 nftId)
     {
-        require(toInt(_chainId) == 1, "ERROR:ORG-010:NOT_MAINNET");
-        require(_info[1].id == 0, "ERROR:ORG-010:PROTOCOL_ALREADY_REGISTERED");
+        require(toInt(_chainId) == 1, "ERROR:CRG-200:NOT_MAINNET");
+        require(_info[1].id == 0, "ERROR:CRG-201:NOT_MAINNET");
 
         // mint token for the new chain
         nftId = _safeMintObject(
             protocolOwner,
             chain,
             PROTOCOL,
-            "");
+            "",
+            address(0));
         
         // only one protocol in dip ecosystem
         _typeSupported[PROTOCOL] = false;
@@ -382,14 +423,15 @@ contract ChainRegistryV01 is
         virtual
         returns(uint256 nftId)
     {
-        require(_chain[chain] == 0, "ERROR:ORG-010:CHAIN_ALREADY_REGISTERED");
+        require(_chain[chain] == 0, "ERROR:CRG-210:CHAIN_ALREADY_REGISTERED");
 
         // mint token for the new chain
         nftId = _safeMintObject(
             chainOwner,
             chain,
             CHAIN,
-            "");
+            "",
+            address(0));
 
         // keep track of registered chains
         _chain[chain] = nftId;
@@ -402,20 +444,17 @@ contract ChainRegistryV01 is
         virtual
         returns(uint256 nftId)
     {
-        require(_chain[chain] > 0, "ERROR:ORG-020:CHAIN_NOT_SUPPORTED");
-        require(_registry[chain] == 0, "ERROR:ORG-021:REGISTRY_ALREADY_REGISTERED");
-        require(registry != address(0), "ERROR:ORG-022:REGISTRY_ADDRESS_ZERO");
+        require(_chain[chain] > 0, "ERROR:CRG-220:CHAIN_NOT_SUPPORTED");
+        require(_contractObjectNftId[chain][registry] == 0, "ERROR:CRG-221:REGISTRY_ALREADY_REGISTERED");
+        require(registry != address(0), "ERROR:CRG-222:REGISTRY_ADDRESS_ZERO");
 
         // mint token for the new registry
         nftId = _safeMintObject(
             registryOwner,
             chain,
             REGISTRY,
-            abi.encode(registry));
-
-        // keep track of registered registries
-        _registry[chain] = nftId;
-        _registryNftIds.push(nftId);
+            abi.encode(registry),
+            registry);
     }
 
 
@@ -423,17 +462,17 @@ contract ChainRegistryV01 is
         address to,
         ChainId chain,
         ObjectType t,
-        bytes memory data
+        bytes memory data,
+        address implementation
     )
-        internal 
+        internal
+        virtual
         returns(uint256 nftId)
     {
-        require(_typeSupported[t], "OBJECT_TYPE_NOT_SUPPORTED");
+        require(_typeSupported[t], "ERROR:CRG-230:OBJECT_TYPE_NOT_SUPPORTED");
 
         // enforce uniqe token ids over all chain id
         nftId = _getNextTokenId();
-
-        _nftIds.push(nftId);
         _safeMint(to, nftId);
 
         NftInfo storage info = _info[nftId];
@@ -447,6 +486,18 @@ contract ChainRegistryV01 is
         // store data if provided        
         if(data.length > 0) {
             info.data = data;
+        }
+
+        // this is a contract object
+        if(implementation != address(0)) {
+            _contractObjectNftId[chain][implementation] = nftId;
+
+            // remembar additional info for contract objects
+            ContractObject storage object = _contractObject[nftId];
+            object.id = nftId;
+            object.chain = chain;
+            object.t = t;
+            object.implementation = implementation;
         }
 
         // object book keeping

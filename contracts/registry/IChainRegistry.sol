@@ -23,6 +23,13 @@ interface IChainRegistry is
         Version version;
     }
 
+    struct ContractObject {
+        uint256 id;
+        ChainId chain;
+        ObjectType t;
+        address implementation;
+    }
+
     // event LogChainRegistryObjectRegistered(address token, uint256 chainId, ObjectState state, bool isNewToken);
     // event LogChainRegistryObjectStateUpdated(address token, uint256 chainId, ObjectState oldState, ObjectState newState);
     // event LogChainRegistryObjectDisplayNameUpdated(bytes32 instanceId, string oldDisplayName, string newDisplayName);
@@ -42,31 +49,7 @@ interface IChainRegistry is
         external
         returns(uint256 nftId);
 
-
-    // function registerComponent(
-    //     bytes32 instanceId, 
-    //     uint256 componentId,
-    //     string memory displayName
-    // )
-    //     external
-    //     returns(uint256 nftId);
-
-
-    // function registerBundle(
-    //     bytes32 instanceId, 
-    //     uint256 riskpoolId, 
-    //     uint256 bundleId, 
-    //     string memory displayName, 
-    //     uint256 expiryAt
-    // )
-    //     external
-    //     returns(uint256 nftId);
-
-
-    // function updateComponent(bytes32 instanceId, uint256 componentId) external;
-    // function updateBundle(bytes32 instanceId, uint256 bundleId) external;
-
-    // view/pure functions
+    //--- view and pure functions ------------------//
 
     function chains() external view returns(uint256 numberOfChains);
     function getChainId(uint256 idx) external view returns(ChainId chain);
@@ -75,6 +58,7 @@ interface IChainRegistry is
     function getNftId(ChainId chain, ObjectType t, uint256 idx) external view returns(uint256 nftId);
 
     function getNftInfo(uint256 nftId) external view returns(NftInfo memory);
+
 
     function getNftMetadata(uint256 nftId)
         external 
@@ -88,6 +72,28 @@ interface IChainRegistry is
             Blocknumber mintedIn,
             Blocknumber updatedIn,
             VersionPart [3] memory v);
+
+
+    function getNftId(
+        ChainId chain,
+        address implementation
+    )
+        external
+        view
+        returns(uint256 nftId);
+
+
+    function getContractObject(uint256 nftId)
+        external
+        view
+        returns(ContractObject memory object);
+
+
+    function isSameType(ObjectType a, ObjectType b)
+        external
+        pure
+        returns(bool same);
+
 
     function probeInstance(address registry)
         external 

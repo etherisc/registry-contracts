@@ -44,13 +44,13 @@ def test_register_token(
 
     chain_id_other = chainRegistryV01.toChainId(web3.chain_id + 1)
 
-    with brownie.reverts('ERROR:ORG-020:CHAIN_NOT_SUPPORTED'):
+    with brownie.reverts('ERROR:CRG-040:CHAIN_NOT_SUPPORTED'):
         chainRegistryV01.registerToken(
             chain_id_other,
             usd1,
             {'from': registryOwner})
 
-    with brownie.reverts('ERROR:ORG-020:TOKEN_ADDRESS_ZERO'):
+    with brownie.reverts('ERROR:CRG-042:TOKEN_ADDRESS_ZERO'):
         chainRegistryV01.registerToken(
             chain_id,
             ZERO_ADDRESS,
@@ -58,6 +58,7 @@ def test_register_token(
 
     tokenType = chainRegistryV01.TOKEN()
     assert chainRegistryV01.objects(chain_id, tokenType) == 0
+    assert chainRegistryV01.getNftId(chain_id, usd1) == 0
 
     chainRegistryV01.registerToken(
         chain_id,
@@ -67,15 +68,23 @@ def test_register_token(
     assert chainRegistryV01.objects(chain_id, tokenType) == 1
 
     tokenNftId = chainRegistryV01.getNftId(chain_id, tokenType, 0)
+    assert chainRegistryV01.getNftId(chain_id, usd1) == tokenNftId
+
     info = chainRegistryV01.getNftInfo(tokenNftId).dict()
     assert info['id'] == tokenNftId
     assert info['chain'] == chain_id
     assert info['t'] == chainRegistryV01.TOKEN()
 
-    with brownie.reverts('ERROR:ORG-040:INDEX_TOO_LARGE'):
+    obj = chainRegistryV01.getContractObject(tokenNftId).dict()
+    assert obj['id'] == info['id']
+    assert obj['chain'] == info['chain']
+    assert obj['t'] == info['t']
+    assert obj['implementation'] == usd1
+
+    with brownie.reverts('ERROR:CRG-110:INDEX_TOO_LARGE'):
         chainRegistryV01.getNftId(chain_id, tokenType, 1)
 
-    with brownie.reverts('ERROR:ORG-020:TOKEN_ALREADY_REGISTERED'):
+    with brownie.reverts('ERROR:CRG-041:TOKEN_ALREADY_REGISTERED'):
         chainRegistryV01.registerToken(
             chain_id,
             usd1,
@@ -97,13 +106,13 @@ def test_register_instance(
             "dummyRegistry TEST",
             {'from': theOutsider})
 
-    with brownie.reverts('ERROR:ORG-020:REGISTRY_ADDRESS_ZERO'):
+    with brownie.reverts('ERROR:CRG-050:REGISTRY_ADDRESS_ZERO'):
         chainRegistryV01.registerInstance(
             ZERO_ADDRESS,
             "dummyRegistry TEST",
             {'from': registryOwner})
 
-    with brownie.reverts('ERROR:ORG-020:REGISTRY_NOT_CONTRACT'):
+    with brownie.reverts('ERROR:CRG-051:REGISTRY_NOT_CONTRACT'):
         chainRegistryV01.registerInstance(
             theOutsider,
             "dummyRegistry TEST",
@@ -113,5 +122,3 @@ def test_register_instance(
         dummyRegistry,
         "dummyRegistry TEST",
         {'from': registryOwner})
-
-    assert False
