@@ -24,24 +24,6 @@ interface IChainRegistry is
     }
 
 
-    struct ContractObject {
-        uint256 id;
-        ChainId chain;
-        ObjectType t;
-        address implementation;
-    }
-
-
-    struct InstanceObject {
-        uint256 id;
-        ChainId chain;
-        ObjectType t;
-        bytes32 instanceId;
-        uint256 objectId; // componentId or bundleId
-        address token;
-    }
-
-
     // event LogChainRegistryObjectRegistered(address token, uint256 chainId, ObjectState state, bool isNewToken);
     // event LogChainRegistryObjectStateUpdated(address token, uint256 chainId, ObjectState oldState, ObjectState newState);
     // event LogChainRegistryObjectDisplayNameUpdated(bytes32 instanceId, string oldDisplayName, string newDisplayName);
@@ -54,15 +36,38 @@ interface IChainRegistry is
     function registerRegistry(ChainId chain, address registry) external returns(uint256 nftId);
     function registerToken(ChainId chain,address token) external returns(uint256 nftId);       
 
-    function registerInstance(address instanceRegistry, string memory displayName) external returns(uint256 nftId);
 
-    function registerComponent(bytes32 instanceId, uint256 componentId) external returns(uint256 nftId);
-    function updateComponent(bytes32 instanceId, uint256 componentId) external;
+    function registerInstance(
+        address instanceRegistry,
+        string memory displayName
+    )
+        external
+        returns(uint256 nftId);
+
+
+    function registerComponent(
+        bytes32 instanceId,
+        uint256 componentId
+    )
+        external
+        returns(uint256 nftId);
+
+
+    function registerBundle(
+        bytes32 instanceId,
+        uint256 riskpoolId,
+        uint256 bundleId,
+        string memory name,
+        uint256 expiryAt
+    )
+        external 
+        returns(uint256 nftId);
 
     //--- view and pure functions ------------------//
 
     function chains() external view returns(uint256 numberOfChains);
     function getChainId(uint256 idx) external view returns(ChainId chain);
+    function getNftId(ChainId chain) external view returns(uint256 nftId);
 
     function objects(ChainId chain, ObjectType t) external view returns(uint256 numberOfObjects);
     function getNftId(ChainId chain, ObjectType t, uint256 idx) external view returns(uint256 nftId);
@@ -117,16 +122,39 @@ interface IChainRegistry is
         returns(uint256 nftId);
 
 
-    function getContractObject(uint256 nftId)
+    // function decodeRegistryData(uint256 nftId)
+
+    function decodeTokenData(uint256 nftId)
         external
         view
-        returns(ContractObject memory object);
+        returns(address token);
 
 
-    function getInstanceObject(uint256 nftId)
+    function decodeInstanceData(uint256 nftId)
         external
         view
-        returns(InstanceObject memory object);
+        returns(
+            bytes32 instanceId,
+            address registry);
+
+
+    function decodeComponentData(uint256 nftId)
+        external
+        view
+        returns(
+            bytes32 instanceId,
+            uint256 componentId,
+            address token);
+
+
+    function decodeBundleData(uint256 nftId)
+        external
+        view
+        returns(
+            bytes32 instanceId,
+            uint256 riskpoolId,
+            uint256 bundleId,
+            address token);
 
 
     function isSameType(ObjectType a, ObjectType b)

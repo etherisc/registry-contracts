@@ -19,6 +19,7 @@ contract DummyInstance is
     }
 
     mapping(uint256 componentId => ComponentInfo info) _component;
+    mapping(uint256 bundleId => Bundle bundle) _bundle;
     DummyRegistry private _registry;
 
 
@@ -42,6 +43,22 @@ contract DummyInstance is
         info.t = t;
         info.state = state;
         info.token = token;
+    }
+
+
+    function setBundleInfo(
+        uint256 bundleId,
+        uint256 riskpoolId,
+        uint256 capital
+    )
+        external
+        onlyOwner
+    {
+        Bundle storage bundle = _bundle[bundleId];
+        bundle.id = bundleId;
+        bundle.riskpoolId = riskpoolId;
+        bundle.capital = capital;
+        bundle.createdAt = block.timestamp;
     }
 
 
@@ -80,6 +97,11 @@ contract DummyInstance is
     function getComponentToken(uint256 componentId) external view returns(IERC20Metadata token) {
         require(_component[componentId].token != address(0), "ERROR:DIS-020:COMPONENT_UNKNOWN");
         return IERC20Metadata(_component[componentId].token);
+    }
+
+    function getBundle(uint256 bundleId) external view returns(Bundle memory bundle) {
+        require(_bundle[bundleId].createdAt > 0, "ERROR:DIS-030:BUNDLE_DOES_NOT_EXIST");
+        return _bundle[bundleId];
     }
 
 
