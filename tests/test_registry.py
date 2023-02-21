@@ -179,6 +179,20 @@ def test_register_component(
         state_active,
         usd2)
 
+    # attempt to register without registring token first
+    with brownie.reverts('ERROR:CRG-060:COMPONENT_TOKEN_NOT_REGISTERED'):
+        chainRegistryV01.registerComponent(
+            instance_id,
+            component_id,
+            {'from': registryOwner})
+
+    # register token
+    chain_id = chainRegistryV01.toChainId(dummyInstance.getChainId())
+    chainRegistryV01.registerToken(
+            chain_id,
+            usd2,
+            {'from': registryOwner})
+
     # try again
     chainRegistryV01.registerComponent(
         instance_id,
@@ -194,4 +208,5 @@ def test_register_component(
     assert obj['t'] == chainRegistryV01.RISKPOOL()
     assert obj['instanceId'] == instance_id
     assert obj['objectId'] == component_id
+    assert obj['token'] == usd2
 

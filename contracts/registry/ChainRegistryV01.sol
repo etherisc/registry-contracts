@@ -240,6 +240,9 @@ contract ChainRegistryV01 is
         ChainId chain = toChainId(instanceService.getChainId());
         ObjectType t = _toObjectType(cType);
 
+        address token = address(instanceService.getComponentToken(componentId));
+        require(_contractObjectNftId[chain][token] > 0, "ERROR:CRG-060:COMPONENT_TOKEN_NOT_REGISTERED");
+
         // mint token for the new erc20 token
         nftId = _safeMintObject(
             owner(),
@@ -257,7 +260,7 @@ contract ChainRegistryV01 is
         object.t = t;
         object.instanceId = instanceId;
         object.objectId = componentId;
-        object.token = address(0); // TODO token and check token is registered
+        object.token = token;
     }
 
 
