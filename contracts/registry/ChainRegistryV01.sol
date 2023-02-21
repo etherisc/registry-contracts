@@ -62,6 +62,11 @@ contract ChainRegistryV01 is
     // keep track of instances
     mapping(bytes32 instanceId => uint256 nftId) private _instance; // which erc20 on which chains are currently supported for minting
 
+    // keep track of instance specific objects like riskpools and risk bundles
+    mapping(bytes32 instanceId => mapping(uint256 componentId => uint256 nftId)) private _component; // which erc20 on which chains are currently supported for minting
+    mapping(bytes32 instanceId => mapping(uint256 bundleId => uint256 nftId)) private _bundle; // which erc20 on which chains are currently supported for minting
+    mapping(uint256 nftId => InstanceObject object) private _instanceObject; // which erc20 on which chains are currently supported for minting
+
     // registy data
     ChainId private _chainId;
     uint256 private _idNext;
@@ -124,6 +129,7 @@ contract ChainRegistryV01 is
         _typeSupported[REGISTRY] = true;
         _typeSupported[TOKEN] = true;
         _typeSupported[INSTANCE] = true;
+        _typeSupported[RISKPOOL] = true;
 
         // register/mint dip protocol on mainnet
         if(toInt(_chainId) == 1) {
@@ -214,6 +220,55 @@ contract ChainRegistryV01 is
 
         // keep track of registered instances
         _instance[instanceId] = nftId;
+    }
+
+
+    function registerComponent(
+        bytes32 instanceId, 
+        uint256 componentId
+    )
+        external 
+        virtual override
+        onlyRegisteredInstance(instanceId)
+        onlySameChain(instanceId)
+        returns(uint256 nftId)
+    {
+        IInstanceServiceFacade instanceService = _getInstanceServiceFacade(instanceId);
+        // getting the type will revert if no component registered
+        IInstanceServiceFacade.ComponentType cType = instanceService.getComponentType(componentId);
+
+        ChainId chain = toChainId(instanceService.getChainId());
+        ObjectType t = _toObjectType(cType);
+
+        // mint token for the new erc20 token
+        nftId = _safeMintObject(
+            owner(),
+            chain,
+            t,
+            abi.encode(instanceId, componentId),
+            address(0));
+
+        // keep track of instance specific objects
+        _component[instanceId][componentId] = nftId;
+
+        InstanceObject storage object = _instanceObject[nftId];
+        object.id = nftId;
+        object.chain = chain;
+        object.t = t;
+        object.instanceId = instanceId;
+        object.objectId = componentId;
+        object.token = address(0); // TODO token and check token is registered
+    }
+
+
+    function updateComponent(
+        bytes32 instanceId,
+        uint256 componentId
+    )
+        external
+        virtual override
+    {
+        // TODO implement
     }
 
 
@@ -330,6 +385,35 @@ contract ChainRegistryV01 is
     }
 
 
+    function getNftId(bytes32 instanceId)
+        external
+        virtual override
+        view
+        returns(uint256 nftId)
+    {
+        return _instance[instanceId];
+    }
+
+
+    function getComponentNftId(bytes32 instanceId, uint256 componentId)
+        external
+        virtual override
+        view
+        returns(uint256 nftId)
+    {
+        return _component[instanceId][componentId];
+    }
+
+
+    function getBundleNftId(bytes32 instanceId, uint256 bundleId)
+        external
+        virtual override
+        view
+        returns(uint256 nftId)
+    {
+    }
+
+
     function getContractObject(uint256 nftId)
         external
         virtual override
@@ -338,6 +422,17 @@ contract ChainRegistryV01 is
     {
         require(_contractObject[nftId].id > 0, "ERROR:CRG-150:CONTRACT_NOT_REGISTERED");
         return _contractObject[nftId];
+    }
+
+
+    function getInstanceObject(uint256 nftId)
+        external
+        virtual override
+        view
+        returns(InstanceObject memory object)
+    {
+        require(_instanceObject[nftId].id > 0, "ERROR:CRG-160:COMPONENT_NOT_REGISTERED");
+        return _instanceObject[nftId];
     }
 
 
@@ -455,6 +550,36 @@ contract ChainRegistryV01 is
             REGISTRY,
             abi.encode(registry),
             registry);
+    }
+
+
+    function _getInstanceServiceFacade(bytes32 instanceId) 
+        internal
+        virtual
+        view
+        returns(IInstanceServiceFacade instanceService)
+    {
+        uint256 nftId = _instance[instanceId];
+        ContractObject memory object = _contractObject[nftId];
+        (,,,,, instanceService) = probeInstance(object.implementation);
+    }
+
+
+    function _toObjectType(IInstanceServiceFacade.ComponentType cType)
+        internal 
+        virtual
+        pure
+        returns(ObjectType t)
+    {
+        if(cType == IInstanceServiceFacade.ComponentType.Riskpool) {
+            return RISKPOOL;
+        }
+
+        if(cType == IInstanceServiceFacade.ComponentType.Product) {
+            return PRODUCT;
+        }
+
+        return ORACLE;
     }
 
 

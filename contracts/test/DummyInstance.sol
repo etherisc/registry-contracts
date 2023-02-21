@@ -12,6 +12,7 @@ contract DummyInstance is
 {
 
     struct ComponentInfo {
+        uint256 id;
         ComponentType t;
         ComponentState state;
         address token;
@@ -37,6 +38,7 @@ contract DummyInstance is
         onlyOwner
     {
         ComponentInfo storage info = _component[componentId];
+        info.id = componentId;
         info.t = t;
         info.state = state;
         info.token = token;
@@ -67,17 +69,16 @@ contract DummyInstance is
     }
 
     function getComponentType(uint256 componentId) external view returns(ComponentType componentType) {
-        require(_component[componentId].token != address(0), "ERROR:DIS-001:COMPONENT_UNKNOWN");
+        require(_component[componentId].id > 0, "ERROR:DIS-010:COMPONENT_UNKNOWN");
         return _component[componentId].t;
     }
 
     function getComponentState(uint256 componentId) external view returns(ComponentState componentState) {
-        require(_component[componentId].token != address(0), "ERROR:DIS-002:COMPONENT_UNKNOWN");
         return _component[componentId].state;
     }
 
     function getComponentToken(uint256 componentId) external view returns(IERC20Metadata token) {
-        require(_component[componentId].token != address(0), "ERROR:DIS-003:COMPONENT_UNKNOWN");
+        require(_component[componentId].token != address(0), "ERROR:DIS-020:COMPONENT_UNKNOWN");
         return IERC20Metadata(_component[componentId].token);
     }
 

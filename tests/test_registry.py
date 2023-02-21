@@ -122,3 +122,76 @@ def test_register_instance(
         dummyRegistry,
         "dummyRegistry TEST",
         {'from': registryOwner})
+
+    instance_id = dummyInstance.getInstanceId()
+
+    nft_id = chainRegistryV01.getNftId(instance_id)
+    assert nft_id > 0
+
+    obj = chainRegistryV01.getContractObject(nft_id).dict()
+    assert obj['id'] == nft_id
+    assert obj['chain'] == chainRegistryV01.toChainId(web3.chain_id)
+    assert obj['t'] == chainRegistryV01.INSTANCE()
+    assert obj['implementation'] == dummyRegistry
+
+
+def test_register_component(
+    dummyInstance: DummyInstance,
+    dummyRegistry: DummyRegistry,
+    usd2: USD2,
+    proxyAdmin: OwnableProxyAdmin,
+    proxyAdminOwner: Account,
+    chainRegistryV01: ChainRegistryV01,
+    registryOwner: Account,
+    theOutsider: Account
+):
+    instance_id = dummyInstance.getInstanceId()
+    component_id = 1
+
+    with brownie.reverts('ERROR:CRG-005:INSTANCE_NOT_REGISTERED'):
+        chainRegistryV01.registerComponent(
+            instance_id,
+            component_id,
+            {'from': registryOwner})
+
+    chainRegistryV01.registerInstance(
+        dummyRegistry,
+        "dummyRegistry TEST",
+        {'from': registryOwner})
+
+    with brownie.reverts('ERROR:DIS-010:COMPONENT_UNKNOWN'):
+        chainRegistryV01.registerComponent(
+            instance_id,
+            component_id,
+            {'from': registryOwner})
+    
+    # add component to dummy instance
+    type_product = 1
+    type_riskpool = 2
+
+    state_created = 0
+    state_active = 3
+    state_paused = 4
+
+    dummyInstance.setComponentInfo(
+        component_id,
+        type_riskpool,
+        state_active,
+        usd2)
+
+    # try again
+    chainRegistryV01.registerComponent(
+        instance_id,
+        component_id,
+        {'from': registryOwner})
+
+    nft_id = chainRegistryV01.getComponentNftId(instance_id, component_id)
+    assert nft_id > 0
+
+    obj = chainRegistryV01.getInstanceObject(nft_id).dict()
+    assert obj['id'] == nft_id
+    assert obj['chain'] == chainRegistryV01.toChainId(web3.chain_id)
+    assert obj['t'] == chainRegistryV01.RISKPOOL()
+    assert obj['instanceId'] == instance_id
+    assert obj['objectId'] == component_id
+

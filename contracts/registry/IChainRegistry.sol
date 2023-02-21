@@ -23,12 +23,24 @@ interface IChainRegistry is
         Version version;
     }
 
+
     struct ContractObject {
         uint256 id;
         ChainId chain;
         ObjectType t;
         address implementation;
     }
+
+
+    struct InstanceObject {
+        uint256 id;
+        ChainId chain;
+        ObjectType t;
+        bytes32 instanceId;
+        uint256 objectId; // componentId or bundleId
+        address token;
+    }
+
 
     // event LogChainRegistryObjectRegistered(address token, uint256 chainId, ObjectState state, bool isNewToken);
     // event LogChainRegistryObjectStateUpdated(address token, uint256 chainId, ObjectState oldState, ObjectState newState);
@@ -42,12 +54,10 @@ interface IChainRegistry is
     function registerRegistry(ChainId chain, address registry) external returns(uint256 nftId);
     function registerToken(ChainId chain,address token) external returns(uint256 nftId);       
 
-    function registerInstance(
-        address instanceRegistry,
-        string memory displayName
-    )
-        external
-        returns(uint256 nftId);
+    function registerInstance(address instanceRegistry, string memory displayName) external returns(uint256 nftId);
+
+    function registerComponent(bytes32 instanceId, uint256 componentId) external returns(uint256 nftId);
+    function updateComponent(bytes32 instanceId, uint256 componentId) external;
 
     //--- view and pure functions ------------------//
 
@@ -83,10 +93,40 @@ interface IChainRegistry is
         returns(uint256 nftId);
 
 
+    function getNftId(bytes32 instanceId)
+        external
+        view
+        returns(uint256 nftId);
+
+
+    function getComponentNftId(
+        bytes32 instanceId, 
+        uint256 componentId
+    )
+        external
+        view
+        returns(uint256 nftId);
+
+
+    function getBundleNftId(
+        bytes32 instanceId, 
+        uint256 bundleId
+    )
+        external
+        view
+        returns(uint256 nftId);
+
+
     function getContractObject(uint256 nftId)
         external
         view
         returns(ContractObject memory object);
+
+
+    function getInstanceObject(uint256 nftId)
+        external
+        view
+        returns(InstanceObject memory object);
 
 
     function isSameType(ObjectType a, ObjectType b)
