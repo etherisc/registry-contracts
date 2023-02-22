@@ -6,6 +6,7 @@ import "../shared/IBaseTypes.sol";
 import "./IInstanceRegistryFacade.sol";
 import "./IInstanceServiceFacade.sol";
 
+type NftId is uint256;
 type ObjectType is uint8;
 
 
@@ -14,7 +15,7 @@ interface IChainRegistry is
 {
 
     struct NftInfo {
-        uint256 id;
+        NftId id;
         ChainId chain;
         ObjectType t;
         bytes data;
@@ -32,9 +33,11 @@ interface IChainRegistry is
     // event LogInstanceRegistryInstanceStateUpdated(bytes32 instanceId, ObjectState oldState, ObjectState newState);
     // event LogInstanceRegistryInstanceDisplayNameUpdated(bytes32 instanceId, string oldDisplayName, string newDisplayName);
 
-    function registerChain(ChainId chain) external returns(uint256 nftId);
-    function registerRegistry(ChainId chain, address registry) external returns(uint256 nftId);
-    function registerToken(ChainId chain,address token) external returns(uint256 nftId);       
+    //--- state changing functions ------------------//
+
+    function registerChain(ChainId chain) external returns(NftId id);
+    function registerRegistry(ChainId chain, address registry) external returns(NftId id);
+    function registerToken(ChainId chain,address token) external returns(NftId id);       
 
 
     function registerInstance(
@@ -42,7 +45,7 @@ interface IChainRegistry is
         string memory displayName
     )
         external
-        returns(uint256 nftId);
+        returns(NftId id);
 
 
     function registerComponent(
@@ -50,7 +53,7 @@ interface IChainRegistry is
         uint256 componentId
     )
         external
-        returns(uint256 nftId);
+        returns(NftId id);
 
 
     function registerBundle(
@@ -61,21 +64,22 @@ interface IChainRegistry is
         uint256 expiryAt
     )
         external 
-        returns(uint256 nftId);
+        returns(NftId id);
 
     //--- view and pure functions ------------------//
+    function exists(NftId id) external view returns(bool);
 
     function chains() external view returns(uint256 numberOfChains);
     function getChainId(uint256 idx) external view returns(ChainId chain);
-    function getNftId(ChainId chain) external view returns(uint256 nftId);
+    function getNftId(ChainId chain) external view returns(NftId id);
 
     function objects(ChainId chain, ObjectType t) external view returns(uint256 numberOfObjects);
-    function getNftId(ChainId chain, ObjectType t, uint256 idx) external view returns(uint256 nftId);
+    function getNftId(ChainId chain, ObjectType t, uint256 idx) external view returns(NftId id);
 
-    function getNftInfo(uint256 nftId) external view returns(NftInfo memory);
+    function getNftInfo(NftId id) external view returns(NftInfo memory);
 
 
-    function getNftMetadata(uint256 nftId)
+    function getNftMetadata(NftId id)
         external 
         view 
         returns(
@@ -88,49 +92,47 @@ interface IChainRegistry is
             Blocknumber updatedIn,
             VersionPart [3] memory v);
 
-
+    // get nft id for registries, tokens and instances
     function getNftId(
         ChainId chain,
         address implementation
     )
         external
         view
-        returns(uint256 nftId);
+        returns(NftId id);
 
-
+    // get nft id for a given instanceId
     function getNftId(bytes32 instanceId)
         external
         view
-        returns(uint256 nftId);
+        returns(NftId id);
 
-
+    // get nft id for specified compnent coordinates
     function getComponentNftId(
         bytes32 instanceId, 
         uint256 componentId
     )
         external
         view
-        returns(uint256 nftId);
+        returns(NftId id);
 
-
+    // get nft id for specified bundle coordinates
     function getBundleNftId(
         bytes32 instanceId, 
         uint256 bundleId
     )
         external
         view
-        returns(uint256 nftId);
+        returns(NftId id);
 
 
-    // function decodeRegistryData(uint256 nftId)
-
-    function decodeTokenData(uint256 nftId)
+    function decodeTokenData(NftId id)
         external
         view
         returns(address token);
 
 
-    function decodeInstanceData(uint256 nftId)
+    function decodeInstanceData(NftId id)
         external
         view
         returns(
@@ -138,7 +140,7 @@ interface IChainRegistry is
             address registry);
 
 
-    function decodeComponentData(uint256 nftId)
+    function decodeComponentData(NftId id)
         external
         view
         returns(
@@ -147,7 +149,7 @@ interface IChainRegistry is
             address token);
 
 
-    function decodeBundleData(uint256 nftId)
+    function decodeBundleData(NftId id)
         external
         view
         returns(
@@ -162,7 +164,7 @@ interface IChainRegistry is
         pure
         returns(bool same);
 
-
+    // utilitiv function to probe an instance given its registry address
     function probeInstance(address registry)
         external 
         view 
