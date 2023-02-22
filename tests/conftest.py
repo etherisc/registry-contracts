@@ -9,6 +9,7 @@ from brownie import (
     DIP,
     DummyInstance,
     DummyRegistry,
+    UFixedMath,
     BaseTypes,
     Versionable,
     OwnableProxyAdmin,
@@ -159,6 +160,10 @@ def baseTypes(theOutsider) -> BaseTypes:
 @pytest.fixture(scope="module")
 def versionable(theOutsider) -> Versionable:
     return Versionable.deploy({'from': theOutsider})
+
+@pytest.fixture(scope="module")
+def math(theOutsider) -> UFixedMath:
+    return UFixedMath.deploy({'from': theOutsider})
 
 #=== chain registry fixtures ==================================================#
 
