@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 // restriction: uint<n> n needs to be different for each type to support function overloading
 type VersionPart is uint16;

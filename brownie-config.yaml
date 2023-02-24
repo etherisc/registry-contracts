@@ -17,7 +17,7 @@ networks:
 compiler:
     evm_version: null
     solc:
-        version: 0.8.18
+        version: 0.8.19
         optimizer:
             enabled: true
             runs: 200

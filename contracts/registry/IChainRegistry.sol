@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import "../shared/IBaseTypes.sol";
 
@@ -66,7 +66,9 @@ interface IChainRegistry is
         external 
         returns(NftId id);
 
+
     //--- view and pure functions ------------------//
+
     function exists(NftId id) external view returns(bool);
 
     function chains() external view returns(uint256 numberOfChains);

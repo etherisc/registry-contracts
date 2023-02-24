@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import "../registry/IInstanceRegistryFacade.sol";
 
-contract DummyRegistry is IInstanceRegistryFacade {
+contract MockRegistry is IInstanceRegistryFacade {
 
     address private _instanceService;
 

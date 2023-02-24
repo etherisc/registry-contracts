@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "../registry/IInstanceServiceFacade.sol";
-import "./DummyRegistry.sol";
+import "./MockRegistry.sol";
 
-contract DummyInstance is 
+contract MockInstance is 
     Ownable,
     IInstanceServiceFacade
 {

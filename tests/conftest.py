@@ -7,8 +7,8 @@ from brownie import (
     USD1,
     USD2,
     DIP,
-    DummyInstance,
-    DummyRegistry,
+    MockInstance,
+    MockRegistry,
     UFixedMath,
     BaseTypes,
     Versionable,
@@ -191,14 +191,14 @@ def chainRegistryV01(proxyAdmin) -> ChainRegistryV01:
 #=== gif instance fixtures ====================================================#
 
 @pytest.fixture(scope="module")
-def dummyInstance(instanceOperator) -> DummyInstance: 
-    return DummyInstance.deploy({'from': instanceOperator})
+def mockInstance(instanceOperator) -> MockInstance: 
+    return MockInstance.deploy({'from': instanceOperator})
 
 @pytest.fixture(scope="module")
-def dummyRegistry(dummyInstance): 
+def mockRegistry(mockInstance): 
     return contract_from_address(
-        DummyRegistry,
-        dummyInstance.getRegistry())
+        MockRegistry,
+        mockInstance.getRegistry())
 
 # @pytest.fixture(scope="module")
 # def instanceService(instance): return instance.getInstanceService()
