@@ -14,11 +14,11 @@ from brownie import (
     MockRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01,
-    StakingV01
+    StakingV01,
 )
 
 from scripts.const import ZERO_ADDRESS
-
+from scripts.util import contract_from_address
 
 # enforce function isolation for tests below
 @pytest.fixture(autouse=True)
@@ -57,6 +57,7 @@ def test_staking_basics(
     stakingV01Implementation: StakingV01,
     stakingV01: StakingV01,
     stakingOwner: Account,
+    dip: interface.IERC20Metadata,
     chainRegistryV01: ChainRegistryV01,
     registryOwner: Account,
     theOutsider: Account
@@ -108,3 +109,26 @@ def test_staking_basics(
     assert info['version'] == si.getVersion(0)
     assert info['implementation'] == si
     assert info['activatedBy'] == pao
+
+    # check max reward rate
+    maxRewardRateInt = s.maxRewardRate()
+    maxRewardRate = maxRewardRateInt / 10 ** s.rateDecimals()
+    assert maxRewardRate == 0.333
+
+    # check dip contract
+    dipContract = contract_from_address(interface.IERC20Metadata, s.getDip())
+    assert dipContract == dip
+    assert dipContract.symbol() == 'DIP'
+    assert dipContract.decimals() == 18
+
+    # check registry
+    registry = contract_from_address(ChainRegistryV01, s.getRegistry())
+    assert registry == r
+    assert registry.version() == r.version()
+    assert registry.owner() == r.owner()
+    assert registry.name() == 'Dezentralized Insurance Protocol Registry'
+    assert registry.symbol() == 'DIPR'
+
+    # check reward rate and dip reserves
+    assert s.rewardRate() == 0
+    assert s.rewardReserves() == 0

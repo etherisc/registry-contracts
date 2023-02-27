@@ -217,10 +217,19 @@ def stakingProxyAdmin(
         {'from': proxyAdminOwner});
 
 @pytest.fixture(scope="module")
-def stakingV01(stakingProxyAdmin, stakingOwner, chainRegistryV01) -> StakingV01:
+def stakingV01(
+    stakingProxyAdmin, 
+    stakingOwner, 
+    dip,
+    chainRegistryV01
+) -> StakingV01:
     staking = contract_from_address(
         StakingV01, 
         stakingProxyAdmin.getProxy())
+
+    staking.setDipContract(
+        dip,
+        {'from': stakingOwner})
 
     staking.setRegistry(
         chainRegistryV01,
