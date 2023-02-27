@@ -24,7 +24,7 @@ interface IStaking {
 
     //--- view and pure functions ------------------//
 
-    function stakingRate(ChainId chain, address token) external returns(UFixed stakingRate);
+    function stakingRate(ChainId chain, address token) external view returns(UFixed stakingRate);
     function rewardRate() external view returns(UFixed rewardRate);
     function rewardReserves() external view returns(uint256 dipAmount);
 

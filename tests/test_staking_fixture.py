@@ -58,6 +58,7 @@ def test_staking_basics(
     stakingV01: StakingV01,
     stakingOwner: Account,
     dip: interface.IERC20Metadata,
+    usd1: USD1,
     chainRegistryV01: ChainRegistryV01,
     registryOwner: Account,
     theOutsider: Account
@@ -132,3 +133,6 @@ def test_staking_basics(
     # check reward rate and dip reserves
     assert s.rewardRate() == 0
     assert s.rewardReserves() == 0
+
+    chain = registry.toChainId(web3.chain_id)
+    s.stakingRate(chain, usd1) == 0

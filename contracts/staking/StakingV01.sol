@@ -44,6 +44,20 @@ contract StakingV01 is
     UFixed internal _rewardRate;
     UFixed internal _rewardRateMax;
 
+
+    modifier onlyApprovedToken(ChainId chain, address token) {
+        NftId id = _registryV01.getNftId(chain, token);
+        require(gtz(id), "ERROR:STK-001:NOT_REGISTERED");
+        IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(id);
+        require(info.t == _registryV01.TOKEN(), "ERROR:STK-002:NOT_TOKEN");
+        require(
+            info.state == IChainRegistry.ObjectState.Approved, 
+            "ERROR:STK-003:TOKEN_NOT_APPROVED");
+        _;
+    }
+
+
+
     // IMPORTANT 1. version needed for upgradable versions
     // _activate is using this to check if this is a new version
     // and if this version is higher than the last activated version
@@ -112,17 +126,18 @@ contract StakingV01 is
     }
 
 
-    function setStakingRate(ChainId chain, address token, UFixed rate)
+    function setStakingRate(
+        ChainId chain,
+        address token,
+        UFixed newStakingRate
+    )
         external
         virtual override
         onlyOwner
+        onlyApprovedToken(chain, token)
     {
-        // TODO refactor from old impl
-        // require(_registry.isRegisteredToken(token, chainId), "ERROR:STK-020:TOKEN_NOT_REGISTERED");
-        // require(newStakingRate > 0, "ERROR:STK-021:STAKING_RATE_ZERO");
-
-        // uint256 oldStakingRate = _stakingRate[token][chainId];
-        // _stakingRate[token][chainId] = newStakingRate;
+        require(gtz(newStakingRate), "ERROR:STK-060:STAKING_RATE_ZERO");
+        _stakingRate[chain][token] = newStakingRate;
     }
 
 
@@ -167,9 +182,10 @@ contract StakingV01 is
     function stakingRate(ChainId chain, address token)
         external 
         virtual override
+        view
         returns(UFixed rate)
     {
-
+        return _stakingRate[chain][token];
     }
 
 

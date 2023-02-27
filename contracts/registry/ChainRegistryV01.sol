@@ -354,6 +354,7 @@ contract ChainRegistryV01 is
             address owner,
             uint256 chainId,
             ObjectType t,
+            ObjectState state,
             bytes memory data,
             Blocknumber mintedIn,
             Blocknumber updatedIn,
@@ -375,6 +376,7 @@ contract ChainRegistryV01 is
             ownerOf(NftId.unwrap(id)),
             toInt(info.chain),
             info.t,
+            info.state,
             info.data,
             info.mintedIn,
             info.updatedIn,
@@ -796,6 +798,13 @@ contract ChainRegistryV01 is
         info.mintedIn = blockNumber();
         info.updatedIn = blockNumber();
         info.version = version();
+
+        if(to == owner()) {
+            info.state = ObjectState.Approved;
+        } else {
+            // TODO deal with special case self registered bundles
+            info.state = ObjectState.Proposed;
+        }
 
         // store data if provided        
         if(data.length > 0) {

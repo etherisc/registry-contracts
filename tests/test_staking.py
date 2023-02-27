@@ -125,3 +125,45 @@ def test_reward_reserves(
     assert dip.balanceOf(theOutsider) == 0
     assert dip.balanceOf(stakingOwner) == partial_reserves + remaining_reserves
     assert dip.balanceOf(stakingOwner) == reserves
+
+
+def test_staking_rate(
+    stakingV01: StakingV01,
+    stakingOwner: Account,
+    registryOwner: Account,
+    usd1: USD1,
+    theOutsider: Account
+):
+    s = stakingV01
+    r = contract_from_address(ChainRegistryV01, s.getRegistry())
+    chain = r.toChainId(web3.chain_id)
+
+    sr00 = stakingV01.toRate(0, 0)
+    sr01 = stakingV01.toRate(1, -2)
+    sr10 = stakingV01.toRate(1, -1)
+
+    assert s.stakingRate(chain, usd1) == sr00
+
+    # check restriction to owner
+    with brownie.reverts('Ownable: caller is not the owner'):
+        s.setStakingRate(chain, usd1, sr00, {'from': theOutsider})
+
+    # check restriction to registered tokens
+    with brownie.reverts('ERROR:STK-001:NOT_REGISTERED'):
+        s.setStakingRate(chain, usd1, sr00, {'from': stakingOwner})
+
+    r.registerToken(chain, usd1, {'from': registryOwner})
+
+    # check restriction to staking rates > 0
+    with brownie.reverts('ERROR:STK-060:STAKING_RATE_ZERO'):
+        s.setStakingRate(chain, usd1, sr00, {'from': stakingOwner})
+
+    # check happy case
+    s.setStakingRate(chain, usd1, sr01, {'from': stakingOwner})
+    assert s.stakingRate(chain, usd1) == sr01
+    assert s.stakingRate(chain, usd1) / 10 ** s.rateDecimals() == 0.01
+
+    # check chaning staking rate is possible
+    s.setStakingRate(chain, usd1, sr10, {'from': stakingOwner})
+    assert s.stakingRate(chain, usd1) == sr10
+    assert s.stakingRate(chain, usd1) / 10 ** s.rateDecimals() == 0.1
