@@ -10,8 +10,8 @@ from brownie import (
     USD1,
     USD2,
     DIP,
-    DummyInstance,
-    DummyRegistry,
+    MockInstance,
+    MockRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01
 )

@@ -9,7 +9,7 @@ from brownie import (
     DIP,
     MockInstance,
     MockRegistry,
-    UFixedMath,
+    UFixedMathTest,
     BaseTypes,
     Versionable,
     OwnableProxyAdmin,
@@ -162,8 +162,8 @@ def versionable(theOutsider) -> Versionable:
     return Versionable.deploy({'from': theOutsider})
 
 @pytest.fixture(scope="module")
-def math(theOutsider) -> UFixedMath:
-    return UFixedMath.deploy({'from': theOutsider})
+def math(theOutsider) -> UFixedMathTest:
+    return UFixedMathTest.deploy({'from': theOutsider})
 
 #=== chain registry fixtures ==================================================#
 

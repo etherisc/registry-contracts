@@ -10,8 +10,8 @@ from brownie import (
     USD1,
     USD2,
     DIP,
-    DummyInstance,
-    DummyRegistry,
+    MockInstance,
+    MockRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01
 )
@@ -89,8 +89,8 @@ def test_register_token(
 
 
 def test_register_instance(
-    dummyInstance: DummyInstance,
-    dummyRegistry: DummyRegistry,
+    mockInstance: MockInstance,
+    mockRegistry: MockRegistry,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
     chainRegistryV01: ChainRegistryV01,
@@ -99,46 +99,46 @@ def test_register_instance(
 ):
     with brownie.reverts('Ownable: caller is not the owner'):
         chainRegistryV01.registerInstance(
-            dummyRegistry,
-            "dummyRegistry TEST",
+            mockRegistry,
+            "mockRegistry TEST",
             {'from': theOutsider})
 
     with brownie.reverts('ERROR:CRG-300:REGISTRY_ADDRESS_ZERO'):
         chainRegistryV01.registerInstance(
             ZERO_ADDRESS,
-            "dummyRegistry TEST",
+            "mockRegistry TEST",
             {'from': registryOwner})
 
     with brownie.reverts('ERROR:CRG-301:REGISTRY_NOT_CONTRACT'):
         chainRegistryV01.registerInstance(
             theOutsider,
-            "dummyRegistry TEST",
+            "mockRegistry TEST",
             {'from': registryOwner})
 
     chainRegistryV01.registerInstance(
-        dummyRegistry,
-        "dummyRegistry TEST",
+        mockRegistry,
+        "mockRegistry TEST",
         {'from': registryOwner})
 
-    instance_id = dummyInstance.getInstanceId()
+    instance_id = mockInstance.getInstanceId()
 
     nft_id = chainRegistryV01.getNftId['bytes32'](instance_id)
     assert nft_id > 0
 
     data = chainRegistryV01.decodeInstanceData(nft_id).dict()
     assert data['instanceId'] == instance_id
-    assert data['registry'] == dummyRegistry
+    assert data['registry'] == mockRegistry
 
     with brownie.reverts('ERROR:CRG-304:INSTANCE_ALREADY_REGISTERED'):
         chainRegistryV01.registerInstance(
-            dummyRegistry,
-            "dummyRegistry TEST",
+            mockRegistry,
+            "mockRegistry TEST",
             {'from': registryOwner})
 
 
 def test_register_component(
-    dummyInstance: DummyInstance,
-    dummyRegistry: DummyRegistry,
+    mockInstance: MockInstance,
+    mockRegistry: MockRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -146,7 +146,7 @@ def test_register_component(
     registryOwner: Account,
     theOutsider: Account
 ):
-    instance_id = dummyInstance.getInstanceId()
+    instance_id = mockInstance.getInstanceId()
     component_id = 1
 
     with brownie.reverts('ERROR:CRG-005:INSTANCE_NOT_REGISTERED'):
@@ -156,8 +156,8 @@ def test_register_component(
             {'from': registryOwner})
 
     chainRegistryV01.registerInstance(
-        dummyRegistry,
-        "dummyRegistry TEST",
+        mockRegistry,
+        "mockRegistry TEST",
         {'from': registryOwner})
 
     with brownie.reverts('ERROR:DIS-010:COMPONENT_UNKNOWN'):
@@ -174,7 +174,7 @@ def test_register_component(
     state_active = 3
     state_paused = 4
 
-    dummyInstance.setComponentInfo(
+    mockInstance.setComponentInfo(
         component_id,
         type_riskpool,
         state_active,
@@ -188,7 +188,7 @@ def test_register_component(
             {'from': registryOwner})
 
     # register token
-    chain_id = chainRegistryV01.toChainId(dummyInstance.getChainId())
+    chain_id = chainRegistryV01.toChainId(mockInstance.getChainId())
     chainRegistryV01.registerToken(
             chain_id,
             usd2,
@@ -216,8 +216,8 @@ def test_register_component(
 
 
 def test_register_bundle(
-    dummyInstance: DummyInstance,
-    dummyRegistry: DummyRegistry,
+    mockInstance: MockInstance,
+    mockRegistry: MockRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -225,13 +225,13 @@ def test_register_bundle(
     registryOwner: Account,
     theOutsider: Account
 ):
-    instance_id = dummyInstance.getInstanceId()
+    instance_id = mockInstance.getInstanceId()
     riskpool_id = 1
     riskpool_id2 = 2
 
     chainRegistryV01.registerInstance(
-        dummyRegistry,
-        "dummyRegistry TEST",
+        mockRegistry,
+        "mockRegistry TEST",
         {'from': registryOwner})
 
     # attempt direct registration of bundle
@@ -257,14 +257,14 @@ def test_register_bundle(
     state_active = 3
     state_paused = 4
 
-    dummyInstance.setComponentInfo(
+    mockInstance.setComponentInfo(
         riskpool_id,
         type_riskpool,
         state_paused,
         usd2)
 
     # register token
-    chain_id = chainRegistryV01.toChainId(dummyInstance.getChainId())
+    chain_id = chainRegistryV01.toChainId(mockInstance.getChainId())
     chainRegistryV01.registerToken(
             chain_id,
             usd2,
@@ -287,13 +287,13 @@ def test_register_bundle(
             {'from': theOutsider})
 
     # activate riskpool
-    dummyInstance.setComponentInfo(
+    mockInstance.setComponentInfo(
         riskpool_id,
         type_riskpool,
         state_active,
         usd2)
 
-    dummyInstance.setComponentInfo(
+    mockInstance.setComponentInfo(
         riskpool_id2,
         type_riskpool,
         state_active,
@@ -310,12 +310,12 @@ def test_register_bundle(
             {'from': theOutsider})
 
     # register bundle
-    dummyInstance.setBundleInfo(
+    mockInstance.setBundleInfo(
         bundle_id,
         riskpool_id,
         10000)
 
-    dummyInstance.setBundleInfo(
+    mockInstance.setBundleInfo(
         bundle_id2,
         riskpool_id2,
         20000)

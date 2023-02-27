@@ -1,7 +1,5 @@
 import pytest
-
-from brownie import UFixedMath
-
+import brownie
 
 # enforce function isolation for tests below
 @pytest.fixture(autouse=True)
@@ -84,6 +82,12 @@ def test_sub(math):
     check_addsub(3, -2, 1, math)
     check_addsub(BIG, -1, BIG - 1, math)
 
+    a = math.itof(1)
+    b = math.itof(2)
+
+    with brownie.reverts('ERROR:UFM-010:NEGATIVE_RESULT'):
+        math.sub(a, b)
+
 
 def test_mul(math):
     check_muldiv(0, 0, 0, 'mul', math)
@@ -107,6 +111,12 @@ def test_div(math):
     check_muldiv(2, 2, 1, 'div', math)
     check_muldiv(BIG, BIG, 1, 'div', math)
 
+    a = math.itof(1)
+    b = math.itof(0)
+
+    with brownie.reverts('ERROR:UFM-020:DIVISOR_ZERO'):
+        math.div(a, b)
+
 
 def test_mul_frac(math):
     # 1/2 * 1/3 == 1/6
@@ -116,12 +126,12 @@ def test_mul_frac(math):
 
     x = math.mul(one_half, one_third)
     assert math.eq(x, one_6th) is True
-    assert math.delta(x, one_6th) == 0
+    assert math.dlt(x, one_6th) == 0
 
     # 1/3 * 1/3 == 1/9
     x = math.mul(one_third, one_third)
     x_expected = to_frac(1, 9, math)
-    assert math.delta(x, x_expected) == 1
+    assert math.dlt(x, x_expected) == 1
 
     # 3/4 * 4/5 == 3/5
     three_4th = to_frac(3, 4, math)
@@ -129,7 +139,7 @@ def test_mul_frac(math):
     x = math.mul(three_4th, four_5th)
     x_expected = to_frac(3 * 4, 4 * 5, math)
     assert math.eq(x, x_expected) is True
-    assert math.delta(x, x_expected) == 0
+    assert math.dlt(x, x_expected) == 0
 
     # 1.25% of 3.1415926536
     p = 0.0125
@@ -140,7 +150,7 @@ def test_mul_frac(math):
     x = math.mul(pf, pif)
     x_expected = math.multiplier() * p * pi
     assert math.eq(x, x_expected) is True
-    assert math.delta(x, x_expected) == 0
+    assert math.dlt(x, x_expected) == 0
 
 
 def to_frac(a, b, math):
@@ -186,9 +196,9 @@ def check_op(a, b, op, math):
     elif op == 'gt':
         assert math.gt(af, bf)
     elif op == 'gtz':
-        assert math.gtz(af)
+        assert math.gtzUFixed(af)
     elif op == 'eqz':
-        assert math.eqz(af)
+        assert math.eqzUFixed(af)
 
 
 def check_itof(a, math):

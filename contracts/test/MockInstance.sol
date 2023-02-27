@@ -20,11 +20,11 @@ contract MockInstance is
 
     mapping(uint256 componentId => ComponentInfo info) _component;
     mapping(uint256 bundleId => Bundle bundle) _bundle;
-    DummyRegistry private _registry;
+    MockRegistry private _registry;
 
 
     constructor() Ownable() { 
-        _registry = new DummyRegistry();
+        _registry = new MockRegistry();
         _registry.setInstanceServiceAddress(address(this));
     }
 
@@ -65,7 +65,7 @@ contract MockInstance is
     function getRegistry()
         external
         view
-        returns(DummyRegistry registry)
+        returns(MockRegistry registry)
     {
         return _registry;
     }

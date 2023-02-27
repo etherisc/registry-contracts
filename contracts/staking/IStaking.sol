@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "../shared/IBaseTypes.sol";
-import "../shared/IUFixedMath.sol";
+import "../shared/UFixedMath.sol";
 import "../registry/IChainRegistry.sol";
 
 interface IStaking {

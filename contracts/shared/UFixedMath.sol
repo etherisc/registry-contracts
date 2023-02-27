@@ -2,11 +2,89 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./IUFixedMath.sol";
 
-contract UFixedMath is
-    IUFixedMath
-{
+type UFixed is uint256;
+
+using {
+    addUFixed as +,
+    subUFixed as -,
+    mulUFixed as *,
+    divUFixed as /,
+    gtUFixed as >,
+    gteUFixed as >=,
+    ltUFixed as <,
+    lteUFixed as <=,
+    eqUFixed as ==
+}
+    for UFixed global;
+
+function addUFixed(UFixed a, UFixed b) pure returns(UFixed) {
+    return UFixed.wrap(UFixed.unwrap(a) + UFixed.unwrap(b));
+}
+
+function subUFixed(UFixed a, UFixed b) pure returns(UFixed) {
+    require(a >= b, "ERROR:UFM-010:NEGATIVE_RESULT");
+
+    return UFixed.wrap(UFixed.unwrap(a) - UFixed.unwrap(b));
+}
+
+function mulUFixed(UFixed a, UFixed b) pure returns(UFixed) {
+    return UFixed.wrap(Math.mulDiv(UFixed.unwrap(a), UFixed.unwrap(b), 10 ** 18));
+}
+
+function divUFixed(UFixed a, UFixed b) pure returns(UFixed) {
+    require(UFixed.unwrap(b) > 0, "ERROR:UFM-020:DIVISOR_ZERO");
+
+    return UFixed.wrap(
+        Math.mulDiv(
+            UFixed.unwrap(a), 
+            10 ** 18,
+            UFixed.unwrap(b)));
+}
+
+function gtUFixed(UFixed a, UFixed b) pure returns(bool isGreaterThan) {
+    return UFixed.unwrap(a) > UFixed.unwrap(b);
+}
+
+function gteUFixed(UFixed a, UFixed b) pure returns(bool isGreaterThan) {
+    return UFixed.unwrap(a) >= UFixed.unwrap(b);
+}
+
+function ltUFixed(UFixed a, UFixed b) pure returns(bool isGreaterThan) {
+    return UFixed.unwrap(a) < UFixed.unwrap(b);
+}
+
+function lteUFixed(UFixed a, UFixed b) pure returns(bool isGreaterThan) {
+    return UFixed.unwrap(a) <= UFixed.unwrap(b);
+}
+
+function eqUFixed(UFixed a, UFixed b) pure returns(bool isEqual) {
+    return UFixed.unwrap(a) == UFixed.unwrap(b);
+}
+
+function gtz(UFixed a) pure returns(bool isZero) {
+    return UFixed.unwrap(a) > 0;
+}
+
+function eqz(UFixed a) pure returns(bool isZero) {
+    return UFixed.unwrap(a) == 0;
+}
+
+function delta(UFixed a, UFixed b) pure returns(UFixed) {
+    if(a > b) {
+        return a - b;
+    }
+
+    return b - a;
+}
+
+contract UFixedBase {
+
+    enum Rounding {
+        Down, // floor(value)
+        Up, // = ceil(value)
+        HalfUp // = floor(value + 0.5)
+    }
 
     int8 public constant EXP = 18;
     uint256 public constant MULTIPLIER = 10 ** uint256(int256(EXP));
@@ -14,20 +92,22 @@ contract UFixedMath is
     
     Rounding public constant ROUNDING_DEFAULT = Rounding.HalfUp;
 
+    function decimals() public pure returns(uint256) {
+        return uint8(EXP);
+    }
+
     function itof(uint256 a)
         public
-        override
         pure
-        returns(UFixed af)
+        returns(UFixed)
     {
         return UFixed.wrap(a * MULTIPLIER);
     }
 
     function itof(uint256 a, int8 exp)
         public
-        override
         pure
-        returns(UFixed af)
+        returns(UFixed)
     {
         require(EXP + exp >= 0, "ERROR:FM-010:EXPONENT_TOO_SMALL");
         require(EXP + exp <= 2 * EXP, "ERROR:FM-011:EXPONENT_TOO_LARGE");
@@ -35,109 +115,25 @@ contract UFixedMath is
         return UFixed.wrap(a * 10 ** uint8(EXP + exp));
     }
 
-    function ftoi(UFixed af)
+    function ftoi(UFixed a)
         public
-        override
         pure
-        returns(uint256 a)
+        returns(uint256)
     {
-        return ftoi(af, ROUNDING_DEFAULT);
+        return ftoi(a, ROUNDING_DEFAULT);
     }
 
-    function ftoi(UFixed af, Rounding rounding)
+    function ftoi(UFixed a, Rounding rounding)
         public
-        override
         pure
-        returns(uint256 a)
+        returns(uint256)
     {
         if(rounding == Rounding.HalfUp) {
-            return Math.mulDiv(UFixed.unwrap(af) + MULTIPLIER_HALF, 1, MULTIPLIER, Math.Rounding.Down);
+            return Math.mulDiv(UFixed.unwrap(a) + MULTIPLIER_HALF, 1, MULTIPLIER, Math.Rounding.Down);
         } else if(rounding == Rounding.Down) {
-            return Math.mulDiv(UFixed.unwrap(af), 1, MULTIPLIER, Math.Rounding.Down);
+            return Math.mulDiv(UFixed.unwrap(a), 1, MULTIPLIER, Math.Rounding.Down);
         } else {
-            return Math.mulDiv(UFixed.unwrap(af), 1, MULTIPLIER, Math.Rounding.Up);
+            return Math.mulDiv(UFixed.unwrap(a), 1, MULTIPLIER, Math.Rounding.Up);
         }
-    }
-
-    function add(UFixed af, UFixed bf) 
-        public
-        override
-        pure
-        returns(UFixed abf)
-    {
-        return UFixed.wrap(
-            UFixed.unwrap(af) + UFixed.unwrap(bf));
-    }
-
-    function sub(UFixed af, UFixed bf) 
-        public
-        override
-        pure
-        returns(UFixed abf)
-    {
-        return UFixed.wrap(
-            UFixed.unwrap(af) - UFixed.unwrap(bf));
-    }
-
-    function delta(UFixed af, UFixed bf) 
-        public
-        override
-        pure
-        returns(UFixed abf)
-    {
-        if(gt(af, bf)) {
-            return sub(af, bf);
-        }
-
-        return sub(bf, af);
-    }
-
-    function mul(UFixed af, UFixed bf) 
-        public
-        override
-        pure
-        returns(UFixed abf)
-    {
-        return UFixed.wrap(
-            Math.mulDiv(
-                UFixed.unwrap(af), 
-                UFixed.unwrap(bf), 
-                MULTIPLIER));
-    }
-
-
-    function div(UFixed af, UFixed bf) 
-        public
-        override
-        pure
-        returns(UFixed abf)
-    {
-        require(gtz(bf), "ERROR:FM-020:DIVISOR_ZERO");
-        return UFixed.wrap(
-            Math.mulDiv(
-                UFixed.unwrap(af), 
-                MULTIPLIER,
-                UFixed.unwrap(bf)));
-    }
-
-
-    function gt(UFixed af, UFixed bf) public override pure returns(bool isGreaterThan) {
-        return UFixed.unwrap(af) > UFixed.unwrap(bf);
-    }
-
-    function eq(UFixed af, UFixed bf) public override pure returns(bool isEqual) {
-        return UFixed.unwrap(af) == UFixed.unwrap(bf);
-    }
-
-    function gtz(UFixed af) public override pure returns(bool isZero) {
-        return UFixed.unwrap(af) > 0;
-    }
-
-    function eqz(UFixed af) public override pure returns(bool isZero) {
-        return UFixed.unwrap(af) == 0;
-    }
-
-    function multiplier() public override pure returns(uint256 multiplier) {
-        return MULTIPLIER;
     }
 }
