@@ -13,11 +13,16 @@ interface IStaking {
     function setRewardRate(UFixed rewardRate) external;
     function increaseRewardReserves(Amount dips) external;
 
-    function stake(NftId target, Amount dips) external;
-    function unstake(NftId target, Amount dips) external;  
-    function unstakeAndClaimRewards(NftId target) external;
-    function claimRewards(NftId target) external;
+    // TODO implement
+    // function stake(NftId target, Amount dips) external;
+    // function unstake(NftId target, Amount dips) external;  
+    // function unstakeAndClaimRewards(NftId target) external;
+    // function claimRewards(NftId target) external;
 
     //--- view and pure functions ------------------//
+
+    function stakingRate(ChainId chain, address token) external returns(UFixed stakingRate);
+    function rewardRate() external returns(UFixed rewardRate);
+    function rewardReserves() external returns(Amount dips);
 
 }

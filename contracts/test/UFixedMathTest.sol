@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "../shared/UFixedMath.sol";
 
-contract UFixedMathTest is UFixedBase {
+contract UFixedMathTest is UFixedType {
 
     function add(UFixed a, UFixed b) external pure returns(UFixed) {
         return a + b;

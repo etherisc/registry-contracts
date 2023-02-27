@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "../shared/IBaseTypes.sol";
+import "../shared/VersionType.sol";
 
 import "./IInstanceRegistryFacade.sol";
 import "./IInstanceServiceFacade.sol";

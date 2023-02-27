@@ -15,6 +15,7 @@ from brownie import (
     OwnableProxyAdmin,
     ChainRegistryV01,
     ChainRegistryV02,
+    StakingV01,
 )
 
 from brownie.network import accounts
@@ -34,8 +35,10 @@ from scripts.const import (
     CUSTOMER1,
     CUSTOMER2,
     REGISTRY_OWNER,
+    STAKING_OWNER,
     PROXY_ADMIN_OWNER,
-    STAKER,
+    STAKER1,
+    STAKER2,
     OUTSIDER,
     GIF_ACTOR
 )
@@ -129,8 +132,16 @@ def registryOwner(accounts) -> Account:
     return get_filled_account(accounts, GIF_ACTOR[REGISTRY_OWNER])
 
 @pytest.fixture(scope="module")
-def proxyAdmin(accounts) -> Account:
-    return get_filled_account(accounts, GIF_ACTOR[PROXY_ADMIN])
+def stakingOwner(accounts) -> Account:
+    return get_filled_account(accounts, GIF_ACTOR[STAKING_OWNER])
+
+@pytest.fixture(scope="module")
+def staker(accounts) -> Account:
+    return get_filled_account(accounts, GIF_ACTOR[STAKER1])
+
+@pytest.fixture(scope="module")
+def staker2(accounts) -> Account:
+    return get_filled_account(accounts, GIF_ACTOR[STAKER2])
 
 @pytest.fixture(scope="module")
 def proxyAdminOwner(accounts) -> Account:
@@ -187,6 +198,35 @@ def chainRegistryV01(proxyAdmin) -> ChainRegistryV01:
     return contract_from_address(
         ChainRegistryV01, 
         proxyAdmin.getProxy())
+
+#=== staking fixtures ==================================================#
+
+@pytest.fixture(scope="module")
+def stakingV01Implementation(theOutsider) -> StakingV01:
+    return StakingV01.deploy({'from': theOutsider})
+
+@pytest.fixture(scope="module")
+def stakingProxyAdmin(
+    stakingV01Implementation,
+    stakingOwner,
+    proxyAdminOwner
+) -> OwnableProxyAdmin:
+    return OwnableProxyAdmin.deploy(
+        stakingV01Implementation,
+        stakingOwner,
+        {'from': proxyAdminOwner});
+
+@pytest.fixture(scope="module")
+def stakingV01(stakingProxyAdmin, stakingOwner, chainRegistryV01) -> StakingV01:
+    staking = contract_from_address(
+        StakingV01, 
+        stakingProxyAdmin.getProxy())
+
+    staking.setRegistry(
+        chainRegistryV01,
+        {'from': stakingOwner})
+
+    return staking
 
 #=== gif instance fixtures ====================================================#
 

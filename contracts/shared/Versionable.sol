@@ -4,15 +4,12 @@ pragma solidity ^0.8.19;
 import "@openzeppelin-upgradeable/contracts/utils/StringsUpgradeable.sol";
 
 import "./BaseTypes.sol";
+import "./VersionType.sol";
 
-contract Versionable is
-    BaseTypes
-{
-    using StringsUpgradeable for uint16; 
+contract Versionable is BaseTypes {
 
     struct VersionInfo {
         Version version;
-        string versionString;
         address implementation;
         address activatedBy; // tx.origin
         Blocknumber activatedIn;
@@ -59,7 +56,7 @@ contract Versionable is
         if(_versions.length > 0) {
             Version lastVersion = _versions[_versions.length - 1];
             require(
-                versionsAreIncreasing(lastVersion, thisVersion),
+                thisVersion > lastVersion,
                 "ERROR:VRN-002:VERSION_NOT_INCREASING"
             );
         }
@@ -68,7 +65,6 @@ contract Versionable is
         _versions.push(thisVersion);
         _versionHistory[thisVersion] = VersionInfo(
             thisVersion,
-            toString(thisVersion),
             implementation,
             activatedBy,
             blockNumber(),
@@ -86,7 +82,21 @@ contract Versionable is
 
     // returns current version (ideally immutable)
     function version() public virtual pure returns(Version) {
-        return toVersion(toPart(0), toPart(0), toPart(0));
+        return zeroVersion();
+    }
+
+
+    function versionParts()
+        external
+        virtual 
+        view
+        returns(
+            VersionPart major,
+            VersionPart minor,
+            VersionPart patch
+        )
+    {
+        return toVersionParts(version());
     }
 
 
@@ -104,105 +114,5 @@ contract Versionable is
     function getVersionInfo(Version _version) external view returns(VersionInfo memory) {
         require(isActivated(_version), "ERROR:VRN-020:VERSION_UNKNOWN");
         return _versionHistory[_version];
-    }
-
-
-    function versionsAreIdentical(
-        Version versionA,
-        Version versionB
-    )
-        public
-        pure
-        returns(bool)
-    {
-        return toInt(versionA) == toInt(versionB);
-    }
-
-
-    function versionsAreIncreasing(
-        Version oldVersion,
-        Version newVersion
-    )
-        public
-        pure
-        returns(bool)
-    {
-        return toInt(oldVersion) < toInt(newVersion);
-    }
-
-
-    function toVersion(
-        VersionPart major,
-        VersionPart minor,
-        VersionPart patch
-    )
-        public
-        pure
-        returns(Version)
-    {
-        uint majorInt = toInt(major);
-        uint minorInt = toInt(minor);
-        uint patchInt = toInt(patch);
-
-        return Version.wrap(
-            uint48(
-                (majorInt << 32) + (minorInt << 16) + patchInt));
-    }
-
-    function toString(Version _version)
-        public
-        pure
-        returns(string memory versionString)
-    {
-        (
-            VersionPart major,
-            VersionPart minor,
-            VersionPart patch
-        ) = toVersionParts(_version);
-
-        return string(
-            abi.encodePacked(
-                "v", toString(major),
-                ".", toString(minor),
-                ".", toString(patch)));
-    }
-
-
-    function toString(VersionPart part) public pure returns(string memory partString) {
-        uint16 partInt = VersionPart.unwrap(part);
-        return StringsUpgradeable.toString(partInt);
-    }
-
-
-    function toVersionParts(Version _version)
-        public
-        pure
-        returns(
-            VersionPart major,
-            VersionPart minor,
-            VersionPart patch
-        )
-    {
-        uint versionInt = toInt(_version);
-        uint16 majorInt = uint16(versionInt >> 32);
-
-        versionInt -= majorInt << 32;
-        uint16 minorInt = uint16(versionInt >> 16);
-        uint16 patchInt = uint16(versionInt - (minorInt << 16));
-
-        return (
-            toPart(majorInt),
-            toPart(minorInt),
-            toPart(patchInt)
-        );
-    }
-
-
-    function toPart(uint16 versionPart)
-        public
-        pure
-        returns(VersionPart)
-    {
-        return VersionPart.wrap(versionPart);
     }
 }

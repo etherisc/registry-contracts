@@ -10,8 +10,6 @@ contract BaseTypes is IBaseTypes {
         return abi.encodePacked(uint16(x << shift));
     }
 
-    function toInt(VersionPart x) public override pure returns(uint) { return VersionPart.unwrap(x); }
-    function toInt(Version x) public override pure returns(uint) { return Version.unwrap(x); }
     function toInt(Blocknumber x) public override pure returns(uint) { return Blocknumber.unwrap(x); }
     function toInt(Timestamp x) public override pure returns(uint) { return Timestamp.unwrap(x); }
     function toInt(Amount x) public override pure returns(uint) { return Amount.unwrap(x); }

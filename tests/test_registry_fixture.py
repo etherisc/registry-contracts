@@ -39,7 +39,7 @@ def test_registry_implementation(
     # check current version
     assert ri.version() == 2 ** 16
 
-    (major, minor, patch) = ri.toVersionParts(ri.version())
+    (major, minor, patch) = ri.versionParts()
     assert (major, minor, patch) == (0, 1, 0)
 
     # check version info after deploy
@@ -51,7 +51,6 @@ def test_registry_implementation(
 
     info = ri.getVersionInfo(ri.getVersion(0)).dict()
     assert info['version'] == ri.getVersion(0)
-    assert info['versionString'] == 'v0.1.0'
     assert info['implementation'] == chainRegistryV01Implementation
     assert info['activatedBy'] == theOutsider
 
@@ -152,7 +151,7 @@ def test_registry_basics(
     # check current version
     assert r.version() == 2 ** 16
 
-    (major, minor, patch) = ri.toVersionParts(ri.version())
+    (major, minor, patch) = ri.versionParts()
     assert (major, minor, patch) == (0, 1, 0)
 
     # check version info after deploy
@@ -164,6 +163,5 @@ def test_registry_basics(
 
     info = r.getVersionInfo(ri.getVersion(0)).dict()
     assert info['version'] == ri.getVersion(0)
-    assert info['versionString'] == 'v0.1.0'
     assert info['implementation'] == chainRegistryV01Implementation
     assert info['activatedBy'] == pao

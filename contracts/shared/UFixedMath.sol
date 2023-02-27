@@ -78,7 +78,7 @@ function delta(UFixed a, UFixed b) pure returns(UFixed) {
     return b - a;
 }
 
-contract UFixedBase {
+contract UFixedType {
 
     enum Rounding {
         Down, // floor(value)

@@ -84,7 +84,6 @@ def test_deploy_demo_v1(
 
     info = upgradableDemo.getVersionInfo(demoV10.version()).dict()
     assert info['version'] == demoV10.version()
-    assert info['versionString'] == 'v1.0.0'
     assert info['implementation'] == demoV10
     assert info['activatedBy'] == proxyAdminOwner
     assert info['activatedIn'] == block_number_v10
@@ -154,7 +153,6 @@ def test_deploy_demo_v1(
 
     info = upgradableDemo.getVersionInfo(demoV11.version()).dict()
     assert info['version'] == demoV11.version()
-    assert info['versionString'] == 'v1.1.0'
     assert info['implementation'] == demoV11
     assert info['activatedBy'] == proxyAdminOwner
     assert info['activatedIn'] == block_number_v11
@@ -203,7 +201,6 @@ def test_deploy_demo_v1(
 
     info = upgradableDemo.getVersionInfo(demoV111.version()).dict()
     assert info['version'] == demoV111.version()
-    assert info['versionString'] == 'v1.1.1'
     assert info['implementation'] == demoV111
     assert info['activatedBy'] == proxyAdminOwnerSuccessor
     assert info['activatedIn'] == block_number_v111

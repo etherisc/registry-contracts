@@ -13,6 +13,6 @@ contract DemoV09 is
     // _activate is using this to check if this is a new version
     // and if this version is higher than the last activated version
     function version() public override virtual pure returns(Version) {
-        return toVersion(toPart(0), toPart(9), toPart(0));
+        return toVersion(toVersionPart(0), toVersionPart(9), toVersionPart(0));
     }
 }

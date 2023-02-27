@@ -51,7 +51,9 @@ CUSTOMER1 = 'customer1'
 CUSTOMER2 = 'customer2'
 REGISTRY_OWNER = 'registryOwner'
 PROXY_ADMIN_OWNER = 'proxyAdminOwner',
-STAKER = 'staker'
+STAKING_OWNER = 'stakingOwner'
+STAKER1 = 'staker1'
+STAKER2 = 'staker2'
 OUTSIDER = 'outsider'
 
 GIF_ACTOR = {
@@ -66,9 +68,11 @@ GIF_ACTOR = {
     INSURER: 8,
     CUSTOMER1: 9,
     CUSTOMER2: 10,
-    REGISTRY_OWNER: 15,
-    PROXY_ADMIN_OWNER: 16,
-    STAKER: 17,
+    REGISTRY_OWNER: 14,
+    PROXY_ADMIN_OWNER: 15,
+    STAKING_OWNER: 16,
+    STAKER1: 17,
+    STAKER2: 18,
     OUTSIDER: 19,
 }
 
