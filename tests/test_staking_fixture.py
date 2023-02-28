@@ -110,7 +110,7 @@ def test_staking_basics(
     assert info['version'] == si.getVersion(0)
     assert info['implementation'] == si
     assert info['activatedBy'] == pao
-
+    
     # check max reward rate
     maxRewardRateInt = s.maxRewardRate()
     maxRewardRate = maxRewardRateInt / 10 ** s.rateDecimals()
@@ -130,9 +130,22 @@ def test_staking_basics(
     assert registry.name() == 'Dezentralized Insurance Protocol Registry'
     assert registry.symbol() == 'DIPR'
 
+    # check link from registry to staking
+    assert r.stakingContract() == s
+
+    # check usdc staking rate
+    chain = r.toChain(web3.chain_id)
+    s.stakingRate(chain, usd1) == 0
+
     # check reward rate and dip reserves
     assert s.rewardRate() == 0
     assert s.rewardReserves() == 0
+    assert s.getStakingWallet() == s
 
-    chain = registry.toChainId(web3.chain_id)
-    s.stakingRate(chain, usd1) == 0
+    # check staking object type support
+    assert s.isStakingSupportedForType(r.PROTOCOL()) is False
+    assert s.isStakingSupportedForType(r.INSTANCE()) is False
+    assert s.isStakingSupportedForType(r.PRODUCT()) is False
+    assert s.isStakingSupportedForType(r.ORACLE()) is False
+    assert s.isStakingSupportedForType(r.RISKPOOL()) is False
+    assert s.isStakingSupportedForType(r.BUNDLE()) is True

@@ -5,11 +5,12 @@ import "../shared/BaseTypes.sol";
 import "../shared/UFixedMath.sol";
 import "../shared/VersionedOwnable.sol";
 
+import "../registry/IInstanceServiceFacade.sol";
 import "../registry/ChainRegistryV01.sol";
 
 import "./IStaking.sol";
 
-// registers dip relevant objects for this chain
+
 contract StakingV01 is
     BaseTypes,
     UFixedType,
@@ -30,6 +31,13 @@ contract StakingV01 is
     uint256 private _stakeBalance;
     address private _stakingWallet;
 
+    // keep track of object types supported for staking
+    mapping(ObjectType targetType => bool isSupported) internal _stakingSupported;
+
+    // keep track of stakes
+    mapping(NftId id => StakeInfo info) internal _info;
+    mapping(NftId target => mapping(address user => StakeInfo info)) internal _stakeInfo;
+
     // keep track of staking rates
     mapping(ChainId chain => mapping(address token => UFixed rate)) internal _stakingRate;
 
@@ -45,14 +53,21 @@ contract StakingV01 is
     UFixed internal _rewardRateMax;
 
 
+    modifier onlySameChain(NftId id) {
+        require(_registryV01.getNftInfo(id).chain == thisChainId(),
+        "ERROR:STK-001:DIFFERENT_CHAIN_NOT_SUPPORTET");
+        _;
+    }
+
+
     modifier onlyApprovedToken(ChainId chain, address token) {
         NftId id = _registryV01.getNftId(chain, token);
-        require(gtz(id), "ERROR:STK-001:NOT_REGISTERED");
+        require(gtz(id), "ERROR:STK-005:NOT_REGISTERED");
         IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(id);
-        require(info.t == _registryV01.TOKEN(), "ERROR:STK-002:NOT_TOKEN");
+        require(info.t == _registryV01.TOKEN(), "ERROR:STK-006:NOT_TOKEN");
         require(
             info.state == IChainRegistry.ObjectState.Approved, 
-            "ERROR:STK-003:TOKEN_NOT_APPROVED");
+            "ERROR:STK-007:TOKEN_NOT_APPROVED");
         _;
     }
 
@@ -85,6 +100,7 @@ contract StakingV01 is
         _version = version();
 
         _dip = IERC20Metadata(DIP_CONTRACT_ADDRESS);
+
         _stakeBalance = 0;
         _stakingWallet = address(this);
 
@@ -123,6 +139,14 @@ contract StakingV01 is
             "ERROR:STK-051:REGISTRY_VERSION_DECREASING");
 
         _registryV01 = registry;
+
+        // explicit setting of staking support per object type
+        _stakingSupported[_registryV01.PROTOCOL()] = false;
+        _stakingSupported[_registryV01.INSTANCE()] = false;
+        _stakingSupported[_registryV01.PRODUCT()] = false;
+        _stakingSupported[_registryV01.ORACLE()] = false;
+        _stakingSupported[_registryV01.RISKPOOL()] = false;
+        _stakingSupported[_registryV01.BUNDLE()] = true;
     }
 
 
@@ -177,7 +201,152 @@ contract StakingV01 is
         _withdrawDip(dipAmount);
     }
 
+
+    function stake(NftId target, uint256 dipAmount)
+        external
+        virtual override
+        returns(NftId stakeId)
+    {
+        require(isStakingSupported(target), "ERROR:STK-040:STAKING_NOT_SUPPORTED");
+        require(dipAmount > 0, "ERROR:STK-041:STAKING_AMOUNT_ZERO");
+
+        address user = msg.sender;
+        stakeId = _registryV01.registerStake(target, user);
+
+        StakeInfo storage info = _stakeInfo[target][user];
+
+        // handling for new stakes
+        if(info.createdAt == zeroTimestamp()) {
+            _info[stakeId] = info;
+
+            info.target = target;
+            info.stakeBalance = 0;
+            info.rewardBalance = 0;
+            info.createdAt = blockTimestamp();
+        }
+
+        // _updateRewards(target, info);
+        // _increaseStakes(info, dipAmount);
+
+        // _collectDip(user, dipAmount);
+    }
+
     //--- view and pure functions ------------------//
+
+    function isStakingSupported(NftId target)
+        public
+        virtual override
+        view 
+        returns(bool isSupported)
+    {
+        ObjectType targetType = _registryV01.getNftInfo(target).t;
+        if(!_stakingSupported[targetType]) {
+            return false;
+        }
+
+        // deal with special cases
+        if(targetType == _registryV01.BUNDLE()) {
+            return _isStakingSupportedForBundle(target);
+        }
+
+        return true;
+    }
+
+
+    function isStakingSupportedForType(ObjectType targetType)
+        external
+        virtual override
+        view
+        returns(bool isSupported)
+    {
+        return _stakingSupported[targetType];
+    }
+
+
+    function hasInfo(
+        NftId target,
+        address user
+    )
+        external override
+        view
+        returns(bool hasStakeInfo)
+    {
+        return _stakeInfo[target][user].createdAt > zeroTimestamp();
+    }
+
+
+    function getInfo(
+        NftId target,
+        address user
+    )
+        external override
+        view
+        returns(StakeInfo memory info)
+    {
+        require(_stakeInfo[target][user].createdAt > zeroTimestamp(), "ERROR:STK-080:STAKE_INFO_NOT_EXISTING");
+        return _stakeInfo[target][user];
+    }
+
+
+    function getInfo(NftId id)
+        external override
+        view
+        returns(StakeInfo memory info)
+    {
+        require(_info[id].createdAt > zeroTimestamp(), "ERROR:STK-082:STAKE_INFO_NOT_EXISTING");
+        return _info[id];
+    }
+
+
+    function getBundleState(NftId target)
+        public
+        view
+        onlySameChain(target)
+        returns(
+            IChainRegistry.ObjectState objectState,
+            IInstanceServiceFacade.BundleState bundleState,
+            Timestamp expiryAt,
+            Timestamp closedAt
+        )
+    {
+        IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(target);
+        require(info.t == _registryV01.BUNDLE(), "ERROR:STK-100:OBJECT_TYPE_NOT_BUNDLE");
+
+        objectState = info.state;
+
+        // TODO read directly from instance/riskpool
+        // use faked values for now
+        bundleState = IInstanceServiceFacade.BundleState.Active;
+        expiryAt = toTimestamp(block.timestamp + 1000);
+        closedAt = zeroTimestamp();
+    }
+
+
+    function _isStakingSupportedForBundle(NftId target)
+        internal
+        virtual
+        view
+        returns(bool isSupported)
+    {
+        (
+            IChainRegistry.ObjectState objectState,
+            IInstanceServiceFacade.BundleState bundleState,
+            Timestamp expiryAt,
+            Timestamp closedAt
+        ) = getBundleState(target);
+
+        if(expiryAt > zeroTimestamp() && expiryAt < blockTimestamp()) {
+            return false;
+        }
+
+        if(closedAt > zeroTimestamp() && closedAt < blockTimestamp()) {
+            return false;
+        }
+
+        return true;
+    }
+
+
 
     function stakingRate(ChainId chain, address token)
         external 
@@ -215,6 +384,16 @@ contract StakingV01 is
         returns(uint256 dips)
     {
         return _rewardReserves;
+    }
+
+
+    function getStakingWallet() 
+        external
+        virtual override
+        view
+        returns(address stakingWallet)
+    {
+        return _stakingWallet;
     }
 
 

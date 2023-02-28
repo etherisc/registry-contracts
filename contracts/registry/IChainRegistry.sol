@@ -70,6 +70,14 @@ interface IChainRegistry is
     function registerToken(ChainId chain,address token) external returns(NftId id);       
 
 
+    function registerStake(
+        NftId target, 
+        address staker
+    )
+        external
+        returns(NftId id);
+
+
     function registerInstance(
         address instanceRegistry,
         string memory displayName
@@ -93,7 +101,7 @@ interface IChainRegistry is
         string memory name,
         uint256 expiryAt
     )
-        external 
+        external
         returns(NftId id);
 
 
@@ -190,12 +198,6 @@ interface IChainRegistry is
             uint256 riskpoolId,
             uint256 bundleId,
             address token);
-
-
-    function isSameType(ObjectType a, ObjectType b)
-        external
-        pure
-        returns(bool same);
 
     // utilitiv function to probe an instance given its registry address
     function probeInstance(address registry)

@@ -110,7 +110,7 @@ def test_registry_basics(
         assert info['version'] == r.version()
 
     # check chain nft
-    chainId = r.toChainId(web3.chain_id)
+    chainId = r.toChain(web3.chain_id)
     chainNftId = r.getNftId['bytes3'](chainId)
     assert r.ownerOf(chainNftId) == ro
 

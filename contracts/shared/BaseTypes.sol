@@ -12,14 +12,7 @@ contract BaseTypes is IBaseTypes {
 
     function toInt(Blocknumber x) public override pure returns(uint) { return Blocknumber.unwrap(x); }
     function toInt(Timestamp x) public override pure returns(uint) { return Timestamp.unwrap(x); }
-    function toInt(Amount x) public override pure returns(uint) { return Amount.unwrap(x); }
     function toInt(ChainId x) public override pure returns(uint) { return uint(uint24(ChainId.unwrap(x))); }
-
-    function toChainId(uint256 x) public override pure returns(ChainId) { return ChainId.wrap(bytes3(abi.encodePacked(uint24(x)))); }
-
-    function blockTimestamp() public override view returns(Timestamp) {
-        return Timestamp.wrap(uint32(block.timestamp));
-    }
 
     function blockNumber() public override view returns(Blocknumber) {
         return Blocknumber.wrap(uint32(block.number));

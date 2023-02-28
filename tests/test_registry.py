@@ -43,7 +43,7 @@ def test_register_token(
             usd1,
             {'from': theOutsider})
 
-    chain_id_other = chainRegistryV01.toChainId(web3.chain_id + 1)
+    chain_id_other = chainRegistryV01.toChain(web3.chain_id + 1)
 
     with brownie.reverts('ERROR:CRG-290:CHAIN_NOT_SUPPORTED'):
         chainRegistryV01.registerToken(
@@ -188,7 +188,7 @@ def test_register_component(
             {'from': registryOwner})
 
     # register token
-    chain_id = chainRegistryV01.toChainId(mockInstance.getChainId())
+    chain_id = chainRegistryV01.toChain(mockInstance.getChainId())
     chainRegistryV01.registerToken(
             chain_id,
             usd2,
@@ -264,7 +264,7 @@ def test_register_bundle(
         usd2)
 
     # register token
-    chain_id = chainRegistryV01.toChainId(mockInstance.getChainId())
+    chain_id = chainRegistryV01.toChain(mockInstance.getChainId())
     chainRegistryV01.registerToken(
             chain_id,
             usd2,

@@ -221,11 +221,16 @@ def stakingV01(
     stakingProxyAdmin, 
     stakingOwner, 
     dip,
-    chainRegistryV01
+    chainRegistryV01,
+    registryOwner
 ) -> StakingV01:
     staking = contract_from_address(
         StakingV01, 
         stakingProxyAdmin.getProxy())
+
+    chainRegistryV01.setStakingContract(
+        staking,
+        {'from': registryOwner})
 
     staking.setDipContract(
         dip,

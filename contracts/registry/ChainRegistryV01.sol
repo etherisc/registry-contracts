@@ -65,15 +65,16 @@ contract ChainRegistryV01 is
     mapping(bytes32 instanceId => mapping(uint256 bundleId => NftId id)) private _bundle; // which erc20 on which chains are currently supported for minting
 
     // registy internal data
-    ChainId private _chainId;
-    uint256 private _idNext;
+    ChainId internal _chainId;
+    address internal _staking;
+    uint256 internal _idNext;
     Version internal _version;
 
 
     modifier onlyRegisteredToken(ChainId chain, address token) {
         NftId id = _contractObject[chain][token];
         require(NftId.unwrap(id) > 0, "ERROR:CRG-001:TOKEN_NOT_REGISTERED");
-        require(isSameType(_info[id].t, TOKEN), "ERROR:CRG-002:ADDRESS_NOT_TOKEN");
+        require(_info[id].t == TOKEN, "ERROR:CRG-002:ADDRESS_NOT_TOKEN");
         _;
     }
 
@@ -107,6 +108,13 @@ contract ChainRegistryV01 is
         require(block.chainid == toInt(_info[id].chain), "ERROR:CRG-021:DIFFERENT_CHAIN_NOT_SUPPORTED");
         _;
     }
+
+
+    modifier onlyStaking() {
+        require(msg.sender == _staking, "ERROR:CRG-030:SENDER_NOT_STAKING");
+        _;
+    }
+
 
     // IMPORTANT 1. version needed for upgradable versions
     // _activate is using this to check if this is a new version
@@ -158,6 +166,18 @@ contract ChainRegistryV01 is
         _registerRegistry(_chainId, address(this), newOwner);
 
         transferOwnership(newOwner);
+    }
+
+
+    function setStakingContract(address staking)
+        external
+        virtual
+        onlyOwner
+    {
+        require(_staking == address(0), "ERROR:CRG-040:STAKING_ALREADY_SET");
+        require(staking != address(0), "ERROR:CRG-041:STAKING_ADDRESS_ZERO");
+
+        _staking = staking;
     }
 
 
@@ -270,6 +290,28 @@ contract ChainRegistryV01 is
     }
 
 
+    function registerStake(
+        NftId target, 
+        address staker
+    )
+        external
+        virtual override
+        onlyStaking()
+        returns(NftId id)
+    {
+        require(staker != address(0), "ERROR:CRG-090:STAKER_WITH_ZERO_ADDRESS");
+        (bytes memory data) = _getStakeData(
+            target,
+            _info[target].t);
+
+        // mint new stake nft
+        id = _safeMintObject(
+            staker,
+            _chainId,
+            STAKE,
+            data);
+    }
+
 
     function probeInstance(
         address registryAddress
@@ -307,10 +349,19 @@ contract ChainRegistryV01 is
     }
 
 
+    function stakingContract()
+        external
+        virtual
+        view
+        returns(address staking)
+    {
+        return _staking;
+    }
+
+
     function exists(NftId id) public virtual override view returns(bool) {
         return NftId.unwrap(_info[id].id) > 0;
     }
-
 
 
     function chains() external virtual override view returns(uint256 numberOfChains) {
@@ -484,6 +535,20 @@ contract ChainRegistryV01 is
     }
 
 
+    function decodeStakeData(NftId id)
+        external
+        view
+        returns(
+            NftId target,
+            ObjectType targetType
+        )
+    {
+        (target, targetType) 
+            = abi.decode(_info[id].data, 
+                (NftId, ObjectType));
+    }
+
+
     function tokenURI(uint256 id) 
         public 
         view 
@@ -518,24 +583,23 @@ contract ChainRegistryV01 is
                 toString(NftId.unwrap(id))));
     }
 
-
-    function isSameType(ObjectType a, ObjectType b) public virtual override pure returns(bool) {
-        return ObjectType.unwrap(a) == ObjectType.unwrap(b);
+    function toChain(uint256 chainId) public pure returns(ChainId) {
+        return toChainId(chainId);
     }
 
     function toObjectType(uint256 t) public pure returns(ObjectType) { 
         return ObjectType.wrap(uint8(t));
     }
 
-    function toString(uint256 i) public view returns(string memory) {
+    function toString(uint256 i) public pure returns(string memory) {
         return StringsUpgradeable.toString(i);
     }
 
-    function toString(ChainId chain) public view returns(string memory) {
+    function toString(ChainId chain) public pure returns(string memory) {
         return StringsUpgradeable.toString(uint24(ChainId.unwrap(chain)));
     }
 
-    function toString(address account) public view returns(string memory) {
+    function toString(address account) public pure returns(string memory) {
         return StringsUpgradeable.toHexString(account);
     }
 
@@ -693,6 +757,16 @@ contract ChainRegistryV01 is
     }
 
 
+    function _getStakeData(NftId target, ObjectType targetType)
+        internal
+        virtual
+        view
+        returns(bytes memory data)
+    {
+        data = _encodeStakeData(target, targetType);
+    }
+
+
     function _encodeTokenData(address token)
         internal
         virtual
@@ -742,6 +816,16 @@ contract ChainRegistryV01 is
         returns(bytes memory)
     {
         return abi.encode(instanceId, riskpoolId, bundleId, token);
+    }
+
+
+    function _encodeStakeData(NftId target, ObjectType targetType)
+        internal 
+        virtual
+        pure 
+        returns(bytes memory)
+    {
+        return abi.encode(target, targetType);
     }
 
 
@@ -815,24 +899,24 @@ contract ChainRegistryV01 is
         _object[chain][t].push(id);
 
         // object type specific book keeping
-        if(isSameType(t, CHAIN)) {
+        if(t == CHAIN) {
             _chain[chain] = id;
             _chainIds.push(chain);
-        } else if(isSameType(t, TOKEN)) {
+        } else if(t == TOKEN) {
             (address token) = abi.decode(data, (address));
             _contractObject[chain][token] = id;
-        } else if(isSameType(t, INSTANCE)) {
+        } else if(t == INSTANCE) {
             (bytes32 instanceId, address registry) = abi.decode(data, (bytes32, address));
             _contractObject[chain][registry] = id;
             _instance[instanceId] = id;
         } else if(
-            isSameType(t, RISKPOOL)
-            || isSameType(t, PRODUCT)
-            || isSameType(t, ORACLE)
+            t == RISKPOOL
+            || t == PRODUCT
+            || t == ORACLE
         ) {
             (bytes32 instanceId, uint256 componentId) = abi.decode(data, (bytes32, uint256));
             _component[instanceId][componentId] = id;
-        } else if(isSameType(t, BUNDLE)) {
+        } else if(t == BUNDLE) {
             (bytes32 instanceId, uint256 bundleId) = abi.decode(data, (bytes32, uint256));
             _bundle[instanceId][bundleId] = id;
         }

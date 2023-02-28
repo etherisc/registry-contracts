@@ -136,7 +136,7 @@ def test_staking_rate(
 ):
     s = stakingV01
     r = contract_from_address(ChainRegistryV01, s.getRegistry())
-    chain = r.toChainId(web3.chain_id)
+    chain = r.toChain(web3.chain_id)
 
     sr00 = stakingV01.toRate(0, 0)
     sr01 = stakingV01.toRate(1, -2)
@@ -149,7 +149,7 @@ def test_staking_rate(
         s.setStakingRate(chain, usd1, sr00, {'from': theOutsider})
 
     # check restriction to registered tokens
-    with brownie.reverts('ERROR:STK-001:NOT_REGISTERED'):
+    with brownie.reverts('ERROR:STK-005:NOT_REGISTERED'):
         s.setStakingRate(chain, usd1, sr00, {'from': stakingOwner})
 
     r.registerToken(chain, usd1, {'from': registryOwner})
