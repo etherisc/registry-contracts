@@ -49,6 +49,7 @@ contract MockInstance is
     function setBundleInfo(
         uint256 bundleId,
         uint256 riskpoolId,
+        BundleState state,
         uint256 capital
     )
         external
@@ -57,6 +58,7 @@ contract MockInstance is
         Bundle storage bundle = _bundle[bundleId];
         bundle.id = bundleId;
         bundle.riskpoolId = riskpoolId;
+        bundle.state = state;
         bundle.capital = capital;
         bundle.createdAt = block.timestamp;
     }

@@ -310,14 +310,18 @@ def test_register_bundle(
             {'from': theOutsider})
 
     # register bundle
+    bundle_state_active = 0 # enum BundleState { Active, Locked, Closed, Burned }
+    bundle_state_locked = 1
     mockInstance.setBundleInfo(
         bundle_id,
         riskpool_id,
+        bundle_state_active,
         10000)
 
     mockInstance.setBundleInfo(
         bundle_id2,
         riskpool_id2,
+        bundle_state_locked,
         20000)
 
     # try to register bundle with wrong riskpool

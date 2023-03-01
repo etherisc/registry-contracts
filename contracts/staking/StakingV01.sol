@@ -27,6 +27,8 @@ contract StakingV01 is
     int8 public constant MAX_REWARD_RATE_EXP = -3;
     uint256 public constant YEAR_DURATION = 365 days;
 
+    uint256 public constant BUNDLE_LIFETIME_DEFAULT = 6 * 30 * 24 * 3600;
+
     // staking wallet (ccount holding dips)
     uint256 private _stakeBalance;
     address private _stakingWallet;
@@ -312,20 +314,33 @@ contract StakingV01 is
         returns(
             IChainRegistry.ObjectState objectState,
             IInstanceServiceFacade.BundleState bundleState,
-            Timestamp expiryAt,
-            Timestamp closedAt
+            Timestamp expiryAt
         )
     {
         IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(target);
         require(info.t == _registryV01.BUNDLE(), "ERROR:STK-100:OBJECT_TYPE_NOT_BUNDLE");
 
+        // fill in object stae from registry info
         objectState = info.state;
 
-        // TODO read directly from instance/riskpool
-        // use faked values for now
-        bundleState = IInstanceServiceFacade.BundleState.Active;
-        expiryAt = toTimestamp(block.timestamp + 1000);
-        closedAt = zeroTimestamp();
+        // read bundle data directly from instance/riskpool
+        // can be done thanks to onlySameChain modifier
+        (
+            bytes32 instanceId,
+            ,
+            uint256 bundleId
+            ,
+        ) = _registryV01.decodeBundleData(target);
+
+        IInstanceServiceFacade instanceService = _registryV01.getInstanceServiceFacade(instanceId);
+        IInstanceServiceFacade.Bundle memory bundle = instanceService.getBundle(bundleId);
+        
+        // fill in other properties from bundle info
+        bundleState = bundle.state;
+        // approx to actual expiry at, good enough for initial staking
+        // TODO once expiry at is available via instance service replace
+        // this by actual value
+        expiryAt = toTimestamp(bundle.createdAt + BUNDLE_LIFETIME_DEFAULT);
     }
 
 
@@ -338,15 +353,16 @@ contract StakingV01 is
         (
             IChainRegistry.ObjectState objectState,
             IInstanceServiceFacade.BundleState bundleState,
-            Timestamp expiryAt,
-            Timestamp closedAt
+            Timestamp expiryAt
         ) = getBundleState(target);
 
-        if(expiryAt > zeroTimestamp() && expiryAt < blockTimestamp()) {
+        // only active bundles are available for staking
+        if(bundleState != IInstanceServiceFacade.BundleState.Active) {
             return false;
         }
 
-        if(closedAt > zeroTimestamp() && closedAt < blockTimestamp()) {
+        // only non-expired bundles are available for staking
+        if(expiryAt > zeroTimestamp() && expiryAt < blockTimestamp()) {
             return false;
         }
 

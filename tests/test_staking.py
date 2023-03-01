@@ -4,6 +4,7 @@ import brownie
 from brownie.network.account import Account
 
 from brownie import (
+    chain,
     history,
     interface,
     web3,
@@ -170,6 +171,88 @@ def test_staking_rate(
     s.setStakingRate(chain, usd1, sr10, {'from': stakingOwner})
     assert s.stakingRate(chain, usd1) == sr10
     assert s.stakingRate(chain, usd1) / 10 ** s.rateDecimals() == 0.1
+
+
+def test_is_staking_supported(
+    mockInstance: MockInstance,
+    mockRegistry: MockRegistry,
+    usd2: USD2,
+    proxyAdmin: OwnableProxyAdmin,
+    proxyAdminOwner: Account,
+    chainRegistryV01: ChainRegistryV01,
+    registryOwner: Account,
+    dip: DIP,
+    instanceOperator: Account,
+    stakingV01: StakingV01,
+    stakingOwner: Account,
+    staker: Account,
+    theOutsider: Account
+):
+    bundle_nft = create_mock_bundle_setup(
+        mockInstance,
+        mockRegistry,
+        usd2,
+        proxyAdmin,
+        proxyAdminOwner,
+        chainRegistryV01,
+        registryOwner,
+        theOutsider)
+    
+    assert bundle_nft > 0
+
+    (
+        instance_id,
+        riskpool_id,
+        bundle_id,
+        token
+    ) = chainRegistryV01.decodeBundleData(bundle_nft)
+    
+    instance_service = contract_from_address(
+        interface.IInstanceServiceFacade, 
+        chainRegistryV01.getInstanceServiceFacade(instance_id))
+    
+    bundle_state_active = 0 # enum BundleState { Active, Locked, Closed, Burned }
+    bundle_state_locked = 1
+    bundle_state_closed = 2
+    bundle_state_burned = 3
+
+    bundle = instance_service.getBundle(bundle_id).dict()
+    assert bundle['state'] == bundle_state_active
+
+    # check that staking for active bundle is possible
+    assert stakingV01.isStakingSupported(bundle_nft) is True
+
+    # cycle through other bundle stakes and check that staking is not supported
+    bundle_funding = 1234 * 10 ** usd2.decimals()
+    mockInstance.setBundleInfo(bundle_id, riskpool_id, bundle_state_locked, bundle_funding)
+    assert instance_service.getBundle(bundle_id).dict()['state'] == bundle_state_locked
+    assert stakingV01.isStakingSupported(bundle_nft) is False
+
+    mockInstance.setBundleInfo(bundle_id, riskpool_id, bundle_state_closed, bundle_funding)
+    assert instance_service.getBundle(bundle_id).dict()['state'] == bundle_state_closed
+    assert stakingV01.isStakingSupported(bundle_nft) is False
+
+    mockInstance.setBundleInfo(bundle_id, riskpool_id, bundle_state_burned, bundle_funding)
+    assert instance_service.getBundle(bundle_id).dict()['state'] == bundle_state_burned
+    assert stakingV01.isStakingSupported(bundle_nft) is False
+
+    # reset to active and check staking is again possible
+    mockInstance.setBundleInfo(bundle_id, riskpool_id, bundle_state_active, bundle_funding)
+    assert instance_service.getBundle(bundle_id).dict()['state'] == bundle_state_active
+    assert stakingV01.isStakingSupported(bundle_nft) is True
+
+    # wait long enough and check that staking is no longer possible
+    chain.sleep(stakingV01.BUNDLE_LIFETIME_DEFAULT() - 10)
+    chain.mine(1)
+
+    # staking should still be good
+    assert stakingV01.isStakingSupported(bundle_nft) is True
+
+    chain.sleep(20)
+    chain.mine(1)
+
+    # beyond expiry, staking no longer possible
+    assert stakingV01.isStakingSupported(bundle_nft) is False
 
 
 def test_stake_bundle_happy_path(
@@ -371,9 +454,11 @@ def create_mock_bundle_setup(
         state_active,
         usd2)
 
+    bundle_state_active = 0 # enum BundleState { Active, Locked, Closed, Burned }
     mockInstance.setBundleInfo(
         bundle_id,
         riskpool_id,
+        bundle_state_active,
         bundle_funding)
 
     # register token

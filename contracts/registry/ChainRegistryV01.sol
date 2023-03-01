@@ -93,7 +93,7 @@ contract ChainRegistryV01 is
 
     modifier onlyActiveRiskpool(bytes32 instanceId, uint256 riskpoolId) {
         require(NftId.unwrap(_component[instanceId][riskpoolId]) > 0, "ERROR:CRG-010:RISKPOOL_NOT_REGISTERED");
-        IInstanceServiceFacade instanceService = _getInstanceServiceFacade(instanceId);
+        IInstanceServiceFacade instanceService = getInstanceServiceFacade(instanceId);
         IInstanceServiceFacade.ComponentType cType = instanceService.getComponentType(riskpoolId);
         require(cType == IInstanceServiceFacade.ComponentType.Riskpool, "ERROR:CRG-011:COMPONENT_NOT_RISKPOOL");
         IInstanceServiceFacade.ComponentState state = instanceService.getComponentState(riskpoolId);
@@ -720,7 +720,7 @@ contract ChainRegistryV01 is
     {
         require(!exists(_component[instanceId][componentId]), "ERROR:CRG-310:COMPONENT_ALREADY_REGISTERED");
 
-        IInstanceServiceFacade instanceService = _getInstanceServiceFacade(instanceId);
+        IInstanceServiceFacade instanceService = getInstanceServiceFacade(instanceId);
         IInstanceServiceFacade.ComponentType cType = instanceService.getComponentType(componentId);
 
         t = _toObjectType(cType);
@@ -747,7 +747,7 @@ contract ChainRegistryV01 is
     {
         require(!exists(_bundle[instanceId][bundleId]), "ERROR:CRG-320:BUNDLE_ALREADY_REGISTERED");
 
-        IInstanceServiceFacade instanceService = _getInstanceServiceFacade(instanceId);
+        IInstanceServiceFacade instanceService = getInstanceServiceFacade(instanceId);
         IInstanceServiceFacade.Bundle memory bundle = instanceService.getBundle(bundleId);
         require(bundle.riskpoolId == riskpoolId, "ERROR:CRG-321:BUNDLE_RISKPOOL_MISMATCH");
 
@@ -830,9 +830,9 @@ contract ChainRegistryV01 is
     }
 
 
-    function _getInstanceServiceFacade(bytes32 instanceId) 
-        internal
-        virtual
+    function getInstanceServiceFacade(bytes32 instanceId) 
+        public
+        virtual override
         view
         returns(IInstanceServiceFacade instanceService)
     {

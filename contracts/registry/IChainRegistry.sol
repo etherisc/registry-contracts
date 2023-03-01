@@ -201,7 +201,13 @@ interface IChainRegistry is
             uint256 bundleId,
             address token);
 
-    // utilitiv function to probe an instance given its registry address
+    // only same chain: utility to get reference to instance service for specified instance id
+    function getInstanceServiceFacade(bytes32 instanceId) 
+        external
+        view
+        returns(IInstanceServiceFacade instanceService);
+
+    // only same chain:  utilitiv function to probe an instance given its registry address
     function probeInstance(address registry)
         external 
         view 
