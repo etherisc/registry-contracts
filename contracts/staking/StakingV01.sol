@@ -37,7 +37,6 @@ contract StakingV01 is
     mapping(ObjectType targetType => bool isSupported) internal _stakingSupported;
 
     // keep track of stakes
-    mapping(NftId target => mapping(address user => NftId id)) internal _stakeId;
     mapping(NftId id => StakeInfo info) internal _info;
     mapping(NftId target => uint256 amountStaked) internal _targetStakeBalance;
 
@@ -204,40 +203,72 @@ contract StakingV01 is
     }
 
 
-    function stake(NftId target, uint256 dipAmount)
+    function createStake(NftId target, uint256 dipAmount)
         external
         virtual override
         returns(NftId stakeId)
     {
-        require(isStakingSupported(target), "ERROR:STK-040:STAKING_NOT_SUPPORTED");
+        // no validation here, validation is done via calling stake() at the end
+        address user = msg.sender;
+        stakeId = _registryV01.registerStake(target, user);
+
+        StakeInfo storage info = _info[stakeId];
+        info = _info[stakeId];
+        info.id = stakeId;
+        info.target = target;
+        info.stakeBalance = 0;
+        info.rewardBalance = 0;
+        info.createdAt = blockTimestamp();
+
+        emit LogStakingNewStake(target, user, stakeId);
+
+        stake(stakeId, dipAmount);
+    }
+
+
+    function stake(NftId stakeId, uint256 dipAmount)
+        public
+        virtual override
+    {
+        // input validation (stake needs to exist)
+        StakeInfo storage info = _info[stakeId];
+        require(info.createdAt > zeroTimestamp(), "ERROR:STK-040:STAKE_NOT_EXISTING");
         require(dipAmount > 0, "ERROR:STK-041:STAKING_AMOUNT_ZERO");
 
+        // staking needs to be possible (might change over time)
+        require(isStakingSupported(info.target), "ERROR:STK-042:STAKING_NOT_SUPPORTED");
         address user = msg.sender;
-        stakeId = _stakeId[target][user];
-        StakeInfo storage info = _info[stakeId];
-
-        // create new stake nft and info
-        if(stakeId == zeroNftId()) {
-            stakeId = _registryV01.registerStake(target, user);
-            _stakeId[target][user] = stakeId;
-
-            info = _info[stakeId];
-            info.id = stakeId;
-            info.target = target;
-            info.stakeBalance = 0;
-            info.rewardBalance = 0;
-            info.createdAt = blockTimestamp();
-
-            emit LogStakingNewStakes(target, user, stakeId);
-        }
 
         // update stake info
         // _updateRewards(target, info);
         _increaseStakes(info, dipAmount);
-
         _collectDip(user, dipAmount);
 
-        emit LogStakingStaked(target, user, stakeId, dipAmount, info.stakeBalance);
+        emit LogStakingStaked(info.target, user, stakeId, dipAmount, info.stakeBalance);
+    }
+
+
+    function unstake(NftId stakeId, uint256 dipAmount)
+        external
+        virtual override
+    {
+        require(false, "TO_BE_IMPLEMENTED");
+    }
+
+
+    function unstakeAndClaimRewards(NftId stakeId)
+        external
+        virtual override
+    {
+        require(false, "TO_BE_IMPLEMENTED");
+    }
+
+
+    function claimRewards(NftId stakeId)
+        external
+        virtual override
+    {
+        require(false, "TO_BE_IMPLEMENTED");
     }
 
     //--- view and pure functions ------------------//
@@ -269,31 +300,6 @@ contract StakingV01 is
         returns(bool isSupported)
     {
         return _stakingSupported[targetType];
-    }
-
-
-    function hasInfo(
-        NftId target,
-        address user
-    )
-        external override
-        view
-        returns(bool hasStakeInfo)
-    {
-        return gtz(_stakeId[target][user]);
-    }
-
-
-    function getInfo(
-        NftId target,
-        address user
-    )
-        external override
-        view
-        returns(StakeInfo memory info)
-    {
-        require(gtz(_stakeId[target][user]), "ERROR:STK-080:STAKE_INFO_NOT_EXISTING");
-        info = _info[_stakeId[target][user]];
     }
 
 

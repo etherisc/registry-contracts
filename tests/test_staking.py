@@ -286,9 +286,6 @@ def test_stake_bundle_happy_path(
     assert stakingV01.isStakingSupportedForType(chainRegistryV01.BUNDLE()) is True
     assert stakingV01.isStakingSupported(bundle_nft) is True
 
-    # check no staking for this bundle and user so far
-    assert stakingV01.hasInfo(bundle_nft, staker) is False
-
     # attempt to stake
     staking_amount = 5000 * 10 ** dip.decimals()
     prepare_staker(staker, staking_amount, dip, instanceOperator, stakingV01)
@@ -297,7 +294,7 @@ def test_stake_bundle_happy_path(
     assert dip.balanceOf(staker) == staking_amount
     assert dip.balanceOf(stakingV01.getStakingWallet()) == 0
 
-    staking_tx = stakingV01.stake(
+    staking_tx = stakingV01.createStake(
         bundle_nft,
         staking_amount,
         {'from': staker })
@@ -316,8 +313,8 @@ def test_stake_bundle_happy_path(
     assert evt['newBalance'] == staking_amount
 
     # check staking nft
-    assert 'LogStakingNewStakes' in staking_tx.events
-    evt = staking_tx.events['LogStakingNewStakes']
+    assert 'LogStakingNewStake' in staking_tx.events
+    evt = staking_tx.events['LogStakingNewStake']
     assert evt['target'] == bundle_nft
     assert evt['user'] == staker
     assert evt['id'] == nft_id
@@ -335,8 +332,7 @@ def test_stake_bundle_happy_path(
     assert target_type == chainRegistryV01.BUNDLE()
 
     # check staking info for nft
-    assert stakingV01.hasInfo(bundle_nft, staker) is True
-    info = stakingV01.getInfo(bundle_nft, staker).dict()
+    info = stakingV01.getInfo(nft_id).dict()
     block_timestamp = web3.eth.getBlock(web3.eth.block_number)['timestamp']
     assert info['id'] == nft_id
     assert info['target'] == bundle_nft
@@ -375,13 +371,16 @@ def test_increase_stakes(
     staking_amount = 5000 * 10 ** dip.decimals()
     prepare_staker(staker, staking_amount, dip, instanceOperator, stakingV01)
 
-    staking_tx = stakingV01.stake(
+    staking_tx = stakingV01.createStake(
         bundle_nft,
         staking_amount,
         {'from': staker })
 
-    assert 'LogStakingNewStakes' in staking_tx.events
     assert 'LogStakingStaked' in staking_tx.events
+    assert 'LogStakingNewStake' in staking_tx.events
+
+    stake_id = staking_tx.events['LogStakingNewStake']['id']
+    assert stake_id > 0
 
     # prepare increasing stakes
     additional_amount = 42 * 10 ** dip.decimals()
@@ -393,7 +392,7 @@ def test_increase_stakes(
 
     # increase stakes
     increase_tx = stakingV01.stake(
-        bundle_nft,
+        stake_id,
         additional_amount,
         {'from': staker })
 

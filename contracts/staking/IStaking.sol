@@ -22,7 +22,7 @@ interface IStaking {
     event LogStakingRewardRateSet(UFixed oldRewardRate, UFixed newRewardRate);
     event LogStakingStakingRateSet(ChainId chain, address token, UFixed oldStakingRate, UFixed newStakingRate);
 
-    event LogStakingNewStakes(NftId target, address user, NftId id);
+    event LogStakingNewStake(NftId target, address user, NftId id);
     event LogStakingStaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
     event LogStakingUnstaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
 
@@ -37,17 +37,14 @@ interface IStaking {
     function refillRewardReserves(uint256 dipAmount) external;
     function withdrawRewardReserves(uint256 dipAmount) external;
 
-    function stake(NftId target, uint256 dipAmount) external returns(NftId stakeId);
-
-    // TODO implement
-    // function unstake(NftId target, Amount dips) external;  
-    // function unstakeAndClaimRewards(NftId target) external;
-    // function claimRewards(NftId target) external;
+    function createStake(NftId target, uint256 dipAmount) external returns(NftId id);
+    function stake(NftId id, uint256 dipAmount) external;
+    function unstake(NftId id, uint256 dipAmount) external;  
+    function unstakeAndClaimRewards(NftId id) external;
+    function claimRewards(NftId id) external;
 
     //--- view and pure functions ------------------//
 
-    function hasInfo(NftId target, address user) external view returns(bool hasInfos);
-    function getInfo(NftId target, address user) external view returns(StakeInfo memory info);
     function getInfo(NftId stake) external view returns(StakeInfo memory info);
 
     function isStakingSupported(NftId target) external view returns(bool isSupported);
