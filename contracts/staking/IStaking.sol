@@ -26,8 +26,8 @@ interface IStaking {
     event LogStakingStaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
     event LogStakingUnstaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
 
-    event LogStakingRewardsUpdated(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
-    event LogStakingRewardsClaimed(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
+    event LogStakingRewardsUpdated(NftId id, uint256 amount, uint256 newBalance);
+    event LogStakingRewardsClaimed(NftId id, uint256 amount, uint256 newBalance);
 
     //--- state changing functions ------------------//
 
@@ -54,6 +54,9 @@ interface IStaking {
     function rewardRate() external view returns(UFixed rewardRate);
     function rewardReserves() external view returns(uint256 dipAmount);
     function getStakingWallet() external view returns(address stakingWallet);
+
+    function calculateRewardsIncrement(StakeInfo memory stakeInfo) external view returns(uint256 rewardsAmount);
+    function calculateRewards(uint256 amount, uint256 duration) external view returns(uint256 rewardAmount);
 
     function toRate(uint256 value, int8 exp) external pure returns(UFixed);
     function rateDecimals() external pure returns(uint256 decimals);

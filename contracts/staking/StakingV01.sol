@@ -51,6 +51,7 @@ contract StakingV01 is
 
     IERC20Metadata internal _dip; 
     uint256 internal _rewardReserves;
+    uint256 internal _rewardBalance;
     UFixed internal _rewardRate;
     UFixed internal _rewardRateMax;
 
@@ -240,11 +241,29 @@ contract StakingV01 is
         address user = msg.sender;
 
         // update stake info
-        // _updateRewards(target, info);
+        _updateRewards(info);
         _increaseStakes(info, dipAmount);
         _collectDip(user, dipAmount);
 
         emit LogStakingStaked(info.target, user, stakeId, dipAmount, info.stakeBalance);
+    }
+
+
+    function _updateRewards(StakeInfo storage info)
+        internal
+        virtual
+    {
+        uint256 amount = calculateRewardsIncrement(info);
+        _rewardBalance += amount;
+
+        info.rewardBalance += amount;
+        info.updatedAt = blockTimestamp();
+
+        emit LogStakingRewardsUpdated(
+            info.id,
+            amount,
+            info.rewardBalance
+        );
     }
 
 
@@ -300,6 +319,35 @@ contract StakingV01 is
         returns(bool isSupported)
     {
         return _stakingSupported[targetType];
+    }
+
+
+    function calculateRewardsIncrement(StakeInfo memory stakeInfo)
+        public 
+        virtual override
+        view
+        returns(uint256 rewardsAmount)
+    {
+        uint256 timeSinceLastUpdate = block.timestamp - toInt(stakeInfo.updatedAt);
+
+        // TODO potentially reduce time depending on the time when the bundle has been closed
+
+        rewardsAmount = calculateRewards(stakeInfo.stakeBalance, timeSinceLastUpdate);
+    }
+
+
+    function calculateRewards(
+        uint256 amount,
+        uint256 duration
+    ) 
+        public 
+        virtual override
+        view
+        returns(uint256 rewardAmount) 
+    {
+        UFixed yearFraction = itof(duration) / itof(YEAR_DURATION);
+        UFixed rewardDuration = _rewardRate * yearFraction;
+        rewardAmount = ftoi(itof(amount) * rewardDuration);
     }
 
 
