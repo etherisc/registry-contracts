@@ -9,12 +9,25 @@ import "../registry/IChainRegistry.sol";
 interface IStaking {
 
     struct StakeInfo {
+        NftId id;
         NftId target;
         uint256 stakeBalance;
         uint256 rewardBalance;
         Timestamp createdAt;
         Timestamp updatedAt;
     }
+
+    event LogStakingRewardReservesIncreased(address user, uint256 amount, uint256 newBalance);
+
+    event LogStakingRewardRateSet(UFixed oldRewardRate, UFixed newRewardRate);
+    event LogStakingStakingRateSet(ChainId chain, address token, UFixed oldStakingRate, UFixed newStakingRate);
+
+    event LogStakingNewStakes(NftId target, address user, NftId id);
+    event LogStakingStaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
+    event LogStakingUnstaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
+
+    event LogStakingRewardsUpdated(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
+    event LogStakingRewardsClaimed(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
 
     //--- state changing functions ------------------//
 

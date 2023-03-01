@@ -153,6 +153,7 @@ contract ChainRegistryV01 is
         _typeSupported[INSTANCE] = true;
         _typeSupported[RISKPOOL] = true;
         _typeSupported[BUNDLE] = true;
+        _typeSupported[STAKE] = true;
 
         // register/mint dip protocol on mainnet
         if(toInt(_chainId) == 1) {
@@ -885,8 +886,12 @@ contract ChainRegistryV01 is
 
         if(to == owner()) {
             info.state = ObjectState.Approved;
-        } else {
+        } else if(t == STAKE) {
+            info.state = ObjectState.Approved;
+        } else if(t == BUNDLE) {
             // TODO deal with special case self registered bundles
+            info.state = ObjectState.Proposed;
+        } else {
             info.state = ObjectState.Proposed;
         }
 

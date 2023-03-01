@@ -35,8 +35,9 @@ contract StakingV01 is
     mapping(ObjectType targetType => bool isSupported) internal _stakingSupported;
 
     // keep track of stakes
+    mapping(NftId target => mapping(address user => NftId id)) internal _stakeId;
     mapping(NftId id => StakeInfo info) internal _info;
-    mapping(NftId target => mapping(address user => StakeInfo info)) internal _stakeInfo;
+    mapping(NftId target => uint256 amountStaked) internal _targetStakeBalance;
 
     // keep track of staking rates
     mapping(ChainId chain => mapping(address token => UFixed rate)) internal _stakingRate;
@@ -70,7 +71,6 @@ contract StakingV01 is
             "ERROR:STK-007:TOKEN_NOT_APPROVED");
         _;
     }
-
 
 
     // IMPORTANT 1. version needed for upgradable versions
@@ -184,7 +184,7 @@ contract StakingV01 is
         require(dipAmount > 0, "ERROR:STK-080:DIP_AMOUNT_ZERO");
 
         address user = msg.sender;
-        _collectDip(user, dipAmount);
+        _collectRewardDip(user, dipAmount);
     }
 
 
@@ -211,24 +211,31 @@ contract StakingV01 is
         require(dipAmount > 0, "ERROR:STK-041:STAKING_AMOUNT_ZERO");
 
         address user = msg.sender;
-        stakeId = _registryV01.registerStake(target, user);
+        stakeId = _stakeId[target][user];
+        StakeInfo storage info = _info[stakeId];
 
-        StakeInfo storage info = _stakeInfo[target][user];
+        // create new stake nft and info
+        if(stakeId == zeroNftId()) {
+            stakeId = _registryV01.registerStake(target, user);
+            _stakeId[target][user] = stakeId;
 
-        // handling for new stakes
-        if(info.createdAt == zeroTimestamp()) {
-            _info[stakeId] = info;
-
+            info = _info[stakeId];
+            info.id = stakeId;
             info.target = target;
             info.stakeBalance = 0;
             info.rewardBalance = 0;
             info.createdAt = blockTimestamp();
+
+            emit LogStakingNewStakes(target, user, stakeId);
         }
 
+        // update stake info
         // _updateRewards(target, info);
-        // _increaseStakes(info, dipAmount);
+        _increaseStakes(info, dipAmount);
 
-        // _collectDip(user, dipAmount);
+        _collectDip(user, dipAmount);
+
+        emit LogStakingStaked(target, user, stakeId, dipAmount, info.stakeBalance);
     }
 
     //--- view and pure functions ------------------//
@@ -271,7 +278,7 @@ contract StakingV01 is
         view
         returns(bool hasStakeInfo)
     {
-        return _stakeInfo[target][user].createdAt > zeroTimestamp();
+        return gtz(_stakeId[target][user]);
     }
 
 
@@ -283,8 +290,8 @@ contract StakingV01 is
         view
         returns(StakeInfo memory info)
     {
-        require(_stakeInfo[target][user].createdAt > zeroTimestamp(), "ERROR:STK-080:STAKE_INFO_NOT_EXISTING");
-        return _stakeInfo[target][user];
+        require(gtz(_stakeId[target][user]), "ERROR:STK-080:STAKE_INFO_NOT_EXISTING");
+        info = _info[_stakeId[target][user]];
     }
 
 
@@ -438,11 +445,49 @@ contract StakingV01 is
 
     //--- internal functions ------------------//
 
-    function _collectDip(address user, uint256 amount)
+    function _increaseStakes(
+        StakeInfo storage info,
+        uint256 amount
+    )
+        internal
+    {
+        _targetStakeBalance[info.target] += amount;
+        _stakeBalance += amount;
+
+        info.stakeBalance += amount;
+        info.updatedAt = blockTimestamp();
+    }
+
+
+    function _decreaseStakes(
+        StakeInfo storage info,
+        uint256 amount
+    )
+        internal
+    {
+        require(amount <= info.stakeBalance, "ERROR:STK-270:UNSTAKING_AMOUNT_EXCEEDS_STAKING_BALANCE");
+
+        _targetStakeBalance[info.target] -= amount;
+        _stakeBalance -= amount;
+
+        info.stakeBalance -= amount;
+        info.updatedAt = blockTimestamp();
+    }
+
+
+    function _collectRewardDip(address user, uint256 amount)
         internal
         virtual
     {
         _rewardReserves += amount;
+        _collectDip(user, amount);
+    }
+
+
+    function _collectDip(address user, uint256 amount)
+        internal
+        virtual
+    {
         _dip.transferFrom(user, _stakingWallet, amount);
     }
 

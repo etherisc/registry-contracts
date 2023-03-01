@@ -25,6 +25,7 @@ using {
 function eqNftId(NftId a, NftId b) pure returns(bool isSame) { return NftId.unwrap(a) == NftId.unwrap(b); }
 function neNftId(NftId a, NftId b) pure returns(bool isDifferent) { return NftId.unwrap(a) != NftId.unwrap(b); }
 function gtz(NftId a) pure returns(bool) { return NftId.unwrap(a) > 0; }
+function zeroNftId() pure returns(NftId) { return NftId.wrap(0); }
 
 function eqObjectType(ObjectType a, ObjectType b) pure returns(bool isSame) { return ObjectType.unwrap(a) == ObjectType.unwrap(b); }
 function neObjectType(ObjectType a, ObjectType b) pure returns(bool isDifferent) { return ObjectType.unwrap(a) != ObjectType.unwrap(b); }
@@ -39,7 +40,8 @@ interface IChainRegistry is
         Proposed,
         Approved,
         Suspended,
-        Archived
+        Archived,
+        Burned
     }
 
 
