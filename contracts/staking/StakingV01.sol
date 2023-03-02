@@ -295,6 +295,16 @@ contract StakingV01 is
     }
 
 
+    function rewardBalance()
+        external
+        virtual override
+        view
+        returns(uint256 dips)
+    {
+        return _rewardBalance;
+    }
+
+
     function rewardReserves()
         external
         virtual override
@@ -638,12 +648,6 @@ contract StakingV01 is
 
         // transfer of dip
         _withdrawDip(user, amount);
-
-        emit LogStakingRewardsClaimed(
-            info.id,
-            amount,
-            info.rewardBalance
-        );
     }
 
 

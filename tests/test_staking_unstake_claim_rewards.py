@@ -39,7 +39,7 @@ def isolation(fn_isolation):
     pass
 
 
-def test_stake_and_unstake_happy_path(
+def test_stake_and_unstake_simple(
     mockInstance: MockInstance,
     mockRegistry: MockRegistry,
     usd2: USD2,
@@ -128,6 +128,280 @@ def test_stake_and_unstake_happy_path(
     assert info['stakeBalance'] == staking_amount - unstake_amount
     assert info['createdAt'] == created_at
     assert info['updatedAt'] == updated_at
+
+
+def test_stake_transfer_and_unstake(
+    mockInstance: MockInstance,
+    mockRegistry: MockRegistry,
+    usd2: USD2,
+    proxyAdmin: OwnableProxyAdmin,
+    proxyAdminOwner: Account,
+    chainRegistryV01: ChainRegistryV01,
+    registryOwner: Account,
+    dip: DIP,
+    instanceOperator: Account,
+    stakingV01: StakingV01,
+    stakingOwner: Account,
+    staker: Account,
+    staker2: Account,
+    theOutsider: Account
+):
+    bundle_nft = create_mock_bundle_setup(
+        mockInstance,
+        mockRegistry,
+        usd2,
+        proxyAdmin,
+        proxyAdminOwner,
+        chainRegistryV01,
+        registryOwner,
+        theOutsider)
+    
+    assert bundle_nft > 0
+
+    # prepare reward rate: 20.0% apr
+    reward_rate = stakingV01.toRate(20, -2)
+    stakingV01.setRewardRate(reward_rate, {'from': stakingOwner})
+    assert stakingV01.rewardRate() == reward_rate
+
+    # prepare staker
+    staking_amount = 100000 * 10 ** dip.decimals()
+    prepare_staker(staker, staking_amount, dip, instanceOperator, stakingV01)
+
+    staking_tx = stakingV01.createStake(
+        bundle_nft,
+        staking_amount,
+        {'from': staker })
+
+    # check balances after staking
+    assert dip.balanceOf(staker) == 0
+    assert dip.balanceOf(stakingV01.getStakingWallet()) == staking_amount
+
+    # get stake nft id
+    created_at = web3.eth.getBlock(web3.eth.block_number)['timestamp']
+    assert 'LogStakingStaked' in staking_tx.events
+    evt = staking_tx.events['LogStakingStaked']
+    nft_id = evt['id']
+
+    # check ownership via staking contract
+    assert stakingV01.isStakeOwner(nft_id, staker) is True
+    assert stakingV01.isStakeOwner(nft_id, staker2) is False
+
+    # check ownership directly on registry
+    assert chainRegistryV01.ownerOf(nft_id) == staker
+    assert chainRegistryV01.ownerOf(nft_id) != staker2
+
+    # ensure staker2 can not just take stake nft over
+    with brownie.reverts('ERC721: caller is not token owner or approved'):
+        chainRegistryV01.transferFrom(staker, staker2, nft_id, {'from': staker2})
+
+    # ordinary nft transfer
+    transfer_tx = chainRegistryV01.transferFrom(staker, staker2, nft_id, {'from': staker})
+
+    assert 'Transfer' in transfer_tx.events
+    evt = dict(transfer_tx.events['Transfer'])
+    assert evt['from'] == staker
+    assert evt['to'] == staker2
+    assert evt['tokenId'] == nft_id
+
+    # check ownership via staking contract
+    assert stakingV01.isStakeOwner(nft_id, staker) is False
+    assert stakingV01.isStakeOwner(nft_id, staker2) is True
+
+    # check ownership directly on registry
+    assert chainRegistryV01.ownerOf(nft_id) == staker2
+    assert chainRegistryV01.ownerOf(nft_id) != staker
+
+    # close bundle
+    mockInstance.setBundleInfo(
+        BUNDLE_ID,
+        RISKPOOL_ID,
+        BUNDLE_STATE_CLOSED,
+        BUNDLE_FUNDING * 10 ** dip.decimals())
+
+    assert stakingV01.isUnstakingSupported(bundle_nft) is True
+
+    unstake_amount = int(staking_amount / 3)
+
+    # attempt by old nft owner to unstake
+    with brownie.reverts('ERROR:STK-010:USER_NOT_OWNER'):
+        stakingV01.unstake(nft_id, unstake_amount, {'from': staker })
+
+    # check that new nft owner can unstake
+    unstake_tx = stakingV01.unstake(nft_id, unstake_amount, {'from': staker2 })
+
+    # check balances after unstaking
+    assert dip.balanceOf(staker) == 0
+    assert dip.balanceOf(staker2) == unstake_amount
+    assert dip.balanceOf(stakingV01.getStakingWallet()) == staking_amount - unstake_amount
+
+    assert 'LogStakingUnstaked' in unstake_tx.events
+    evt = dict(unstake_tx.events['LogStakingUnstaked'])
+    assert evt['id'] == nft_id
+    assert evt['target'] == bundle_nft
+    assert evt['user'] == staker2
+    assert evt['amount'] == unstake_amount
+    assert evt['newBalance'] == staking_amount - unstake_amount
+
+    # check staking info for nft after unstaking
+    info = stakingV01.getInfo(nft_id).dict()
+    updated_at = web3.eth.getBlock(web3.eth.block_number)['timestamp']
+    assert info['id'] == nft_id
+    assert info['target'] == bundle_nft
+    assert info['stakeBalance'] == staking_amount - unstake_amount
+    assert info['createdAt'] == created_at
+    assert info['updatedAt'] == updated_at
+
+
+def test_stake_and_claim_rewards(
+    mockInstance: MockInstance,
+    mockRegistry: MockRegistry,
+    usd2: USD2,
+    proxyAdmin: OwnableProxyAdmin,
+    proxyAdminOwner: Account,
+    chainRegistryV01: ChainRegistryV01,
+    registryOwner: Account,
+    dip: DIP,
+    instanceOperator: Account,
+    stakingV01: StakingV01,
+    stakingOwner: Account,
+    staker: Account,
+    theOutsider: Account
+):
+    bundle_nft = create_mock_bundle_setup(
+        mockInstance,
+        mockRegistry,
+        usd2,
+        proxyAdmin,
+        proxyAdminOwner,
+        chainRegistryV01,
+        registryOwner,
+        theOutsider)
+    
+    assert bundle_nft > 0
+
+    # prepare reward rate: 20.0% apr
+    reward_rate = stakingV01.toRate(20, -2)
+    stakingV01.setRewardRate(reward_rate, {'from': stakingOwner})
+    assert stakingV01.rewardRate() == reward_rate
+
+    # prepare staker
+    staking_amount = 100000 * 10 ** dip.decimals()
+    prepare_staker(staker, staking_amount, dip, instanceOperator, stakingV01)
+
+    staking_tx = stakingV01.createStake(
+        bundle_nft,
+        staking_amount,
+        {'from': staker })
+
+    # get stake nft id
+    created_at = web3.eth.getBlock(web3.eth.block_number)['timestamp']
+    assert 'LogStakingStaked' in staking_tx.events
+    evt = staking_tx.events['LogStakingStaked']
+    nft_id = evt['id']
+
+    quarter_year = int(stakingV01.YEAR_DURATION() / 4)
+    chain.sleep(quarter_year)
+    chain.mine(1)
+
+    # close bundle
+    mockInstance.setBundleInfo(
+        BUNDLE_ID,
+        RISKPOOL_ID,
+        BUNDLE_STATE_CLOSED,
+        BUNDLE_FUNDING * 10 ** dip.decimals())
+
+    unstake_tx = stakingV01.unstake(nft_id, 1, {'from': staker})
+    unstaked_at = web3.eth.getBlock(web3.eth.block_number)['timestamp']
+
+    quarter_year_rewards_amount = stakingV01.calculateRewards(
+        staking_amount, unstaked_at - created_at)
+
+    assert 'LogStakingRewardsUpdated' in unstake_tx.events
+    evt = dict(unstake_tx.events['LogStakingRewardsUpdated'])
+    assert evt['id'] == nft_id
+    assert delta_is_tiny(evt['amount'], quarter_year_rewards_amount)
+    assert evt['amount'] == evt['newBalance']
+
+    info = stakingV01.getInfo(nft_id).dict()
+    assert info['rewardBalance'] == evt['newBalance']
+
+    # check that not anybody can execute claimRewards
+    with brownie.reverts('ERROR:STK-010:USER_NOT_OWNER'):
+        stakingV01.claimRewards(nft_id, {'from': theOutsider})
+
+    # check initial reward balance/reserves
+    assert delta_is_tiny(stakingV01.rewardBalance(), quarter_year_rewards_amount)
+    assert stakingV01.rewardReserves() == 0
+
+    # check that nft owner can claim rewards
+    claim_tx = stakingV01.claimRewards(nft_id, {'from': staker})
+
+    # check no rewards have been payed (as reward reserves are empty)
+    assert 'LogStakingRewardsClaimed' in claim_tx.events
+    evt = dict(claim_tx.events['LogStakingRewardsClaimed'])
+    assert evt['id'] == nft_id
+    assert evt['amount'] == 0
+    assert evt['newBalance'] == stakingV01.rewardBalance()
+
+    # add some reward reserves and try again
+    reward_amount = info['rewardBalance']
+    reserves_amount = 10000 * 10 ** dip.decimals()
+    dip.approve(stakingV01.getStakingWallet(), reserves_amount, {'from': instanceOperator})
+    reserve_tx = stakingV01.refillRewardReserves(reserves_amount, {'from': instanceOperator})
+
+    assert stakingV01.rewardReserves() == reserves_amount
+    assert dip.balanceOf(stakingV01.getStakingWallet()) == staking_amount - 1 + reserves_amount
+
+    # check again that nft owner can claim rewards
+    info_before = stakingV01.getInfo(nft_id).dict()
+    claim_tx2 = stakingV01.claimRewards(nft_id, {'from': staker})
+
+    # balance check
+    assert dip.balanceOf(stakingV01.getStakingWallet()) == staking_amount - 1 + reserves_amount - reward_amount
+    assert dip.balanceOf(staker) == 1 + reward_amount
+
+    # check rewards have now been payed
+    assert 'LogStakingRewardsClaimed' in claim_tx2.events
+    evt = dict(claim_tx2.events['LogStakingRewardsClaimed'])
+    assert evt['id'] == nft_id
+    assert evt['amount'] == reward_amount
+    assert evt['newBalance'] == 0
+
+    # check staking info for nft after unstaking
+    info_after = stakingV01.getInfo(nft_id).dict()
+    assert info_after['rewardBalance'] == 0
+    assert info_after['id'] == info_before['id']
+    assert info_after['target'] == info_before['target']
+    assert info_after['stakeBalance'] == info_before['stakeBalance']
+    assert info_after['createdAt'] == info_before['createdAt']
+    assert info_after['updatedAt'] >= info_before['updatedAt']
+
+    # wait a bit (to get some additional rewards)
+    chain.sleep(14 * 24 * 3600)
+    chain.mine(1)
+    
+    unstake_and_claim_tx = stakingV01.unstakeAndClaimRewards(nft_id, {'from': staker})
+
+    evts = unstake_and_claim_tx.events
+    assert 'LogStakingRewardsUpdated' in evts
+    assert 'LogStakingUnstaked' in evts
+    assert 'LogStakingRewardsClaimed' in evts
+
+    assert evts['LogStakingRewardsUpdated']['id'] == nft_id
+    assert evts['LogStakingRewardsUpdated']['amount'] > 0
+    assert evts['LogStakingRewardsUpdated']['amount'] == evts['LogStakingRewardsUpdated']['newBalance']
+
+    assert evts['LogStakingUnstaked']['id'] == nft_id
+    assert evts['LogStakingUnstaked']['amount'] == staking_amount - 1
+    assert evts['LogStakingUnstaked']['newBalance'] == 0
+
+    assert evts['LogStakingRewardsClaimed']['id'] == nft_id
+    assert evts['LogStakingRewardsClaimed']['amount'] == evts['LogStakingRewardsUpdated']['newBalance']
+    assert evts['LogStakingRewardsClaimed']['newBalance'] == 0
+
+    # final balance check
+    assert dip.balanceOf(stakingV01.getStakingWallet()) == reserves_amount - reward_amount - + evts['LogStakingRewardsClaimed']['amount']
+    assert dip.balanceOf(staker) == staking_amount + reward_amount + evts['LogStakingRewardsClaimed']['amount']
 
 
 def delta_is_tiny(a, b, epsilon=10 ** -10):
