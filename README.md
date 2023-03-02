@@ -59,7 +59,7 @@ r = ChainRegistryV01.deploy(fpao)
 # deploy the proxy admin and provide the 
 # registry implementation its initial owner
 pa = OwnableProxyAdmin.deploy(r, ro, fpao)
-p = contract_from_address(ChainRegistryV01, pa.getProxy())
+p = ,contract_from_address(ChainRegistryV01, pa.getProxy())
 
 # deploy the two next versions
 i1 = DemoV1.deploy(fio)

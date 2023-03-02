@@ -49,7 +49,7 @@ def test_reward_rate(
         s.setRewardRate(rr40, {'from': theOutsider})
 
     # check max reward rate restriction 
-    with brownie.reverts('ERROR:STK-070:REWARD_EXCEEDS_MAX_VALUE'):
+    with brownie.reverts('ERROR:STK-100:REWARD_EXCEEDS_MAX_VALUE'):
         s.setRewardRate(rr40, {'from': stakingOwner})
 
     # check happy path
@@ -112,7 +112,7 @@ def test_reward_reserves(
         s.withdrawRewardReserves(0, {'from': stakingOwner})
 
     # attempt withdrawal of more than availables reserves
-    with brownie.reverts('ERROR:STK-091:DIP_RESERVES_INSUFFICIENT'):
+    with brownie.reverts('ERROR:STK-280:DIP_RESERVES_INSUFFICIENT'):
         s.withdrawRewardReserves(reserves + 1, {'from': stakingOwner})
 
     # withdrwal of 20% of reserves
@@ -159,7 +159,7 @@ def test_staking_rate(
     r.registerToken(chain, usd1, {'from': registryOwner})
 
     # check restriction to staking rates > 0
-    with brownie.reverts('ERROR:STK-060:STAKING_RATE_ZERO'):
+    with brownie.reverts('ERROR:STK-110:STAKING_RATE_ZERO'):
         s.setStakingRate(chain, usd1, sr00, {'from': stakingOwner})
 
     # check happy case

@@ -18,6 +18,7 @@ interface IStaking {
     }
 
     event LogStakingRewardReservesIncreased(address user, uint256 amount, uint256 newBalance);
+    event LogStakingRewardReservesDecreased(address user, uint256 amount, uint256 newBalance);
 
     event LogStakingRewardRateSet(UFixed oldRewardRate, UFixed newRewardRate);
     event LogStakingStakingRateSet(ChainId chain, address token, UFixed oldStakingRate, UFixed newStakingRate);
@@ -31,11 +32,11 @@ interface IStaking {
 
     //--- state changing functions ------------------//
 
-    function setStakingRate(ChainId chain, address token, UFixed stakingRate) external;    
-    function setRewardRate(UFixed rewardRate) external;
-
     function refillRewardReserves(uint256 dipAmount) external;
     function withdrawRewardReserves(uint256 dipAmount) external;
+
+    function setRewardRate(UFixed rewardRate) external;
+    function setStakingRate(ChainId chain, address token, UFixed stakingRate) external;    
 
     function createStake(NftId target, uint256 dipAmount) external returns(NftId id);
     function stake(NftId id, uint256 dipAmount) external;
@@ -45,15 +46,18 @@ interface IStaking {
 
     //--- view and pure functions ------------------//
 
-    function getInfo(NftId stake) external view returns(StakeInfo memory info);
-
-    function isStakingSupported(NftId target) external view returns(bool isSupported);
-    function isStakingSupportedForType(ObjectType targetType) external view returns(bool isSupported);
-
-    function stakingRate(ChainId chain, address token) external view returns(UFixed stakingRate);
     function rewardRate() external view returns(UFixed rewardRate);
     function rewardReserves() external view returns(uint256 dipAmount);
+    function stakingRate(ChainId chain, address token) external view returns(UFixed stakingRate);
     function getStakingWallet() external view returns(address stakingWallet);
+    function getDip() external view returns(IERC20Metadata);
+
+    function isStakeOwner(NftId id, address user) external view returns(bool isOwner);
+    function getInfo(NftId id) external view returns(StakeInfo memory info);
+
+    function isStakingSupportedForType(ObjectType targetType) external view returns(bool isSupported);
+    function isStakingSupported(NftId target) external view returns(bool isSupported);
+    function isUnstakingSupported(NftId target) external view returns(bool isSupported);
 
     function calculateRewardsIncrement(StakeInfo memory stakeInfo) external view returns(uint256 rewardsAmount);
     function calculateRewards(uint256 amount, uint256 duration) external view returns(uint256 rewardAmount);

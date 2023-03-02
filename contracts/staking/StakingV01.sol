@@ -30,15 +30,22 @@ contract StakingV01 is
     uint256 public constant BUNDLE_LIFETIME_DEFAULT = 6 * 30 * 24 * 3600;
 
     // staking wallet (ccount holding dips)
-    uint256 private _stakeBalance;
-    address private _stakingWallet;
+    IERC20Metadata internal _dip; 
+
+    UFixed internal _rewardRate; // current apr for staking rewards
+    UFixed internal _rewardRateMax; // max apr for staking rewards
+    uint256 internal _rewardBalance; // current balance of accumulated rewards 
+    uint256 internal _rewardReserves; // available funds to fund reward payments
+
+    uint256 private _stakeBalance; // current balance of staked dips
+    address private _stakingWallet; // address that holds staked dips and reward reserves
 
     // keep track of object types supported for staking
     mapping(ObjectType targetType => bool isSupported) internal _stakingSupported;
 
     // keep track of stakes
-    mapping(NftId id => StakeInfo info) internal _info;
-    mapping(NftId target => uint256 amountStaked) internal _targetStakeBalance;
+    mapping(NftId id => StakeInfo info) internal _info; // metadata per stake
+    mapping(NftId target => uint256 amountStaked) internal _targetStakeBalance; // current sum of stakes per target
 
     // keep track of staking rates
     mapping(ChainId chain => mapping(address token => UFixed rate)) internal _stakingRate;
@@ -48,12 +55,6 @@ contract StakingV01 is
 
     // staking internal data
     Version internal _version;
-
-    IERC20Metadata internal _dip; 
-    uint256 internal _rewardReserves;
-    uint256 internal _rewardBalance;
-    UFixed internal _rewardRate;
-    UFixed internal _rewardRateMax;
 
 
     modifier onlySameChain(NftId id) {
@@ -71,6 +72,12 @@ contract StakingV01 is
         require(
             info.state == IChainRegistry.ObjectState.Approved, 
             "ERROR:STK-007:TOKEN_NOT_APPROVED");
+        _;
+    }
+
+
+    modifier onlyStakeOwner(NftId id) {
+        require(isStakeOwner(id, msg.sender), "ERROR:STK-010:USER_NOT_OWNER");
         _;
     }
 
@@ -128,7 +135,7 @@ contract StakingV01 is
         require(_dip.decimals() == DIP_DECIMALS, "ERROR:STK-042:DIP_DECIMALS_INVALID");
     }
 
-
+    // sets the on-chain registry that keeps track of all protocol objects on this chain
     function setRegistry(ChainRegistryV01 registry)
         external
         virtual
@@ -152,33 +159,6 @@ contract StakingV01 is
     }
 
 
-    function setStakingRate(
-        ChainId chain,
-        address token,
-        UFixed newStakingRate
-    )
-        external
-        virtual override
-        onlyOwner
-        onlyApprovedToken(chain, token)
-    {
-        require(gtz(newStakingRate), "ERROR:STK-060:STAKING_RATE_ZERO");
-        _stakingRate[chain][token] = newStakingRate;
-    }
-
-
-    function setRewardRate(UFixed newRewardRate)
-        external
-        virtual override
-        onlyOwner
-    {
-        require(newRewardRate <= _rewardRateMax, "ERROR:STK-070:REWARD_EXCEEDS_MAX_VALUE");
-        UFixed oldRewardRate = _rewardRate;
-
-        _rewardRate = newRewardRate;
-    }
-
-
     function refillRewardReserves(uint256 dipAmount)
         external
         virtual override
@@ -196,11 +176,35 @@ contract StakingV01 is
         onlyOwner
     {
         require(dipAmount > 0, "ERROR:STK-090:DIP_AMOUNT_ZERO");
-        require(_rewardReserves >= dipAmount, "ERROR:STK-091:DIP_RESERVES_INSUFFICIENT");
 
-        _rewardReserves -= dipAmount;
+        _withdrawRewardDip(owner(), dipAmount);
+    }
 
-        _withdrawDip(dipAmount);
+
+    function setRewardRate(UFixed newRewardRate)
+        external
+        virtual override
+        onlyOwner
+    {
+        require(newRewardRate <= _rewardRateMax, "ERROR:STK-100:REWARD_EXCEEDS_MAX_VALUE");
+        UFixed oldRewardRate = _rewardRate;
+
+        _rewardRate = newRewardRate;
+    }
+
+
+    function setStakingRate(
+        ChainId chain,
+        address token,
+        UFixed newStakingRate
+    )
+        external
+        virtual override
+        onlyOwner
+        onlyApprovedToken(chain, token)
+    {
+        require(gtz(newStakingRate), "ERROR:STK-110:STAKING_RATE_ZERO");
+        _stakingRate[chain][token] = newStakingRate;
     }
 
 
@@ -233,11 +237,11 @@ contract StakingV01 is
     {
         // input validation (stake needs to exist)
         StakeInfo storage info = _info[stakeId];
-        require(info.createdAt > zeroTimestamp(), "ERROR:STK-040:STAKE_NOT_EXISTING");
-        require(dipAmount > 0, "ERROR:STK-041:STAKING_AMOUNT_ZERO");
+        require(info.createdAt > zeroTimestamp(), "ERROR:STK-150:STAKE_NOT_EXISTING");
+        require(dipAmount > 0, "ERROR:STK-151:STAKING_AMOUNT_ZERO");
 
         // staking needs to be possible (might change over time)
-        require(isStakingSupported(info.target), "ERROR:STK-042:STAKING_NOT_SUPPORTED");
+        require(isStakingSupported(info.target), "ERROR:STK-152:STAKING_NOT_SUPPORTED");
         address user = msg.sender;
 
         // update stake info
@@ -249,48 +253,117 @@ contract StakingV01 is
     }
 
 
-    function _updateRewards(StakeInfo storage info)
-        internal
-        virtual
-    {
-        uint256 amount = calculateRewardsIncrement(info);
-        _rewardBalance += amount;
-
-        info.rewardBalance += amount;
-        info.updatedAt = blockTimestamp();
-
-        emit LogStakingRewardsUpdated(
-            info.id,
-            amount,
-            info.rewardBalance
-        );
-    }
-
-
-    function unstake(NftId stakeId, uint256 dipAmount)
+    function unstake(NftId stakeId, uint256 amount)
         external
         virtual override
+        onlyStakeOwner(stakeId)        
     {
-        require(false, "TO_BE_IMPLEMENTED");
+        _unstake(stakeId, msg.sender, amount);
     }
 
 
     function unstakeAndClaimRewards(NftId stakeId)
         external
         virtual override
+        onlyStakeOwner(stakeId)     
     {
-        require(false, "TO_BE_IMPLEMENTED");
+        _unstake(stakeId, msg.sender, type(uint256).max);
     }
 
 
     function claimRewards(NftId stakeId)
         external
         virtual override
+        onlyStakeOwner(stakeId)        
     {
-        require(false, "TO_BE_IMPLEMENTED");
+        address user = msg.sender;
+        StakeInfo storage info = _info[stakeId];
+
+        _claimRewards(user, info);
     }
 
     //--- view and pure functions ------------------//
+
+
+    function rewardRate()
+        external
+        virtual override
+        view
+        returns(UFixed)
+    {
+        return _rewardRate;
+    }
+
+
+    function rewardReserves()
+        external
+        virtual override
+        view
+        returns(uint256 dips)
+    {
+        return _rewardReserves;
+    }
+
+
+    function stakingRate(ChainId chain, address token)
+        external 
+        virtual override
+        view
+        returns(UFixed rate)
+    {
+        return _stakingRate[chain][token];
+    }
+
+
+    function getStakingWallet() 
+        external
+        virtual override
+        view
+        returns(address stakingWallet)
+    {
+        return _stakingWallet;
+    }
+
+
+    function getDip() 
+        external 
+        virtual override
+        view 
+        returns(IERC20Metadata dip)
+    {
+        return _dip;
+    }
+
+
+    function isStakeOwner(NftId stakeId, address user)
+        public
+        virtual override
+        view
+        returns(bool isOwner)
+    {
+        return _registryV01.ownerOf(NftId.unwrap(stakeId)) == user;
+    }
+
+
+    function getInfo(NftId id)
+        external override
+        view
+        returns(StakeInfo memory info)
+    {
+        require(_info[id].createdAt > zeroTimestamp(), "ERROR:STK-200:STAKE_INFO_NOT_EXISTING");
+        return _info[id];
+    }
+
+
+    function isStakingSupportedForType(ObjectType targetType)
+        external
+        virtual override
+        view
+        returns(bool isSupported)
+    {
+        return _stakingSupported[targetType];
+    }
+
 
     function isStakingSupported(NftId target)
         public
@@ -312,13 +385,23 @@ contract StakingV01 is
     }
 
 
-    function isStakingSupportedForType(ObjectType targetType)
-        external
+    function isUnstakingSupported(NftId target)
+        public
         virtual override
-        view
+        view 
         returns(bool isSupported)
     {
-        return _stakingSupported[targetType];
+        ObjectType targetType = _registryV01.getNftInfo(target).t;
+        if(!_stakingSupported[targetType]) {
+            return false;
+        }
+
+        // deal with special cases
+        if(targetType == _registryV01.BUNDLE()) {
+            return _isUnstakingSupportedForBundle(target);
+        }
+
+        return true;
     }
 
 
@@ -351,13 +434,42 @@ contract StakingV01 is
     }
 
 
-    function getInfo(NftId id)
-        external override
-        view
-        returns(StakeInfo memory info)
+    function toRate(uint256 value, int8 exp)
+        external
+        virtual override
+        pure
+        returns(UFixed)
     {
-        require(_info[id].createdAt > zeroTimestamp(), "ERROR:STK-082:STAKE_INFO_NOT_EXISTING");
-        return _info[id];
+        return itof(value, exp);
+    }
+
+
+    function rateDecimals()
+        external
+        virtual override
+        pure
+        returns(uint256)
+    {
+        return decimals();
+    }
+
+
+    function getRegistry()
+        external 
+        virtual 
+        view 
+        returns(ChainRegistryV01)
+    {
+        return _registryV01;
+    }
+
+
+    function maxRewardRate()
+        external
+        view
+        returns(UFixed)
+    {
+        return _rewardRateMax;
     }
 
 
@@ -372,7 +484,7 @@ contract StakingV01 is
         )
     {
         IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(target);
-        require(info.t == _registryV01.BUNDLE(), "ERROR:STK-100:OBJECT_TYPE_NOT_BUNDLE");
+        require(info.t == _registryV01.BUNDLE(), "ERROR:STK-210:OBJECT_TYPE_NOT_BUNDLE");
 
         // fill in object stae from registry info
         objectState = info.state;
@@ -396,6 +508,9 @@ contract StakingV01 is
         // this by actual value
         expiryAt = toTimestamp(bundle.createdAt + BUNDLE_LIFETIME_DEFAULT);
     }
+
+
+    //--- internal functions ------------------//
 
 
     function _isStakingSupportedForBundle(NftId target)
@@ -424,102 +539,40 @@ contract StakingV01 is
     }
 
 
-
-    function stakingRate(ChainId chain, address token)
-        external 
-        virtual override
-        view
-        returns(UFixed rate)
-    {
-        return _stakingRate[chain][token];
-    }
-
-
-    function maxRewardRate()
-        external
-        view
-        returns(UFixed)
-    {
-        return _rewardRateMax;
-    }
-
-
-    function rewardRate()
-        external
-        virtual override
-        view
-        returns(UFixed)
-    {
-        return _rewardRate;
-    }
-
-
-    function rewardReserves()
-        external
-        virtual override
-        view
-        returns(uint256 dips)
-    {
-        return _rewardReserves;
-    }
-
-
-    function getStakingWallet() 
-        external
-        virtual override
-        view
-        returns(address stakingWallet)
-    {
-        return _stakingWallet;
-    }
-
-
-    function toRate(uint256 value, int8 exp)
-        external
-        virtual override
-        pure
-        returns(UFixed)
-    {
-        return itof(value, exp);
-    }
-
-
-    function rateDecimals()
-        external
-        virtual override
-        pure
-        returns(uint256)
-    {
-        return decimals();
-    }
-
-
-    function getDip() 
-        external 
+    function _isUnstakingSupportedForBundle(NftId target)
+        internal
         virtual
-        view 
-        returns(IERC20Metadata)
+        view
+        returns(bool isSupported)
     {
-        return _dip;
+        (
+            IChainRegistry.ObjectState objectState,
+            IInstanceServiceFacade.BundleState bundleState,
+            Timestamp expiryAt
+        ) = getBundleState(target);
+
+        // only closed or burned bundles are available for staking
+        if(bundleState == IInstanceServiceFacade.BundleState.Closed
+            || bundleState == IInstanceServiceFacade.BundleState.Burned)
+        {
+            return true;
+        }
+
+        // expired bundles are available for unstaking
+        if(expiryAt > zeroTimestamp() && expiryAt < blockTimestamp()) {
+            return true;
+        }
+
+        return false;
     }
 
-
-    function getRegistry()
-        external 
-        virtual 
-        view 
-        returns(ChainRegistryV01)
-    {
-        return _registryV01;
-    }
-
-    //--- internal functions ------------------//
 
     function _increaseStakes(
         StakeInfo storage info,
         uint256 amount
     )
         internal
+        virtual
     {
         _targetStakeBalance[info.target] += amount;
         _stakeBalance += amount;
@@ -529,11 +582,95 @@ contract StakingV01 is
     }
 
 
+    function _unstake(
+        NftId id,
+        address user, 
+        uint256 amount
+    ) 
+        internal
+        virtual
+    {
+        StakeInfo storage info = _info[id];
+        require(this.isUnstakingSupported(info.target), "ERROR:STK-250:UNSTAKE_NOT_SUPPORTED");
+        require(amount > 0, "ERROR:STK-251:UNSTAKE_AMOUNT_ZERO");
+
+        _updateRewards(info);
+
+        bool unstakeAll = (amount == type(uint256).max);
+        if(unstakeAll) {
+            amount = info.stakeBalance;
+        }
+
+        _decreaseStakes(info, amount);
+        _withdrawDip(user, amount);
+
+        emit LogStakingUnstaked(
+            info.target,
+            user,
+            info.id,
+            amount,
+            info.stakeBalance
+        );
+
+        if(unstakeAll) {
+            _claimRewards(user, info);
+        }
+    }
+
+
+    function _claimRewards(
+        address user,
+        StakeInfo storage info
+    )
+        internal
+        virtual
+    {
+        uint256 amount = info.rewardBalance;
+
+        // ensure reward payout is within avaliable reward reserves
+        if(amount > _rewardReserves) {
+            amount = _rewardReserves;
+        }
+
+        // book keeping
+        _decreaseRewards(info, amount);
+        _rewardReserves -= amount;
+
+        // transfer of dip
+        _withdrawDip(user, amount);
+
+        emit LogStakingRewardsClaimed(
+            info.id,
+            amount,
+            info.rewardBalance
+        );
+    }
+
+
+    function _updateRewards(StakeInfo storage info)
+        internal
+        virtual
+    {
+        uint256 amount = calculateRewardsIncrement(info);
+        _rewardBalance += amount;
+
+        info.rewardBalance += amount;
+        info.updatedAt = blockTimestamp();
+
+        emit LogStakingRewardsUpdated(
+            info.id,
+            amount,
+            info.rewardBalance
+        );
+    }
+
+
     function _decreaseStakes(
         StakeInfo storage info,
         uint256 amount
     )
         internal
+        virtual
     {
         require(amount <= info.stakeBalance, "ERROR:STK-270:UNSTAKING_AMOUNT_EXCEEDS_STAKING_BALANCE");
 
@@ -545,12 +682,44 @@ contract StakingV01 is
     }
 
 
+    function _decreaseRewards(StakeInfo storage info, uint256 amount)
+        internal
+        virtual
+    {
+        info.rewardBalance -= amount;
+        info.updatedAt = blockTimestamp();
+
+        _rewardBalance -= amount;
+
+        emit LogStakingRewardsClaimed(
+            info.id,
+            amount,
+            info.rewardBalance
+        );
+    }
+
+
     function _collectRewardDip(address user, uint256 amount)
         internal
         virtual
     {
         _rewardReserves += amount;
         _collectDip(user, amount);
+
+        emit LogStakingRewardReservesIncreased(user, amount, _rewardReserves);
+    }
+
+
+    function _withdrawRewardDip(address user, uint256 amount)
+        internal
+        virtual
+    {
+        require(_rewardReserves >= amount, "ERROR:STK-280:DIP_RESERVES_INSUFFICIENT");
+
+        _rewardReserves -= amount;
+        _withdrawDip(owner(), amount);
+
+        emit LogStakingRewardReservesDecreased(user, amount, _rewardReserves);
     }
 
 
@@ -562,14 +731,16 @@ contract StakingV01 is
     }
 
 
-    function _withdrawDip(uint256 amount)
+    function _withdrawDip(address user, uint256 amount)
         internal
         virtual
     {
+        require(_dip.balanceOf(_stakingWallet) >= amount, "ERROR:STK-290:DIP_BALANCE_INSUFFICIENT");
+
         if(_stakingWallet != address(this)) {
-            _dip.transferFrom(_stakingWallet, owner(), amount);
+            _dip.transferFrom(_stakingWallet, user, amount);
         } else {
-            _dip.transfer(owner(), amount);
+            _dip.transfer(user, amount);
         }
     }
 }
