@@ -190,6 +190,8 @@ contract StakingV01 is
         UFixed oldRewardRate = _rewardRate;
 
         _rewardRate = newRewardRate;
+
+        emit LogStakingRewardRateSet(owner(), oldRewardRate, _rewardRate);
     }
 
 
@@ -204,7 +206,11 @@ contract StakingV01 is
         onlyApprovedToken(chain, token)
     {
         require(gtz(newStakingRate), "ERROR:STK-110:STAKING_RATE_ZERO");
+
+        UFixed oldStakingRate = _stakingRate[chain][token];
         _stakingRate[chain][token] = newStakingRate;
+
+        emit LogStakingStakingRateSet(owner(), chain, token, oldStakingRate, newStakingRate);
     }
 
 

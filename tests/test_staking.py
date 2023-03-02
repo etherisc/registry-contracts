@@ -53,7 +53,14 @@ def test_reward_rate(
         s.setRewardRate(rr40, {'from': stakingOwner})
 
     # check happy path
-    s.setRewardRate(rr30, {'from': stakingOwner})
+    set_tx = s.setRewardRate(rr30, {'from': stakingOwner})
+
+    assert 'LogStakingRewardRateSet' in set_tx.events
+    evt = dict(set_tx.events['LogStakingRewardRateSet'])
+    assert evt['user'] == s.owner()
+    assert evt['oldRewardRate'] == 0
+    assert evt['newRewardRate'] == rr30
+
     assert s.rewardRate() == rr30
     assert s.rewardRate() / 10 ** s.rateDecimals() == 0.3
 
@@ -98,7 +105,14 @@ def test_reward_reserves(
     assert dip.balanceOf(stakingOwner) == 0
 
     # check increasing reserves
-    s.refillRewardReserves(reserves, {'from': theOutsider })
+    refill_tx = s.refillRewardReserves(reserves, {'from': theOutsider })
+
+    assert 'LogStakingRewardReservesIncreased' in refill_tx.events
+    evt = dict(refill_tx.events['LogStakingRewardReservesIncreased'])
+    assert evt['user'] == theOutsider
+    assert evt['amount'] == reserves
+    assert evt['newBalance'] == reserves
+
     assert s.rewardReserves() == reserves
     assert dip.balanceOf(theOutsider) == 0
     assert dip.balanceOf(stakingOwner) == 0
@@ -117,7 +131,14 @@ def test_reward_reserves(
 
     # withdrwal of 20% of reserves
     partial_reserves = 0.2 * reserves
-    s.withdrawRewardReserves(partial_reserves, {'from': stakingOwner})
+    withdraw_tx = s.withdrawRewardReserves(partial_reserves, {'from': stakingOwner})
+
+    assert 'LogStakingRewardReservesDecreased' in withdraw_tx.events
+    evt = dict(withdraw_tx.events['LogStakingRewardReservesDecreased'])
+    assert evt['user'] == stakingOwner
+    assert evt['amount'] == partial_reserves
+    assert evt['newBalance'] == reserves - partial_reserves
+
     assert s.rewardReserves() == reserves - partial_reserves
     assert dip.balanceOf(theOutsider) == 0
     assert dip.balanceOf(stakingOwner) == partial_reserves
@@ -163,7 +184,16 @@ def test_staking_rate(
         s.setStakingRate(chain, usd1, sr00, {'from': stakingOwner})
 
     # check happy case
-    s.setStakingRate(chain, usd1, sr01, {'from': stakingOwner})
+    set_tx = s.setStakingRate(chain, usd1, sr01, {'from': stakingOwner})
+
+    assert 'LogStakingStakingRateSet' in set_tx.events
+    evt = dict(set_tx.events['LogStakingStakingRateSet'])
+    assert evt['user'] == s.owner()
+    assert evt['chain'] == chain
+    assert evt['token'] == usd1
+    assert evt['oldStakingRate'] == 0
+    assert evt['newStakingRate'] == sr01
+
     assert s.stakingRate(chain, usd1) == sr01
     assert s.stakingRate(chain, usd1) / 10 ** s.rateDecimals() == 0.01
 

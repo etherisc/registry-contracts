@@ -20,8 +20,8 @@ interface IStaking {
     event LogStakingRewardReservesIncreased(address user, uint256 amount, uint256 newBalance);
     event LogStakingRewardReservesDecreased(address user, uint256 amount, uint256 newBalance);
 
-    event LogStakingRewardRateSet(UFixed oldRewardRate, UFixed newRewardRate);
-    event LogStakingStakingRateSet(ChainId chain, address token, UFixed oldStakingRate, UFixed newStakingRate);
+    event LogStakingRewardRateSet(address user, UFixed oldRewardRate, UFixed newRewardRate);
+    event LogStakingStakingRateSet(address user, ChainId chain, address token, UFixed oldStakingRate, UFixed newStakingRate);
 
     event LogStakingNewStake(NftId target, address user, NftId id);
     event LogStakingStaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
