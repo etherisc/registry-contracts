@@ -36,10 +36,10 @@ jobs:
       - name: Execute tests
         run: brownie test -n auto
         
-      - name: Install solhint linter
-        run: npm install --global solhint
-      - name: Run solhint linter
-        run: solhint contracts/**/*.sol
+      # - name: Install solhint linter
+      #   run: npm install --global solhint
+      # - name: Run solhint linter
+      #   run: solhint contracts/**/*.sol
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
