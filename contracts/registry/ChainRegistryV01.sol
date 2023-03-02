@@ -231,7 +231,7 @@ contract ChainRegistryV01 is
         (
             ChainId chain,
             bytes memory data
-        ) = _getInstanceData(instanceRegistry);
+        ) = _getInstanceData(instanceRegistry, displayName);
 
         // mint token for the new erc20 token
         id = _safeMintObject(
@@ -271,7 +271,7 @@ contract ChainRegistryV01 is
         bytes32 instanceId, 
         uint256 riskpoolId, 
         uint256 bundleId, 
-        string memory name, 
+        string memory displayName, 
         uint256 expiryAt
     )
         external
@@ -280,7 +280,8 @@ contract ChainRegistryV01 is
         onlySameChain(instanceId)
         returns(NftId id)
     {
-        (ChainId chain, bytes memory data) = _getBundleData(instanceId, riskpoolId, bundleId);
+        (ChainId chain, bytes memory data) 
+        = _getBundleData(instanceId, riskpoolId, bundleId, displayName);
 
         // mint token for the new erc20 token
         id = _safeMintObject(
@@ -397,46 +398,6 @@ contract ChainRegistryV01 is
     }
 
 
-    function getNftMetadata(NftId id)
-        external
-        virtual override
-        view 
-        returns(
-            string memory uri,
-            address owner,
-            uint256 chainId,
-            ObjectType t,
-            ObjectState state,
-            bytes memory data,
-            Blocknumber mintedIn,
-            Blocknumber updatedIn,
-            VersionPart [3] memory v
-        )
-    {
-        require(exists(id), "ERROR:CRG-130:NFT_ID_INVALID");
-
-        NftInfo memory info = _info[id];
-
-        (
-            VersionPart major,
-            VersionPart minor,
-            VersionPart patch
-        ) = toVersionParts(info.version);
-
-        return (
-            nftURI(id),
-            ownerOf(NftId.unwrap(id)),
-            toInt(info.chain),
-            info.t,
-            info.state,
-            info.data,
-            info.mintedIn,
-            info.updatedIn,
-            [major, minor, patch]
-        );
-    }
-
-
     function getNftId(
         ChainId chain,
         address implementation
@@ -496,12 +457,13 @@ contract ChainRegistryV01 is
         view
         returns(
             bytes32 instanceId,
-            address registry
+            address registry,
+            string memory displayName
         )
     {
-        (instanceId, registry) 
+        (instanceId, registry, displayName) 
             = abi.decode(_info[id].data, 
-                (bytes32, address));
+                (bytes32, address, string));
     }
 
 
@@ -527,12 +489,13 @@ contract ChainRegistryV01 is
             bytes32 instanceId,
             uint256 riskpoolId,
             uint256 bundleId,
-            address token
+            address token,
+            string memory displayName
         )
     {
-        (instanceId, riskpoolId, bundleId, token) 
+        (instanceId, riskpoolId, bundleId, token, displayName) 
             = abi.decode(_info[id].data, 
-                (bytes32, uint256, uint256, address));
+                (bytes32, uint256, uint256, address, string));
     }
 
 
@@ -674,7 +637,10 @@ contract ChainRegistryV01 is
     }
 
 
-    function _getInstanceData(address instanceRegistry)
+    function _getInstanceData(
+        address instanceRegistry,
+        string memory displayName
+    )
         internal
         virtual
         view
@@ -701,7 +667,7 @@ contract ChainRegistryV01 is
         require(!exists(_contractObject[chainId][instanceRegistry]), "ERROR:CRG-304:INSTANCE_ALREADY_REGISTERED");
 
         chain = chainId;
-        data = _encodeInstanceData(instanceId, instanceRegistry);
+        data = _encodeInstanceData(instanceId, instanceRegistry, displayName);
     }
 
 
@@ -735,7 +701,8 @@ contract ChainRegistryV01 is
     function _getBundleData(
         bytes32 instanceId,
         uint256 riskpoolId,
-        uint256 bundleId
+        uint256 bundleId,
+        string memory displayName
     )
         internal
         virtual
@@ -754,7 +721,7 @@ contract ChainRegistryV01 is
         address token = address(instanceService.getComponentToken(riskpoolId));
 
         chain = toChainId(instanceService.getChainId());
-        data = _encodeBundleData(instanceId, riskpoolId, bundleId, token);
+        data = _encodeBundleData(instanceId, riskpoolId, bundleId, token, displayName);
     }
 
 
@@ -780,14 +747,15 @@ contract ChainRegistryV01 is
 
     function _encodeInstanceData(
         bytes32 instanceId,
-        address registry
+        address registry,
+        string memory displayName
     )
         internal
         virtual
         view
         returns(bytes memory data)
     {
-        return abi.encode(instanceId, registry);
+        return abi.encode(instanceId, registry, displayName);
     }
 
 
@@ -809,14 +777,15 @@ contract ChainRegistryV01 is
         bytes32 instanceId,
         uint256 riskpoolId,
         uint256 bundleId,
-        address token
+        address token,
+        string memory displayName
     )
         internal 
         virtual
         pure 
         returns(bytes memory)
     {
-        return abi.encode(instanceId, riskpoolId, bundleId, token);
+        return abi.encode(instanceId, riskpoolId, bundleId, token, displayName);
     }
 
 
@@ -837,7 +806,7 @@ contract ChainRegistryV01 is
         returns(IInstanceServiceFacade instanceService)
     {
         NftId id = _instance[instanceId];
-        (, address registry) = decodeInstanceData(id);
+        (, address registry, ) = decodeInstanceData(id);
         (,,,,, instanceService) = probeInstance(registry);
     }
 
@@ -929,7 +898,7 @@ contract ChainRegistryV01 is
 
 
     function _getNextTokenId() internal returns(NftId id) {
-        id = NftId.wrap(toInt(_chainId) * _idNext);
+        id = NftId.wrap(_idNext);
         _idNext++;
     }
 

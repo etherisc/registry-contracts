@@ -100,7 +100,7 @@ interface IChainRegistry is
         bytes32 instanceId,
         uint256 riskpoolId,
         uint256 bundleId,
-        string memory name,
+        string memory displayName,
         uint256 expiryAt
     )
         external
@@ -119,21 +119,6 @@ interface IChainRegistry is
     function getNftId(ChainId chain, ObjectType t, uint256 idx) external view returns(NftId id);
 
     function getNftInfo(NftId id) external view returns(NftInfo memory);
-
-
-    function getNftMetadata(NftId id)
-        external 
-        view 
-        returns(
-            string memory uri,
-            address owner,
-            uint256 chainId,
-            ObjectType t,
-            ObjectState state,
-            bytes memory data,
-            Blocknumber mintedIn,
-            Blocknumber updatedIn,
-            VersionPart [3] memory v);
 
     // get nft id for registries, tokens and instances
     function getNftId(
@@ -180,7 +165,8 @@ interface IChainRegistry is
         view
         returns(
             bytes32 instanceId,
-            address registry);
+            address registry,
+            string memory displayName);
 
 
     function decodeComponentData(NftId id)
@@ -199,7 +185,8 @@ interface IChainRegistry is
             bytes32 instanceId,
             uint256 riskpoolId,
             uint256 bundleId,
-            address token);
+            address token,
+            string memory displayName);
 
     // only same chain: utility to get reference to instance service for specified instance id
     function getInstanceServiceFacade(bytes32 instanceId) 

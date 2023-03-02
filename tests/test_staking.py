@@ -234,7 +234,8 @@ def test_is_staking_supported(
         instance_id,
         riskpool_id,
         bundle_id,
-        token
+        token,
+        name
     ) = chainRegistryV01.decodeBundleData(bundle_nft)
     
     instance_service = contract_from_address(

@@ -512,6 +512,7 @@ contract StakingV01 is
             ,
             uint256 bundleId
             ,
+            ,
         ) = _registryV01.decodeBundleData(target);
 
         IInstanceServiceFacade instanceService = _registryV01.getInstanceServiceFacade(instanceId);

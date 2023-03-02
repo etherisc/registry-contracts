@@ -134,16 +134,9 @@ def test_registry_basics(
     assert info['updatedIn'] == history[-1].block_number
     assert info['version'] == r.version()
 
-    meta = r.getNftMetadata(registryNftId).dict()
-    assert meta['chainId'] == web3.chain_id
-    assert meta['t'] == r.REGISTRY()
-    assert meta['owner'] == ro
-    assert meta['mintedIn'] == info['mintedIn']
-    assert meta['updatedIn'] == info['updatedIn']
-    assert meta['v'] == (0, 1, 0)
-
     # disect uri and check its parts
-    (_, _, _, uri_chain, uri_contract) = meta['uri'].split(':')
+    nft_uri = r.nftURI(registryNftId)
+    (_, _, _, uri_chain, uri_contract) = nft_uri.split(':')
     assert uri_chain.split('_')[0] == str(web3.chain_id)
     assert uri_contract.split('_')[0] == r
     assert uri_contract.split('_')[1] == registryNftId
