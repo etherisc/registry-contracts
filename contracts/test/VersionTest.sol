@@ -18,7 +18,7 @@ contract VersionTest {
     }
 
     function tp(uint16 p) external pure returns(VersionPart) {
-        return toPart(p);
+        return toVersionPart(p);
     }
 
     function tv(VersionPart major, VersionPart minor, VersionPart patch) external pure returns(Version){
