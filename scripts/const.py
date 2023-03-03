@@ -1,5 +1,8 @@
 # === GIF platform ========================================================== #
 
+DIP_MAINNET_ADDRESS = '0xc719d010B63E5bbF2C0551872CD5316ED26AcD83'
+USDT_MAINNET_ADDRESS = '0xdAC17F958D2ee523a2206206994597C13D831ec7'
+
 # GIF release
 GIF_RELEASE = '2.0.0'
 

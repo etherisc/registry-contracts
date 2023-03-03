@@ -57,7 +57,8 @@ interface IChainRegistry is
     }
 
 
-    // event LogChainRegistryObjectRegistered(address token, uint256 chainId, ObjectState state, bool isNewToken);
+    event LogChainRegistryObjectRegistered(NftId id, ChainId chain, ObjectType t, ObjectState state, address to);
+
     // event LogChainRegistryObjectStateUpdated(address token, uint256 chainId, ObjectState oldState, ObjectState newState);
     // event LogChainRegistryObjectDisplayNameUpdated(bytes32 instanceId, string oldDisplayName, string newDisplayName);
 

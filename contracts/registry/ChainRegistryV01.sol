@@ -905,6 +905,8 @@ contract ChainRegistryV01 is
             (bytes32 instanceId, uint256 bundleId) = abi.decode(data, (bytes32, uint256));
             _bundle[instanceId][bundleId] = id;
         }
+
+        emit LogChainRegistryObjectRegistered(id, chain, t, info.state, to);
     }
 
     // requirement: each chain registry produces token ids that
