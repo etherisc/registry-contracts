@@ -2,7 +2,9 @@
 pragma solidity ^0.8.19;
 
 // restriction: uint<n> n needs to be different for each type to support function overloading
-type ChainId is bytes3;
+
+// allows for chain ids up to 13 digits
+type ChainId is bytes5;
 
 using {
     eqChainId as ==,
@@ -13,7 +15,7 @@ using {
 function eqChainId(ChainId a, ChainId b) pure returns(bool isSame) { return ChainId.unwrap(a) == ChainId.unwrap(b); }
 function neqChainId(ChainId a, ChainId b) pure returns(bool isDifferent) { return ChainId.unwrap(a) != ChainId.unwrap(b); }
 
-function toChainId(uint256 chainId) pure returns(ChainId) { return ChainId.wrap(bytes3(abi.encodePacked(uint24(chainId))));}
+function toChainId(uint256 chainId) pure returns(ChainId) { return ChainId.wrap(bytes5(abi.encodePacked(uint40(chainId))));}
 function thisChainId() view returns(ChainId) { return toChainId(block.chainid); }
 
 type Timestamp is uint40;

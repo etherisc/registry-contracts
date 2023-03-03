@@ -95,23 +95,30 @@ def test_registry_basics(
     assert r.totalSupply() == nfts
     assert r.balanceOf(ro) == nfts
 
+    protocolTokenId = 1101
+
     # check protocol nft (when chainid == 1)
     if web3.chain_id == 1:
-        protocolTokenId = 1
+        assert r.exists(protocolTokenId)
+        assert r.objects(1, r.PROTOCOL()) == 1
+        assert r.getNftId(1, r.PROTOCOL(), 0) == protocolTokenId
         assert r.ownerOf(protocolTokenId) == ro
-        assert r.getTokenId(0) == protocolTokenId
 
-        info = r.getTokenInfo(protocolTokenId).dict()
+        info = r.getNftInfo(protocolTokenId).dict()
         assert info['id'] == protocolTokenId
         assert info['t'] == r.PROTOCOL()
         assert info['chain'] == hex(web3.chain_id)
         assert info['mintedIn'] == history[-1].block_number
         assert info['updatedIn'] == history[-1].block_number
         assert info['version'] == r.version()
+    else:
+        assert r.exists(protocolTokenId) is False
+        assert r.objects(1, r.PROTOCOL()) == 0
+
 
     # check chain nft
     chainId = r.toChain(web3.chain_id)
-    chainNftId = r.getNftId['bytes3'](chainId)
+    chainNftId = r.getNftId['bytes5'](chainId)
     assert r.ownerOf(chainNftId) == ro
 
     info = r.getNftInfo(chainNftId).dict()
@@ -140,6 +147,17 @@ def test_registry_basics(
     assert uri_chain.split('_')[0] == str(web3.chain_id)
     assert uri_contract.split('_')[0] == r
     assert uri_contract.split('_')[1] == registryNftId
+
+    # check nft id composition
+    chain_digits = len(str(web3.chain_id))
+    digits_part = str(registryNftId)[-2:]
+    chain_part = str(registryNftId)[-(chain_digits + 2):-2]
+    index_part = str(registryNftId)[:-(chain_digits + 2)]
+
+    assert int(index_part + chain_part + digits_part) == registryNftId
+    assert int(index_part) > 1
+    assert int(chain_part) == web3.chain_id
+    assert int(digits_part) == chain_digits
 
     # check current version
     assert r.version() == 2 ** 16

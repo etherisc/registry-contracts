@@ -46,28 +46,33 @@ contract ChainRegistryV01 is
     ObjectType public constant BUNDLE = ObjectType.wrap(40);
 
     // keep trak of nft meta data
-    mapping(NftId id => NftInfo info) private _info;
-    mapping(ObjectType t => bool isSupported) private _typeSupported; // which nft types are currently supported for minting
+    mapping(NftId id => NftInfo info) internal _info;
+    mapping(ObjectType t => bool isSupported) internal _typeSupported; // which nft types are currently supported for minting
 
     // keep track of chains
-    mapping(ChainId chain => NftId id) private _chain;
-    ChainId [] private _chainIds;
+    mapping(ChainId chain => NftId id) internal _chain;
+    ChainId [] internal _chainIds;
 
     // keep track of objects per chain and type
-    mapping(ChainId chain => mapping(ObjectType t => NftId [] ids)) private _object; // which erc20 on which chains are currently supported for minting
+    mapping(ChainId chain => mapping(ObjectType t => NftId [] ids)) internal _object; // which erc20 on which chains are currently supported for minting
 
     // keep track of objects with a contract address (registries, tokens, instances)
-    mapping(ChainId chain => mapping(address implementation => NftId id)) private _contractObject; // which erc20 on which chains are currently supported for minting
+    mapping(ChainId chain => mapping(address implementation => NftId id)) internal _contractObject; // which erc20 on which chains are currently supported for minting
 
     // keep track of instances, comonents and bundles
-    mapping(bytes32 instanceId => NftId id) private _instance; // which erc20 on which chains are currently supported for minting
-    mapping(bytes32 instanceId => mapping(uint256 componentId => NftId id)) private _component; // which erc20 on which chains are currently supported for minting
-    mapping(bytes32 instanceId => mapping(uint256 bundleId => NftId id)) private _bundle; // which erc20 on which chains are currently supported for minting
+    mapping(bytes32 instanceId => NftId id) internal _instance; // which erc20 on which chains are currently supported for minting
+    mapping(bytes32 instanceId => mapping(uint256 componentId => NftId id)) internal _component; // which erc20 on which chains are currently supported for minting
+    mapping(bytes32 instanceId => mapping(uint256 bundleId => NftId id)) internal _bundle; // which erc20 on which chains are currently supported for minting
+
+    // only used for _getNextTokenId
+    uint256 internal _chainIdInt; 
+    uint256 internal _chainIdDigits;
+    uint256 internal _chainIdMultiplier;
+    uint256 internal _idNext;
 
     // registy internal data
     ChainId internal _chainId;
     address internal _staking;
-    uint256 internal _idNext;
     Version internal _version;
 
 
@@ -142,7 +147,10 @@ contract ChainRegistryV01 is
 
         // set main internal variables
         _version = version();
-        _chainId = toChainId(block.chainid);
+        _chainIdInt = block.chainid;
+        _chainId = toChainId(_chainIdInt);
+        _chainIdDigits = _countDigits(_chainIdInt);
+        _chainIdMultiplier = 10 ** _chainIdDigits;
         _idNext = 1;
 
         // set types supported by this version
@@ -560,7 +568,7 @@ contract ChainRegistryV01 is
     }
 
     function toString(ChainId chain) public pure returns(string memory) {
-        return StringsUpgradeable.toString(uint24(ChainId.unwrap(chain)));
+        return StringsUpgradeable.toString(uint40(ChainId.unwrap(chain)));
     }
 
     function toString(address account) public pure returns(string memory) {
@@ -589,7 +597,10 @@ contract ChainRegistryV01 is
     }
 
 
-    function _registerChain(ChainId chain, address chainOwner)
+    function _registerChain(
+        ChainId chain,
+        address chainOwner
+    )
         internal
         virtual
         returns(NftId id)
@@ -896,10 +907,50 @@ contract ChainRegistryV01 is
         }
     }
 
+    // requirement: each chain registry produces token ids that
+    // are guaranteed to not collide with any token id genereated
+    // on a different chain
+    //
+    // format concat(counter,chainid,2 digits for len-of-chain-id)
+    // restriction chainid up to 99 digits
+    // decode: from right to left:
+    // - 2 right most digits encode length of chainid
+    // - move number of digits to left as determined above (-> chainid)
+    // - the reminder to the left is the counter
+    // examples
+    // 1101
+    // ^^ ^
+    // || +- 1-digit chain id
+    // |+-- chain id = 1 (mainnet)
+    // +-- 1st token id on mainnet
+    // (1 * 10 ** 1 + 1) * 100 + 1
+    // 42987654321010
+    // ^ ^          ^
+    // | |          +- 10-digit chain id
+    // | +-- chain id = 9876543210 (hypothetical chainid)
+    // +-- 42nd token id on this chain
+    // (42 * 10 ** 10 + 9876543210) * 100 + 10
+    // (index * 10 ** digits + chainid) * 100 + digits (1 < digits < 100)
 
     function _getNextTokenId() internal returns(NftId id) {
-        id = NftId.wrap(_idNext);
+        id = NftId.wrap(
+            (_idNext * _chainIdMultiplier + _chainIdInt) * 100 + _chainIdDigits
+        );
+
         _idNext++;
+    }
+
+
+    function _countDigits(uint256 num)
+        internal 
+        pure 
+        returns (uint256 count)
+    {
+        count = 0;
+        while (num != 0) {
+            count++;
+            num /= 10;
+        }
     }
 
 
