@@ -189,6 +189,11 @@ interface IChainRegistry is
             address token,
             string memory displayName);
 
+    function toChain(uint256 chainId) 
+        external
+        pure
+        returns(ChainId);
+
     // only same chain: utility to get reference to instance service for specified instance id
     function getInstanceServiceFacade(bytes32 instanceId) 
         external

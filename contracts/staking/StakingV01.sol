@@ -524,6 +524,16 @@ contract StakingV01 is
     }
 
 
+    function toChain(uint256 chainId)
+        external 
+        virtual override
+        pure
+        returns(ChainId)
+    {
+        return toChainId(chainId);
+    }
+
+
     function toRate(uint256 value, int8 exp)
         external
         virtual override

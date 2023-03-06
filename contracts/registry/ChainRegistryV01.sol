@@ -524,7 +524,7 @@ contract ChainRegistryV01 is
     function tokenURI(uint256 id) 
         public 
         view 
-        override 
+        virtual override 
         returns(string memory)
     {
         return nftURI(NftId.wrap(id));
@@ -555,7 +555,7 @@ contract ChainRegistryV01 is
                 toString(NftId.unwrap(id))));
     }
 
-    function toChain(uint256 chainId) public pure returns(ChainId) {
+    function toChain(uint256 chainId) public virtual override pure returns(ChainId) {
         return toChainId(chainId);
     }
 

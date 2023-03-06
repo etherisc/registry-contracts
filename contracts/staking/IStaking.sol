@@ -3,6 +3,8 @@ pragma solidity ^0.8.19;
 
 import "../shared/IBaseTypes.sol";
 import "../shared/UFixedMath.sol";
+
+import "../registry/ChainRegistryV01.sol";
 import "../registry/IChainRegistry.sol";
 
 
@@ -47,6 +49,8 @@ interface IStaking {
 
     //--- view and pure functions ------------------//
 
+    function getRegistry() external view returns(ChainRegistryV01);
+
     function rewardRate() external view returns(UFixed rewardRate);
     function rewardBalance() external view returns(uint256 dipAmount);
     function rewardReserves() external view returns(uint256 dipAmount);
@@ -69,6 +73,8 @@ interface IStaking {
 
     function calculateRequiredStaking(ChainId chain, address token, uint256 tokenAmount) external view returns(uint256 dipAmount);
     function calculateCapitalSupport(ChainId chain, address token, uint256 dipAmount) external view returns(uint256 tokenAmount);
+
+    function toChain(uint256 chainId) external pure returns(ChainId);
 
     function toRate(uint256 value, int8 exp) external pure returns(UFixed);
     function rateDecimals() external pure returns(uint256 decimals);
