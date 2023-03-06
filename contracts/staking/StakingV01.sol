@@ -499,6 +499,18 @@ contract StakingV01 is
         view 
         returns(uint256 capitalAmount)
     {
+        IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(target);
+
+        // check target type staking support
+        require(_stakingSupported[info.t], "ERROR:STK-220:TARGET_TYPE_NOT_SUPPORTED");
+        require(info.t == _registryV01.BUNDLE(), "ERROR:STK-221:TARGET_TYPE_NOT_BUNDLE");
+
+        (,,, address token, ) = _registryV01.decodeBundleData(target);
+
+        return calculateCapitalSupport(
+            info.chain, 
+            token, 
+            _targetStakeBalance[target]);
     }
 
 
