@@ -6,6 +6,7 @@ from brownie import (
     Contract,
     USD1,
     USD2,
+    USD3,
     DIP,
     MockInstance,
     MockRegistry,
@@ -158,6 +159,9 @@ def usd1(instanceOperator) -> USD1: return USD1.deploy({'from': instanceOperator
 
 @pytest.fixture(scope="module")
 def usd2(instanceOperator) -> USD2: return USD2.deploy({'from': instanceOperator})
+
+@pytest.fixture(scope="module")
+def usd3(instanceOperator) -> USD3: return USD3.deploy({'from': instanceOperator})
 
 @pytest.fixture(scope="module")
 def dip(instanceOperator) -> DIP: return DIP.deploy({'from': instanceOperator})

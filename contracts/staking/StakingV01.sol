@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
 import "../shared/BaseTypes.sol";
 import "../shared/UFixedMath.sol";
 import "../shared/VersionedOwnable.sol";
@@ -451,6 +453,55 @@ contract StakingV01 is
     }
 
 
+    function calculateRequiredStaking(
+        ChainId chain,
+        address token,
+        uint256 tokenAmount
+    )
+        external
+        virtual override
+        view 
+        returns(uint256 dipAmount)
+    {
+        require(gtz(_stakingRate[chain][token]), "ERROR:STK-210:TOKEN_STAKING_RATE_NOT_SET");
+
+        UFixed rate = _stakingRate[chain][token];
+        int8 decimals = int8(IERC20Metadata(token).decimals());
+        UFixed dip = itof(tokenAmount, int8(uint8(DIP_DECIMALS)) - decimals) / rate;
+
+        return ftoi(dip);
+    }
+
+
+    function calculateCapitalSupport(
+        ChainId chain,
+        address token,
+        uint256 dipAmount
+    )
+        public
+        virtual override
+        view
+        returns(uint256 tokenAmount)
+    {
+        require(gtz(_stakingRate[chain][token]), "ERROR:STK-211:TOKEN_STAKING_RATE_NOT_SET");
+
+        UFixed rate = _stakingRate[chain][token];
+        int8 decimals = int8(IERC20Metadata(token).decimals());
+        UFixed support = itof(dipAmount, decimals - int8(uint8(DIP_DECIMALS))) * _stakingRate[chain][token];
+
+        return ftoi(support);
+    }
+
+
+    function capitalSupport(NftId target)
+        external
+        virtual override
+        view 
+        returns(uint256 capitalAmount)
+    {
+    }
+
+
     function toRate(uint256 value, int8 exp)
         external
         virtual override
@@ -501,7 +552,7 @@ contract StakingV01 is
         )
     {
         IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(target);
-        require(info.t == _registryV01.BUNDLE(), "ERROR:STK-210:OBJECT_TYPE_NOT_BUNDLE");
+        require(info.t == _registryV01.BUNDLE(), "ERROR:STK-230:OBJECT_TYPE_NOT_BUNDLE");
 
         // fill in object stae from registry info
         objectState = info.state;

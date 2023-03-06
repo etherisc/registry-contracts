@@ -64,6 +64,10 @@ interface IStaking {
     function calculateRewardsIncrement(StakeInfo memory stakeInfo) external view returns(uint256 rewardsAmount);
     function calculateRewards(uint256 amount, uint256 duration) external view returns(uint256 rewardAmount);
 
+    function calculateRequiredStaking(ChainId chain, address token, uint256 tokenAmount) external view returns(uint256 dipAmount);
+    function calculateCapitalSupport(ChainId chain, address token, uint256 dipAmount) external view returns(uint256 tokenAmount);
+    function capitalSupport(NftId target) external view returns(uint256 capitalAmount);
+
     function toRate(uint256 value, int8 exp) external pure returns(UFixed);
     function rateDecimals() external pure returns(uint256 decimals);
 }
