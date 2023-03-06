@@ -176,6 +176,10 @@ brownie console
 
 * combine staking getInfo(nftid) + get bundle info(nftid), via interface
 * stakes(target)
+  (+) code
+  (-) tests
 * stakes(target, user)
-* calculateCapitalSupport -> see IStakingDataProvider
-* capitalSupport -> see IStakingDataProvider
+  (+) not implemented
+* capitalSupport
+  (+) code
+  (-) tests

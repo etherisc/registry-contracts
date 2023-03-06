@@ -57,6 +57,9 @@ interface IStaking {
     function isStakeOwner(NftId id, address user) external view returns(bool isOwner);
     function getInfo(NftId id) external view returns(StakeInfo memory info);
 
+    function stakes(NftId target) external view returns(uint256 dipAmount);
+    function capitalSupport(NftId target) external view returns(uint256 capitalAmount);
+
     function isStakingSupportedForType(ObjectType targetType) external view returns(bool isSupported);
     function isStakingSupported(NftId target) external view returns(bool isSupported);
     function isUnstakingSupported(NftId target) external view returns(bool isSupported);
@@ -66,7 +69,6 @@ interface IStaking {
 
     function calculateRequiredStaking(ChainId chain, address token, uint256 tokenAmount) external view returns(uint256 dipAmount);
     function calculateCapitalSupport(ChainId chain, address token, uint256 dipAmount) external view returns(uint256 tokenAmount);
-    function capitalSupport(NftId target) external view returns(uint256 capitalAmount);
 
     function toRate(uint256 value, int8 exp) external pure returns(UFixed);
     function rateDecimals() external pure returns(uint256 decimals);

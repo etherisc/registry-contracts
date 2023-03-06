@@ -493,6 +493,16 @@ contract StakingV01 is
     }
 
 
+    function stakes(NftId target)
+        external
+        virtual override
+        view
+        returns(uint256 dipAmount)
+    {
+        return _targetStakeBalance[target];
+    }
+
+
     function capitalSupport(NftId target)
         external
         virtual override
