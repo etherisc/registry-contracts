@@ -171,3 +171,11 @@ brownie test -n 8
 ```bash
 brownie console
 ```
+
+## TODO
+
+* combine staking getInfo(nftid) + get bundle info(nftid), via interface
+* stakes(target)
+* stakes(target, user)
+* calculateCapitalSupport -> see IStakingDataProvider
+* capitalSupport -> see IStakingDataProvider

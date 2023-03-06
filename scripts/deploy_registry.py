@@ -45,6 +45,23 @@ from scripts.const import (
     GIF_ACTOR
 )
 
+GAS_PRICE_SAFETY_FACTOR = 1.3
+GAS_REGISTRY = {
+    INSTANCE_OPERATOR: 1500000, # dip,usdt token for testnets
+    PROXY_ADMIN_OWNER: 3700000, # proxy adins for registry, staking
+    REGISTRY_OWNER: 5700000, # registry contract, some wiring
+    STAKING_OWNER: 4200000, # staking contract, some wiring
+    STAKER1: 0
+}
+
+GAS_MOCK = {
+    INSTANCE_OPERATOR: 1200000, # mock instance and instance registry, some transfers
+    PROXY_ADMIN_OWNER: 0, # proxy adins for registry, staking
+    REGISTRY_OWNER: 1800000, # registration of protocol, chain, token, instance, riskpool, bundle
+    STAKING_OWNER: 0,
+    STAKER1: 700000, # create bundle stake
+}
+
 PROXY_ADMIN_CONTRACT = OwnableProxyAdmin
 REGISTRY_CONTRACT = ChainRegistryV01
 STAKING_CONTRACT = StakingV01
@@ -82,34 +99,83 @@ STATE_BUNDLE = {
 }
 
 def help():
-    print('from scripts.deploy_registry import all_in_1, verify_deploy, help')
-    print('(registry, staking, nft, dip, usdt, instance_service, instance_operator, registry_owner, staking_owner, proxy_admin) = all_in_1()')
+    print('from scripts.deploy_registry import all_in_1, get_accounts, get_stakeholder_accounts, check_funds, amend_funds, verify_deploy, help')
+    print('a = get_accounts()')
+    print('stakeholder_accounts = get_stakeholder_accounts(a)')
+    print('check_funds = get_stakeholder_accounts(stakeholder_accounts)')
+    print('(registry, staking, nft, dip, usdt, instance_service, instance_operator, registry_owner, staking_owner, proxy_admin) = all_in_1(stakeholder_accounts)')
     print('instance_service.getBundle({}).dict()'.format(MOCK_BUNDLE_ID))
     print("registry.getNftInfo(nft['stake']).dict()")
     print("registry.decodeStakeData(nft['stake']).dict()")
     print("staking.getInfo(nft['stake']).dict()")
 
+# >>> GIF_ACTOR[INSTANCE_OPERATOR]
+# 0
+# >>> GIF_ACTOR[PROXY_ADMIN_OWNER]
+# 15
+# >>> GIF_ACTOR[REGISTRY_OWNER]
+# 14
+# >>> GIF_ACTOR[STAKING_OWNER]
+# 16
+# >>> GIF_ACTOR[STAKER1]
+# 17
+# >>> print('\n'.join(['{}: {}'.format(x, initial_balance - accounts[GIF_ACTOR[x]].balance()) for x in a]))
+# instanceOperator: 2456175
+# ('proxyAdminOwner',): 3490280
+# registryOwner: 7181980
+# stakingOwner: 3981863
+# staker1: 657142
 
-def actor_account(actor):
+def actor_account(actor, accts):
     assert actor in GIF_ACTOR
     account_idx = GIF_ACTOR[actor]
-    return accounts[account_idx]
+    return accts[account_idx]
 
 
-def accounts_ganache():
+def get_stakeholder_accounts(accts):
+    if len(accts) >= 20:
+        return {
+            INSTANCE_OPERATOR: actor_account(INSTANCE_OPERATOR, accts),
+            PROXY_ADMIN_OWNER: actor_account(PROXY_ADMIN_OWNER, accts),
+            REGISTRY_OWNER: actor_account(REGISTRY_OWNER, accts),
+            STAKING_OWNER: actor_account(STAKING_OWNER, accts),
+            STAKER1: actor_account(STAKER1, accts),
+        }
+    
+    print('ERROR: current chain is {}. len(accounts): {}, expected 20'
+        .format(web3.chain_id, len(accts)))
+
     return {
-        INSTANCE_OPERATOR: actor_account(INSTANCE_OPERATOR),
-        PROXY_ADMIN_OWNER: actor_account(PROXY_ADMIN_OWNER),
-        REGISTRY_OWNER: actor_account(REGISTRY_OWNER),
-        STAKING_OWNER: actor_account(STAKING_OWNER),
-        STAKER1: actor_account(STAKER1),
+        INSTANCE_OPERATOR: None,
+        PROXY_ADMIN_OWNER: None,
+        REGISTRY_OWNER: None,
+        STAKING_OWNER: None,
+        STAKER1: None,
     }
 
 
-def all_in_1(
-    stakeholder_accounts=accounts_ganache(),
-    include_mock_setup=True,
-    publish=False
+def get_accounts(mnemonic=None):
+    if not mnemonic and len(accounts) >= 20:
+        return accounts
+    
+    if mnemonic:
+        return accounts.from_mnemonic(mnemonic, count=20)
+    
+    print('ERROR: mnemonic is mandatory on chains without prefilled accounts (len => 20)')
+    return None
+
+
+def get_gas_price():
+    if web3.eth.chain_id == 1337:
+        return 1
+    
+    return web3.eth.gas_price
+
+
+def amend_funds(
+    stakeholder_accounts,
+    gas_price=None,
+    include_mock_setup=True
 ):
     # check stakeholder accounts
     a = stakeholder_accounts
@@ -119,20 +185,103 @@ def all_in_1(
     assert STAKING_OWNER in a
     assert STAKER1 in a
 
-    dip = connect_to_dip(a, publish)
-    usdt = connect_to_usdt(a, publish)
+    if not gas_price:
+        gas_price = get_gas_price()
+
+    gp = int(GAS_PRICE_SAFETY_FACTOR * gas_price)
+
+    g = GAS_REGISTRY
+    if include_mock_setup:
+        g = get_balance_sum(GAS_REGISTRY, GAS_MOCK)
+    
+    for s in a.keys():
+        bs = a[s].balance()
+        if bs >= gp * g[s]:
+            print('{}.balance(): {} OK'.format(s, bs))
+        else:
+            ms = gp * g[s] - bs
+            print('{}.balance(): {} transfer {} from instanceOperator'.format(s, bs, ms))
+            a['instanceOperator'].transfer(a[s], ms)
+
+
+def check_funds(
+    stakeholder_accounts,
+    gas_price=None,
+    include_mock_setup=True
+):
+    # check stakeholder accounts
+    a = stakeholder_accounts
+    assert INSTANCE_OPERATOR in a
+    assert PROXY_ADMIN_OWNER in a
+    assert REGISTRY_OWNER in a
+    assert STAKING_OWNER in a
+    assert STAKER1 in a
+
+    if not gas_price:
+        gas_price = get_gas_price()
+
+    gp = int(GAS_PRICE_SAFETY_FACTOR * gas_price)
+
+    g = GAS_REGISTRY
+    if include_mock_setup:
+        g = get_balance_sum(GAS_REGISTRY, GAS_MOCK)
+    
+    g_missing = 0
+    for s in a.keys():
+        bs = a[s].balance()
+        if bs >= gp * g[s]:
+            print('{}.balance(): {} OK'.format(s, bs))
+        else:
+            ms = gp * g[s] - bs
+            print('{}.balance(): {} MISSING: {}'.format(s, bs, ms))
+            g_missing += ms
+
+    if g_missing > 0:
+        if a[INSTANCE_OPERATOR].balance() >= gp * g[INSTANCE_OPERATOR] + g_missing:
+            print('{} balance sufficient to fund other accounts, use amend_funds(a) and try again'.format(INSTANCE_OPERATOR))
+        else:
+            print('{} balance insufficient to fund other accounts. missing amount: {}'
+                .format(INSTANCE_OPERATOR, g_missing))
+    
+    assert g_missing == 0
+
+
+def all_in_1(
+    stakeholder_accounts,
+    dip_address=None,
+    usdt_address=None,
+    include_mock_setup=True,
+    publish=False
+):
+    if not stakeholder_accounts:
+        if web3.chain_id == 1337:
+            stakeholder_accounts = accounts_ganache()
+        else:
+            print('stakeholder_accounts must not be None')
+            assert stakeholder_accounts
+
+    # check stakeholder accounts
+    a = stakeholder_accounts
+    balances_before = get_balances(a)
+    gas_price = get_gas_price()
+    check_funds(a, gas_price, include_mock_setup)
+
+    dip = connect_to_dip(a, dip_address, publish)
+    usdt = connect_to_usdt(a, usdt_address, publish)
 
     (
         proxy_admin, 
         registry_owner,
         registry
-    ) = deploy_registry(a, publish)
+    ) = deploy_registry(a, dip, publish)
 
     (
         proxy_admin, 
         staking_owner,
         staking
     ) = deploy_staking(a, registry, dip, publish)
+
+    balances_after = get_balances(a)
 
     # deal with mock setup for testing, playing around
     nft = None
@@ -217,7 +366,7 @@ def all_in_1(
                 .format(staker, staking_amount))
             
             dip.approve(
-                staking.getStakingWallet(),
+                staking,
                 staking_amount,
                 {'from': staker})
 
@@ -230,6 +379,16 @@ def all_in_1(
             {'from': staker })
 
         nft[NFT_STAKE] = extract_id(stake_tx)
+
+    balances_after_mock = get_balances(a)
+
+    delta_registry = get_balance_delta(balances_before, balances_after)
+    delta_mock = get_balance_delta(balances_after, balances_after_mock)
+    delta_total = get_balance_delta(balances_before, balances_after_mock)
+
+    print('gas costs for registry/staking\n{}'.format(delta_registry))
+    print('gas costs for mock setup\n{}'.format(delta_mock))
+    print('gas costs total\n{}'.format(delta_total))
 
     return (
         registry,
@@ -269,8 +428,8 @@ def deploy_registry(
         REGISTRY_CONTRACT, 
         proxy_admin.getProxy())
 
-    print('>>> done. upgradaple registry at {} with owner {}'
-        .format(registry, registry_owner))
+    print('>>> done. upgradaple registry at {} with owner {} and implementation {}'
+        .format(registry, registry_owner, registry_impl))
 
     return (
         proxy_admin,
@@ -305,8 +464,8 @@ def deploy_staking(
         STAKING_CONTRACT, 
         proxy_admin.getProxy())
 
-    print('>>> upgradaple staking at {} with owner {}'
-        .format(staking, staking_owner))
+    print('>>> upgradaple staking at {} with owner {} and implementation {}'
+        .format(staking, staking_owner, staking_impl))
 
     print('>>> set staking contract in registry')
     # needed for onlyStaking modifier
@@ -335,13 +494,18 @@ def deploy_staking(
     )
 
 
-def connect_to_dip(a, publish=False):
+def connect_to_dip(a, token, publish=False):
     instance_operator = a[INSTANCE_OPERATOR]
 
     if web3.chain_id == 1:
         return contract_from_address(
             DIP, 
             DIP_MAINNET_ADDRESS)
+
+    if token:
+        return contract_from_address(
+            DIP, 
+            token)
 
     print('>>> deploy dummy DIP contract contract')
     dip = DIP.deploy(
@@ -352,7 +516,7 @@ def connect_to_dip(a, publish=False):
     return dip
 
 
-def connect_to_usdt(a, publish=False):
+def connect_to_usdt(a, token, publish=False):
     instance_operator = a[INSTANCE_OPERATOR]
 
     if web3.chain_id == 1:
@@ -360,7 +524,12 @@ def connect_to_usdt(a, publish=False):
             USD2, 
             TETHER_MAINNET_ADDRESS)
 
-    print('>>> deploy dummy DIP contract contract')
+    if token:
+        return contract_from_address(
+            USD2, 
+            token)
+
+    print('>>> deploy dummy USDT contract contract')
     usdt = USD2.deploy(
         {'from': instance_operator},
         publish_source=publish)
@@ -434,3 +603,32 @@ def verify_deploy(
 def extract_id(tx):
     assert 'LogChainRegistryObjectRegistered' in tx.events
     return dict(tx.events['LogChainRegistryObjectRegistered'])['id']
+
+
+def get_balance_sum(b1, b2):
+    d = {}
+
+    for a in b1:
+        d[a] = b1[a] + b2[a]
+    
+    return d
+
+
+def get_balance_delta(b1, b2):
+    d = {}
+
+    for a in b1:
+        d[a] = b1[a] - b2[a]
+    
+    return d
+
+
+def get_balances(stakeholder_accounts):
+    b = {}
+
+    for a in stakeholder_accounts.keys():
+        b[a] = stakeholder_accounts[a].balance()
+    
+    return b
+
+
