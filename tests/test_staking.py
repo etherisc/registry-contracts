@@ -358,6 +358,7 @@ def test_stake_bundle_happy_path(
     assert info['id'] == nft_id
     assert info['t'] == chainRegistryV01.STAKE()
     assert info['state'] == state_approved
+    assert info['version'] == chainRegistryV01.version()
     (target_id, target_type) = chainRegistryV01.decodeStakeData(nft_id)
     assert target_id == bundle_nft
     assert target_type == chainRegistryV01.BUNDLE()
@@ -371,6 +372,7 @@ def test_stake_bundle_happy_path(
     assert info['rewardBalance'] == 0
     assert info['createdAt'] == block_timestamp
     assert info['updatedAt'] == block_timestamp
+    assert info['version'] == stakingV01.version()
 
 
 def test_increase_stakes(

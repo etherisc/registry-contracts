@@ -15,6 +15,7 @@ interface IStaking {
         uint256 rewardBalance;
         Timestamp createdAt;
         Timestamp updatedAt;
+        Version version;
     }
 
     event LogStakingRewardReservesIncreased(address user, uint256 amount, uint256 newBalance);

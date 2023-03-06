@@ -230,6 +230,7 @@ contract StakingV01 is
         info.stakeBalance = 0;
         info.rewardBalance = 0;
         info.createdAt = blockTimestamp();
+        info.version = version();
 
         emit LogStakingNewStake(target, user, stakeId);
 
