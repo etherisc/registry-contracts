@@ -600,6 +600,27 @@ contract StakingV01 is
         expiryAt = toTimestamp(bundle.createdAt + BUNDLE_LIFETIME_DEFAULT);
     }
 
+    //--- view and pure functions (target type specific) ------------------//
+    
+    // staking.getInfo(stake)
+    // registry.decodeBundleData(target)
+    // staking.getBundleState()
+    function getBundleInfo(NftId stake)
+        external
+        view
+        returns(
+            bytes32 instanceId,
+            uint256 riskpoolId,
+            uint256 bundleId,
+            string memory displayName,
+            IInstanceServiceFacade.BundleState bundleState,
+            Timestamp expiryAt,
+            uint256 stakeBalance,
+            uint256 rewardBalance
+        )
+    {
+        
+    }
 
     //--- internal functions ------------------//
 

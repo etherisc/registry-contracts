@@ -72,4 +72,20 @@ interface IStaking {
 
     function toRate(uint256 value, int8 exp) external pure returns(UFixed);
     function rateDecimals() external pure returns(uint256 decimals);
+
+    //--- view and pure functions (target type specific) ------------------//
+
+    function getBundleInfo(NftId stake)
+        external
+        view
+        returns(
+            bytes32 instanceId,
+            uint256 riskpoolId,
+            uint256 bundleId,
+            string memory displayName,
+            IInstanceServiceFacade.BundleState bundleState,
+            Timestamp expiryAt,
+            uint256 stakeBalance,
+            uint256 rewardBalance
+        );
 }
