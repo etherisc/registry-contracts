@@ -605,8 +605,9 @@ contract StakingV01 is
     // staking.getInfo(stake)
     // registry.decodeBundleData(target)
     // staking.getBundleState()
-    function getBundleInfo(NftId stake)
+    function getBundleInfo(NftId stakeId)
         external
+        virtual override
         view
         returns(
             bytes32 instanceId,
@@ -615,11 +616,32 @@ contract StakingV01 is
             string memory displayName,
             IInstanceServiceFacade.BundleState bundleState,
             Timestamp expiryAt,
-            uint256 stakeBalance,
-            uint256 rewardBalance
+            uint256 stakeAmount,
+            uint256 rewardAmount
         )
     {
-        
+        StakeInfo memory info = _info[stakeId];
+        require(info.createdAt > zeroTimestamp(), "ERROR:STK-240:STAKE_UNKNOWN");
+
+        IChainRegistry.NftInfo memory bundle = _registryV01.getNftInfo(info.target);
+        require(bundle.t == _registryV01.BUNDLE(), "ERROR:STK-241:TARGET_NOT_BUNDLE");
+
+        (
+            instanceId,
+            riskpoolId,
+            bundleId,
+            ,
+            displayName
+        ) = _registryV01.decodeBundleData(bundle.id);
+
+        (
+            ,
+            bundleState,
+            expiryAt
+        ) = getBundleState(bundle.id);
+
+        stakeAmount = info.stakeBalance;
+        rewardAmount = info.rewardBalance;
     }
 
     //--- internal functions ------------------//
