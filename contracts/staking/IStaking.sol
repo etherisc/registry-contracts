@@ -81,12 +81,12 @@ interface IStaking {
 
     //--- view and pure functions (target type specific) ------------------//
 
-    function getBundleInfo(NftId stake)
+    function getBundleInfo(NftId bundle)
         external
         view
         returns(
             bytes32 instanceId,
-            // uint256 riskpoolId,
+            uint256 riskpoolId,
             uint256 bundleId,
             address token,
             string memory displayName,
@@ -94,7 +94,6 @@ interface IStaking {
             Timestamp expiryAt,
             bool stakingSupported,
             bool unstakingSupported,
-            uint256 stakeBalance,
-            uint256 rewardBalance
+            uint256 stakeBalance
         );
 }

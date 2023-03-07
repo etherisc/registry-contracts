@@ -612,13 +612,13 @@ contract StakingV01 is
 
     //--- view and pure functions (target type specific) ------------------//
 
-    function getBundleInfo(NftId stakeNft)
+    function getBundleInfo(NftId bundleNft)
         external
         virtual override
         view
         returns(
             bytes32 instanceId,
-            // uint256 riskpoolId,
+            uint256 riskpoolId,
             uint256 bundleId,
             address token,
             string memory displayName,
@@ -626,21 +626,12 @@ contract StakingV01 is
             Timestamp expiryAt,
             bool stakingSupported,
             bool unstakingSupported,
-            uint256 stakeAmount,
-            uint256 rewardAmount
+            uint256 stakeAmount
         )
     {
-        NftId bundleNft;
-
-        (
-            bundleNft,
-            stakeAmount,
-            rewardAmount
-        ) = _getBundleInfoHelper(stakeNft);
-
         (
             instanceId,
-            ,
+            riskpoolId,
             bundleId,
             token,
             displayName
@@ -654,32 +645,10 @@ contract StakingV01 is
 
         stakingSupported = _isStakingSupportedForBundle(bundleNft);
         unstakingSupported = _isUnstakingSupportedForBundle(bundleNft);
+        stakeAmount = _targetStakeBalance[bundleNft];
     }
 
     //--- internal functions ------------------//
-
-    function _getBundleInfoHelper(NftId stakeId)
-        internal
-        view
-        returns(
-            NftId bundleId,
-            uint256 stakeAmount,
-            uint256 rewardAmount
-        )
-    {
-        StakeInfo memory info = _info[stakeId];
-        require(info.createdAt > zeroTimestamp(), "ERROR:STK-240:STAKE_UNKNOWN");
-
-        IChainRegistry.NftInfo memory bundle = _registryV01.getNftInfo(info.target);
-        require(bundle.t == _registryV01.BUNDLE(), "ERROR:STK-241:TARGET_NOT_BUNDLE");
-
-        return(
-            bundle.id,
-            info.stakeBalance,
-            info.rewardBalance
-        );
-    }
-
 
     function _isStakingSupportedForBundle(NftId target)
         internal
