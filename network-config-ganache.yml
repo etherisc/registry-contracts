@@ -1,0 +1,7 @@
+live:
+- name: Local
+  networks:
+  - chainid: 1337
+    host: http://172.26.0.2:7545
+    id: ganache
+    name: ganache

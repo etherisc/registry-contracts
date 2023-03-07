@@ -556,7 +556,7 @@ contract StakingV01 is
 
     function getRegistry()
         external 
-        virtual 
+        virtual override
         view 
         returns(ChainRegistryV01)
     {
@@ -611,21 +611,58 @@ contract StakingV01 is
     }
 
     //--- view and pure functions (target type specific) ------------------//
-    
-    // staking.getInfo(stake)
-    // registry.decodeBundleData(target)
-    // staking.getBundleState()
-    function getBundleInfo(NftId stakeId)
+
+    function getBundleInfo(NftId stakeNft)
         external
         virtual override
         view
         returns(
             bytes32 instanceId,
-            uint256 riskpoolId,
+            // uint256 riskpoolId,
             uint256 bundleId,
+            address token,
             string memory displayName,
             IInstanceServiceFacade.BundleState bundleState,
             Timestamp expiryAt,
+            bool stakingSupported,
+            bool unstakingSupported,
+            uint256 stakeAmount,
+            uint256 rewardAmount
+        )
+    {
+        NftId bundleNft;
+
+        (
+            bundleNft,
+            stakeAmount,
+            rewardAmount
+        ) = _getBundleInfoHelper(stakeNft);
+
+        (
+            instanceId,
+            ,
+            bundleId,
+            token,
+            displayName
+        ) = _registryV01.decodeBundleData(bundleNft);
+
+        (
+            ,
+            bundleState,
+            expiryAt
+        ) = getBundleState(bundleNft);
+
+        stakingSupported = _isStakingSupportedForBundle(bundleNft);
+        unstakingSupported = _isUnstakingSupportedForBundle(bundleNft);
+    }
+
+    //--- internal functions ------------------//
+
+    function _getBundleInfoHelper(NftId stakeId)
+        internal
+        view
+        returns(
+            NftId bundleId,
             uint256 stakeAmount,
             uint256 rewardAmount
         )
@@ -636,25 +673,12 @@ contract StakingV01 is
         IChainRegistry.NftInfo memory bundle = _registryV01.getNftInfo(info.target);
         require(bundle.t == _registryV01.BUNDLE(), "ERROR:STK-241:TARGET_NOT_BUNDLE");
 
-        (
-            instanceId,
-            riskpoolId,
-            bundleId,
-            ,
-            displayName
-        ) = _registryV01.decodeBundleData(bundle.id);
-
-        (
-            ,
-            bundleState,
-            expiryAt
-        ) = getBundleState(bundle.id);
-
-        stakeAmount = info.stakeBalance;
-        rewardAmount = info.rewardBalance;
+        return(
+            bundle.id,
+            info.stakeBalance,
+            info.rewardBalance
+        );
     }
-
-    //--- internal functions ------------------//
 
 
     function _isStakingSupportedForBundle(NftId target)

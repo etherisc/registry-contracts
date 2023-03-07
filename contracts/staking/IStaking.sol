@@ -86,11 +86,14 @@ interface IStaking {
         view
         returns(
             bytes32 instanceId,
-            uint256 riskpoolId,
+            // uint256 riskpoolId,
             uint256 bundleId,
+            address token,
             string memory displayName,
             IInstanceServiceFacade.BundleState bundleState,
             Timestamp expiryAt,
+            bool stakingSupported,
+            bool unstakingSupported,
             uint256 stakeBalance,
             uint256 rewardBalance
         );
