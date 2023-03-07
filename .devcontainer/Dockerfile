@@ -54,7 +54,7 @@ RUN wget -O /tmp/v${VERSION_OPEN_ZEPPELIN}.tar.gz https://github.com/OpenZeppeli
     && tar xvfz /tmp/v${VERSION_OPEN_ZEPPELIN}.tar.gz \
     && mv openzeppelin-contracts-${VERSION_OPEN_ZEPPELIN} openzeppelin-contracts@${VERSION_OPEN_ZEPPELIN} 
 
-ARG VERSION_OPEN_ZEPPELIN=4.8.1
+ARG VERSION_OPEN_ZEPPELIN=4.8.2
 RUN wget -O /tmp/v${VERSION_OPEN_ZEPPELIN}.tar.gz https://github.com/OpenZeppelin/openzeppelin-contracts/archive/refs/tags/v${VERSION_OPEN_ZEPPELIN}.tar.gz \
     && mkdir -p /home/vscode/.brownie/packages/OpenZeppelin \
     && cd /home/vscode/.brownie/packages/OpenZeppelin \

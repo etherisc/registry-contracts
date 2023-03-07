@@ -14,7 +14,7 @@ cd ~/.brownie/packages/OpenZeppelin
 tar xvfz /tmp/v${VERSION_OPEN_ZEPPELIN}.tar.gz 
 mv openzeppelin-contracts-${VERSION_OPEN_ZEPPELIN} openzeppelin-contracts@${VERSION_OPEN_ZEPPELIN} 
 
-export VERSION_OPEN_ZEPPELIN=4.8.1
+export VERSION_OPEN_ZEPPELIN=4.8.2
 wget -O /tmp/v${VERSION_OPEN_ZEPPELIN}.tar.gz https://github.com/OpenZeppelin/openzeppelin-contracts/archive/refs/tags/v${VERSION_OPEN_ZEPPELIN}.tar.gz 
 mkdir -p ~/.brownie/packages/OpenZeppelin 
 cd ~/.brownie/packages/OpenZeppelin 

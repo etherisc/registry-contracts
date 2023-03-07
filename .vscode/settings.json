@@ -1,4 +1,8 @@
 {
+    "solidity.remappingsUnix": [
+        "@openzeppelin/=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.8.2",
+        "@openzeppelin-upgradeable/=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts-upgradeable@4.8.2",
+    ],
     "workbench.colorCustomizations": {
         "activityBar.activeBackground": "#d29320",
         "activityBar.background": "#d29320",
