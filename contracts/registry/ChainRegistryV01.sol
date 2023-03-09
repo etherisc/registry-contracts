@@ -902,7 +902,7 @@ contract ChainRegistryV01 is
             (bytes32 instanceId, uint256 componentId) = abi.decode(data, (bytes32, uint256));
             _component[instanceId][componentId] = id;
         } else if(t == BUNDLE) {
-            (bytes32 instanceId, uint256 bundleId) = abi.decode(data, (bytes32, uint256));
+            (bytes32 instanceId, , uint256 bundleId, , ) = abi.decode(data, (bytes32, uint256, uint256, address, string));
             _bundle[instanceId][bundleId] = id;
         }
 
