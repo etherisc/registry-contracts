@@ -455,7 +455,7 @@ contract ChainRegistryV01 is
         view
         returns(address token)
     {
-        (token) = abi.decode(_info[id].data, (address));
+        (token) = _decodeTokenData(_info[id].data);
     }
 
 
@@ -469,14 +469,13 @@ contract ChainRegistryV01 is
             string memory displayName
         )
     {
-        (instanceId, registry, displayName) 
-            = abi.decode(_info[id].data, 
-                (bytes32, address, string));
+        return _decodeInstanceData(_info[id].data);
     }
 
 
     function decodeComponentData(NftId id)
         external
+        virtual override
         view
         returns(
             bytes32 instanceId,
@@ -484,14 +483,13 @@ contract ChainRegistryV01 is
             address token
         )
     {
-        (instanceId, componentId, token) 
-            = abi.decode(_info[id].data, 
-                (bytes32, uint256, address));
+        return _decodeComponentData(_info[id].data);
     }
 
 
     function decodeBundleData(NftId id)
         external
+        virtual override
         view
         returns(
             bytes32 instanceId,
@@ -501,23 +499,20 @@ contract ChainRegistryV01 is
             string memory displayName
         )
     {
-        (instanceId, riskpoolId, bundleId, token, displayName) 
-            = abi.decode(_info[id].data, 
-                (bytes32, uint256, uint256, address, string));
+        return _decodeBundleData(_info[id].data);
     }
 
 
     function decodeStakeData(NftId id)
         external
         view
+        virtual override
         returns(
             NftId target,
             ObjectType targetType
         )
     {
-        (target, targetType) 
-            = abi.decode(_info[id].data, 
-                (NftId, ObjectType));
+        return _decodeStakeData(_info[id].data);
     }
 
 
@@ -756,6 +751,16 @@ contract ChainRegistryV01 is
     }
 
 
+    function _decodeTokenData(bytes memory data) 
+        internal 
+        virtual 
+        view 
+        returns(address token)
+    {
+        return abi.decode(data, (address));
+    }
+
+
     function _encodeInstanceData(
         bytes32 instanceId,
         address registry,
@@ -770,6 +775,21 @@ contract ChainRegistryV01 is
     }
 
 
+    function _decodeInstanceData(bytes memory data) 
+        internal
+        virtual
+        view
+        returns(
+            bytes32 instanceId,
+            address registry,
+            string memory displayName
+        )
+    {
+        (instanceId, registry, displayName) 
+            = abi.decode(data, (bytes32, address, string));
+    }
+
+
     function _encodeComponentData(
         bytes32 instanceId,
         uint256 componentId,
@@ -781,6 +801,21 @@ contract ChainRegistryV01 is
         returns(bytes memory)
     {
         return abi.encode(instanceId, componentId, token);
+    }
+
+
+    function _decodeComponentData(bytes memory data) 
+        internal 
+        virtual 
+        view 
+        returns(
+            bytes32 instanceId,
+            uint256 componentId,
+            address token
+        )
+    {
+        (instanceId, componentId, token)
+            = abi.decode(data, (bytes32, uint256, address));
     }
 
 
@@ -800,6 +835,23 @@ contract ChainRegistryV01 is
     }
 
 
+    function _decodeBundleData(bytes memory data) 
+        internal 
+        virtual 
+        view 
+        returns(
+            bytes32 instanceId,
+            uint256 riskpoolId,
+            uint256 bundleId,
+            address token,
+            string memory displayName
+        )
+    {
+        (instanceId, riskpoolId, bundleId, token, displayName) 
+            = abi.decode(data, (bytes32, uint256, uint256, address, string));
+    }
+
+
     function _encodeStakeData(NftId target, ObjectType targetType)
         internal 
         virtual
@@ -807,6 +859,20 @@ contract ChainRegistryV01 is
         returns(bytes memory)
     {
         return abi.encode(target, targetType);
+    }
+
+
+    function _decodeStakeData(bytes memory data) 
+        internal
+        virtual
+        view
+        returns(
+            NftId target,
+            ObjectType targetType
+        )
+    {
+        (target, targetType) 
+            = abi.decode(data, (NftId, ObjectType));
     }
 
 
@@ -888,10 +954,10 @@ contract ChainRegistryV01 is
             _chain[chain] = id;
             _chainIds.push(chain);
         } else if(t == TOKEN) {
-            (address token) = abi.decode(data, (address));
+            (address token) = _decodeTokenData(data);
             _contractObject[chain][token] = id;
         } else if(t == INSTANCE) {
-            (bytes32 instanceId, address registry) = abi.decode(data, (bytes32, address));
+            (bytes32 instanceId, address registry, ) = _decodeInstanceData(data);
             _contractObject[chain][registry] = id;
             _instance[instanceId] = id;
         } else if(
@@ -899,10 +965,10 @@ contract ChainRegistryV01 is
             || t == PRODUCT
             || t == ORACLE
         ) {
-            (bytes32 instanceId, uint256 componentId) = abi.decode(data, (bytes32, uint256));
+            (bytes32 instanceId, uint256 componentId, ) = _decodeComponentData(data);
             _component[instanceId][componentId] = id;
         } else if(t == BUNDLE) {
-            (bytes32 instanceId, , uint256 bundleId, , ) = abi.decode(data, (bytes32, uint256, uint256, address, string));
+            (bytes32 instanceId, , uint256 bundleId, , ) = _decodeBundleData(data);
             _bundle[instanceId][bundleId] = id;
         }
 

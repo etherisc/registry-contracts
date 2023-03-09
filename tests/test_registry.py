@@ -106,42 +106,49 @@ def test_register_instance(
     registryOwner: Account,
     theOutsider: Account
 ):
+    instance_name = 'mockInstance TEST'
+
     with brownie.reverts('Ownable: caller is not the owner'):
         chainRegistryV01.registerInstance(
             mockRegistry,
-            "mockRegistry TEST",
+            instance_name,
             {'from': theOutsider})
 
     with brownie.reverts('ERROR:CRG-300:REGISTRY_ADDRESS_ZERO'):
         chainRegistryV01.registerInstance(
             ZERO_ADDRESS,
-            "mockRegistry TEST",
+            instance_name,
             {'from': registryOwner})
 
     with brownie.reverts('ERROR:CRG-301:REGISTRY_NOT_CONTRACT'):
         chainRegistryV01.registerInstance(
             theOutsider,
-            "mockRegistry TEST",
+            instance_name,
             {'from': registryOwner})
 
     chainRegistryV01.registerInstance(
         mockRegistry,
-        "mockRegistry TEST",
+        instance_name,
         {'from': registryOwner})
 
     instance_id = mockInstance.getInstanceId()
 
+
+    # check instance registry entry, instance entry
+    chain = chainRegistryV01.toChain(web3.chain_id)
     nft_id = chainRegistryV01.getNftId['bytes32'](instance_id)
     assert nft_id > 0
+    assert chainRegistryV01.getNftId(chain, mockRegistry) == nft_id
 
     data = chainRegistryV01.decodeInstanceData(nft_id).dict()
     assert data['instanceId'] == instance_id
     assert data['registry'] == mockRegistry
+    assert data['displayName'] == instance_name
 
     with brownie.reverts('ERROR:CRG-304:INSTANCE_ALREADY_REGISTERED'):
         chainRegistryV01.registerInstance(
             mockRegistry,
-            "mockRegistry TEST",
+            instance_name,
             {'from': registryOwner})
 
 
@@ -155,6 +162,7 @@ def test_register_component(
     registryOwner: Account,
     theOutsider: Account
 ):
+    chain = chainRegistryV01.toChain(web3.chain_id)
     instance_id = mockInstance.getInstanceId()
     component_id = 1
 
@@ -246,6 +254,7 @@ def test_register_bundle(
     # attempt direct registration of bundle
     bundle_id = 1
     bundle_id2 = 2
+    bundle_id2 = 3
     bundle_name = 'my test bundle'
     bundle_expiry_at = unix_timestamp() + 14 * 24 * 3600
 
@@ -360,6 +369,7 @@ def test_register_bundle(
     assert data['riskpoolId'] == riskpool_id
     assert data['bundleId'] == bundle_id
     assert data['token'] == usd2
+    assert data['displayName'] == bundle_name
 
     with brownie.reverts('ERROR:CRG-320:BUNDLE_ALREADY_REGISTERED'):
         chainRegistryV01.registerBundle(

@@ -189,6 +189,15 @@ interface IChainRegistry is
             address token,
             string memory displayName);
 
+
+    function decodeStakeData(NftId id)
+        external
+        view
+        returns(
+            NftId target,
+            ObjectType targetType);
+
+
     function toChain(uint256 chainId) 
         external
         pure
