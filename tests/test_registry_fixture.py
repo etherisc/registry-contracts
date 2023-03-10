@@ -121,12 +121,13 @@ def test_registry_basics(
     chainNftId = r.getNftId['bytes5'](chainId)
     assert r.ownerOf(chainNftId) == ro
 
+    expected_block_number = history[-1].block_number - 1
     info = r.getNftInfo(chainNftId).dict()
     assert info['id'] == chainNftId
     assert info['t'] == r.CHAIN()
     assert info['chain'] == hex(web3.chain_id)
-    assert info['mintedIn'] == history[-1].block_number
-    assert info['updatedIn'] == history[-1].block_number
+    assert info['mintedIn'] == expected_block_number
+    assert info['updatedIn'] == expected_block_number
     assert info['version'] == r.version()
 
     # check registry nft
@@ -137,8 +138,8 @@ def test_registry_basics(
     assert info['id'] == registryNftId
     assert info['t'] == r.REGISTRY()
     assert info['chain'] == hex(web3.chain_id)
-    assert info['mintedIn'] == history[-1].block_number
-    assert info['updatedIn'] == history[-1].block_number
+    assert info['mintedIn'] == expected_block_number
+    assert info['updatedIn'] == expected_block_number
     assert info['version'] == r.version()
 
     # disect uri and check its parts

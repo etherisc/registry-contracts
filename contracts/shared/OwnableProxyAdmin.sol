@@ -16,24 +16,37 @@ contract OwnableProxyAdmin is
     TransparentUpgradeableProxy private _proxy;
 
     constructor(
-        VersionedOwnable implementation,
-        address implementationOwner
+        VersionedOwnable implementation
     )
         Ownable()
     {
         require(address(implementation) != address(0), "ERROR:PXA-001:IMPLEMENTATION_ZERO");
-        require(implementationOwner != address(0), "ERROR:PXA-002:IMPLEMENTATION_OWNER_ZERO");
-
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation), 
-            address(this),
-            abi.encodeWithSignature(
-                ACTIVATE_AND_SET_OWNER_SIGNATURE,
-                address(implementation),
-                implementationOwner)
-        );
-
         _implementation = implementation;
+    }
+
+
+    function setProxy(TransparentUpgradeableProxy proxy)
+        external
+        onlyOwner
+    {
+        require(address(_proxy) == address(0), "ERROR:PXA-010:PROXY_SET_ALREADY");
+        require(address(proxy) != address(0), "ERROR:PXA-011:PROXY_ZERO");
+        _proxy = proxy;
+    }
+
+
+    function getProxyCallData(
+        address implementation,
+        address implementationOwner
+    )
+        external
+        pure
+        returns(bytes memory data)
+    {
+        return abi.encodeWithSignature(
+            ACTIVATE_AND_SET_OWNER_SIGNATURE,
+            implementation,
+            implementationOwner);
     }
 
 
@@ -41,8 +54,9 @@ contract OwnableProxyAdmin is
         external
         onlyOwner
     {
-        require(address(newImplementation) != address(0), "ERROR:PXA-010:IMPLEMENTATION_ZERO");
-        require(address(newImplementation) != address(_implementation), "ERROR:PXA-011:IMPLEMENTATION_NOT_NEW");
+        require(address(_proxy) != address(0), "ERROR:PXA-020:PROXY_NOT_SET");
+        require(address(newImplementation) != address(0), "ERROR:PXA-021:IMPLEMENTATION_ZERO");
+        require(address(newImplementation) != address(_implementation), "ERROR:PXA-022:IMPLEMENTATION_NOT_NEW");
 
         _implementation = newImplementation;
         _proxy.upgradeToAndCall(
@@ -58,8 +72,8 @@ contract OwnableProxyAdmin is
         external
         onlyOwner
     {
-        require(newAdmin != address(0), "ERROR:PXA-020:PROXY_ADMIN_ZERO");
-        require(newAdmin != address(_implementation.owner()), "ERROR:PXA-012:PROXY_ADMIN_SAME_AS_IMPLEMENTATION_OWNER");
+        require(newAdmin != address(0), "ERROR:PXA-030:PROXY_ADMIN_ZERO");
+        require(newAdmin != address(_implementation.owner()), "ERROR:PXA-031:PROXY_ADMIN_SAME_AS_IMPLEMENTATION_OWNER");
         _proxy.changeAdmin(newAdmin);
     }
 

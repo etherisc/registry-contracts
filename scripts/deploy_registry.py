@@ -26,16 +26,6 @@ from scripts.const import (
     USDT_MAINNET_ADDRESS,
     ACCOUNTS_MNEMONIC,
     INSTANCE_OPERATOR,
-    # INSTANCE_WALLET,
-    # ORACLE_PROVIDER,
-    # CHAINLINK_NODE_OPERATOR,
-    # RISKPOOL_KEEPER,
-    # RISKPOOL_WALLET,
-    # INVESTOR,
-    # PRODUCT_OWNER,
-    # INSURER,
-    # CUSTOMER1,
-    # CUSTOMER2,
     REGISTRY_OWNER,
     STAKING_OWNER,
     PROXY_ADMIN_OWNER,
@@ -45,7 +35,7 @@ from scripts.const import (
     GIF_ACTOR
 )
 
-GAS_PRICE_SAFETY_FACTOR = 1.3
+GAS_PRICE_SAFETY_FACTOR = 2
 GAS_REGISTRY = {
     INSTANCE_OPERATOR: 1500000, # dip,usdt token for testnets
     PROXY_ADMIN_OWNER: 3700000, # proxy adins for registry, staking
@@ -98,33 +88,20 @@ STATE_BUNDLE = {
     3: 'Burned'
 }
 
+# load openzeppelin contracts
+oz = get_package('OpenZeppelin')
+
 def help():
     print('from scripts.deploy_registry import all_in_1, get_accounts, get_stakeholder_accounts, check_funds, amend_funds, verify_deploy, help')
     print('a = get_accounts()')
     print('stakeholder_accounts = get_stakeholder_accounts(a)')
-    print('check_funds = get_stakeholder_accounts(stakeholder_accounts)')
+    print('check_funds(stakeholder_accounts)')
     print('(registry, staking, nft, dip, usdt, instance_service, instance_operator, registry_owner, staking_owner, proxy_admin) = all_in_1(stakeholder_accounts)')
     print('instance_service.getBundle({}).dict()'.format(MOCK_BUNDLE_ID))
     print("registry.getNftInfo(nft['stake']).dict()")
     print("registry.decodeStakeData(nft['stake']).dict()")
     print("staking.getInfo(nft['stake']).dict()")
 
-# >>> GIF_ACTOR[INSTANCE_OPERATOR]
-# 0
-# >>> GIF_ACTOR[PROXY_ADMIN_OWNER]
-# 15
-# >>> GIF_ACTOR[REGISTRY_OWNER]
-# 14
-# >>> GIF_ACTOR[STAKING_OWNER]
-# 16
-# >>> GIF_ACTOR[STAKER1]
-# 17
-# >>> print('\n'.join(['{}: {}'.format(x, initial_balance - accounts[GIF_ACTOR[x]].balance()) for x in a]))
-# instanceOperator: 2456175
-# ('proxyAdminOwner',): 3490280
-# registryOwner: 7181980
-# stakingOwner: 3981863
-# staker1: 657142
 
 def actor_account(actor, accts):
     assert actor in GIF_ACTOR
@@ -175,6 +152,7 @@ def get_gas_price():
 def amend_funds(
     stakeholder_accounts,
     gas_price=None,
+    safety_factor=GAS_PRICE_SAFETY_FACTOR,
     include_mock_setup=True
 ):
     # check stakeholder accounts
@@ -188,7 +166,7 @@ def amend_funds(
     if not gas_price:
         gas_price = get_gas_price()
 
-    gp = int(GAS_PRICE_SAFETY_FACTOR * gas_price)
+    gp = int(safety_factor * gas_price)
 
     g = GAS_REGISTRY
     if include_mock_setup:
@@ -207,6 +185,7 @@ def amend_funds(
 def check_funds(
     stakeholder_accounts,
     gas_price=None,
+    safety_factor=GAS_PRICE_SAFETY_FACTOR,
     include_mock_setup=True
 ):
     # check stakeholder accounts
@@ -220,7 +199,7 @@ def check_funds(
     if not gas_price:
         gas_price = get_gas_price()
 
-    gp = int(GAS_PRICE_SAFETY_FACTOR * gas_price)
+    gp = int(safety_factor * gas_price)
 
     g = GAS_REGISTRY
     if include_mock_setup:
@@ -418,11 +397,7 @@ def deploy_registry(
         publish_source=publish)
 
     print('>>> deploy registry proxy admin contract {}'.format(PROXY_ADMIN_CONTRACT._name))
-    proxy_admin = PROXY_ADMIN_CONTRACT.deploy(
-        registry_impl,
-        registry_owner,
-        {'from': proxy_admin_owner},
-        publish_source=publish)
+    proxy_admin = deploy_proxy(registry_impl, registry_owner, proxy_admin_owner, publish)
 
     registry = contract_from_address(
         REGISTRY_CONTRACT, 
@@ -454,11 +429,7 @@ def deploy_staking(
         publish_source=publish)
 
     print('>>> deploy staking proxy admin contract {}'.format(PROXY_ADMIN_CONTRACT._name))
-    proxy_admin = PROXY_ADMIN_CONTRACT.deploy(
-        staking_impl,
-        staking_owner,
-        {'from': proxy_admin_owner},
-        publish_source=publish)
+    proxy_admin = deploy_proxy(staking_impl, staking_owner, proxy_admin_owner, publish)
     
     staking = contract_from_address(
         STAKING_CONTRACT, 
@@ -492,6 +463,39 @@ def deploy_staking(
         staking_owner,
         staking
     )
+
+
+def deploy_proxy(
+    impl,
+    impl_owner,
+    proxy_admin_owner,
+    publish=False
+):
+
+    proxy_admin = PROXY_ADMIN_CONTRACT.deploy(
+        impl,
+        # impl_owner,
+        {'from': proxy_admin_owner},
+        publish_source=publish)
+
+    # create call data for deploy step
+    oz_proxy_data = proxy_admin.getProxyCallData(
+        impl,
+        impl_owner)
+
+    # deploy
+    oz_proxy = oz.TransparentUpgradeableProxy.deploy(
+        impl,
+        proxy_admin,
+        oz_proxy_data,
+        {'from': proxy_admin_owner},
+        publish_source=publish)
+
+    proxy_admin.setProxy(
+        oz_proxy,
+        {'from': proxy_admin_owner})
+
+    return proxy_admin
 
 
 def connect_to_dip(a, token, publish=False):

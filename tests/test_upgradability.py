@@ -13,6 +13,7 @@ from brownie import (
 )
 
 from scripts.util import contract_from_address
+from scripts.deploy_registry import deploy_proxy
 
 # enforce function isolation for tests below
 @pytest.fixture(autouse=True)
@@ -58,12 +59,13 @@ def test_deploy_demo_v1(
     assert demoV111.owner() == demoImplementationOwner
     
     # deploy proxy and assign initial implementation and owner
-    proxyAdmin = OwnableProxyAdmin.deploy(
+    proxyAdmin = deploy_proxy(
         demoV10,
         upgradableDemoOwner,
-        {'from': proxyAdminOwner})
+        proxyAdminOwner)
 
-    block_number_v10 = chain.height
+    # deploy_proxy has one additional tx (and block) after upgrade
+    block_number_v10 = chain.height - 1
     upgradableDemo = contract_from_address(
         DemoV10, 
         proxyAdmin.getProxy())
@@ -120,7 +122,7 @@ def test_deploy_demo_v1(
             {'from': upgradableDemoOwner})
 
     # verify that proxyAdminOwner may not upgrade to existing version
-    with brownie.reverts("ERROR:PXA-011:IMPLEMENTATION_NOT_NEW"):
+    with brownie.reverts("ERROR:PXA-022:IMPLEMENTATION_NOT_NEW"):
         proxyAdmin.upgrade(
             demoV10,
             {'from': proxyAdminOwner})

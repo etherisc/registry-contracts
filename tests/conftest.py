@@ -50,10 +50,7 @@ from scripts.util import (
     contract_from_address,
 )
 
-# from scripts.instance import (
-#     GifRegistry,
-#     GifInstance,
-# )
+from scripts.deploy_registry import deploy_proxy
 
 
 INITIAL_ACCOUNT_FUNDING = '1 ether'
@@ -192,10 +189,7 @@ def proxyAdmin(
     registryOwner,
     proxyAdminOwner
 ) -> OwnableProxyAdmin:
-    return OwnableProxyAdmin.deploy(
-        chainRegistryV01Implementation,
-        registryOwner,
-        {'from': proxyAdminOwner});
+    return deploy_proxy(chainRegistryV01Implementation, registryOwner, proxyAdminOwner)
 
 @pytest.fixture(scope="module")
 def chainRegistryV01(proxyAdmin) -> ChainRegistryV01:
@@ -215,10 +209,8 @@ def stakingProxyAdmin(
     stakingOwner,
     proxyAdminOwner
 ) -> OwnableProxyAdmin:
-    return OwnableProxyAdmin.deploy(
-        stakingV01Implementation,
-        stakingOwner,
-        {'from': proxyAdminOwner});
+    return deploy_proxy(stakingV01Implementation, stakingOwner, proxyAdminOwner)
+
 
 @pytest.fixture(scope="module")
 def stakingV01(
