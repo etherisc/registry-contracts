@@ -11,6 +11,7 @@ from brownie import (
     MockInstance,
     MockRegistry,
     OwnableProxyAdmin,
+    ChainNft,
     ChainRegistryV01,
     StakingV01,
 )
@@ -53,6 +54,7 @@ GAS_MOCK = {
 }
 
 PROXY_ADMIN_CONTRACT = OwnableProxyAdmin
+NFT_CONTRACT = ChainNft
 REGISTRY_CONTRACT = ChainRegistryV01
 STAKING_CONTRACT = StakingV01
 
@@ -96,7 +98,7 @@ def help():
     print('a = get_accounts()')
     print('stakeholder_accounts = get_stakeholder_accounts(a)')
     print('check_funds(stakeholder_accounts)')
-    print('(registry, staking, nft, dip, usdt, instance_service, instance_operator, registry_owner, staking_owner, proxy_admin) = all_in_1(stakeholder_accounts)')
+    print('(registry, staking, nft, nft_ids, dip, usdt, instance_service, instance_operator, registry_owner, staking_owner, proxy_admin) = all_in_1(stakeholder_accounts)')
     print('instance_service.getBundle({}).dict()'.format(MOCK_BUNDLE_ID))
     print("registry.getNftInfo(nft['stake']).dict()")
     print("registry.decodeStakeData(nft['stake']).dict()")
@@ -251,7 +253,8 @@ def all_in_1(
     (
         proxy_admin, 
         registry_owner,
-        registry
+        registry,
+        nft
     ) = deploy_registry(a, dip, publish)
 
     (
@@ -263,12 +266,11 @@ def all_in_1(
     balances_after = get_balances(a)
 
     # deal with mock setup for testing, playing around
-    nft = None
     mock_instance_service = None
     instance_operator = a[INSTANCE_OPERATOR]
 
     if include_mock_setup:
-        nft = {}
+        nft_ids = {}
         chain_id = web3.chain_id
 
         print('>>> register token {} for chain {}'
@@ -277,9 +279,10 @@ def all_in_1(
         token_tx = registry.registerToken(
             registry.toChain(chain_id),
             usdt,
+            '',
             {'from': registry_owner})
         
-        nft[NFT_USDT] = extract_id(token_tx)
+        nft_ids[NFT_USDT] = extract_id(token_tx)
 
         (
             instance_operator,
@@ -294,9 +297,10 @@ def all_in_1(
         instance_tx = registry.registerInstance(
             mock_registry,
             instance_name,
+            '',
             {'from': registry_owner})
 
-        nft[NFT_INSTANCE] = extract_id(instance_tx)
+        nft_ids[NFT_INSTANCE] = extract_id(instance_tx)
 
         print('>>> register riskpool {}'
             .format(MOCK_RISKPOOL_ID))
@@ -304,9 +308,10 @@ def all_in_1(
         riskpool_tx = registry.registerComponent(
             mock_instance_service.getInstanceId(),
             MOCK_RISKPOOL_ID,
+            '',
             {'from': registry_owner})
 
-        nft[NFT_RISKPOOL] = extract_id(riskpool_tx)
+        nft_ids[NFT_RISKPOOL] = extract_id(riskpool_tx)
 
         bundle_name = 'my bundle TEST'
         bundle_expiry_at = unix_timestamp() + 14 * 24 * 3600
@@ -322,7 +327,7 @@ def all_in_1(
             bundle_expiry_at,
             {'from': registry_owner})
 
-        nft[NFT_BUNDLE] = extract_id(bundle_tx)
+        nft_ids[NFT_BUNDLE] = extract_id(bundle_tx)
 
         staking_amount = 5000 * 10 ** dip.decimals()
         staker = a[STAKER1]
@@ -354,11 +359,11 @@ def all_in_1(
             .format(staking_amount, bundle_name, MOCK_BUNDLE_ID))
 
         stake_tx = staking.createStake(
-            nft[NFT_BUNDLE],
+            nft_ids[NFT_BUNDLE],
             staking_amount,
             {'from': staker })
 
-        nft[NFT_STAKE] = extract_id(stake_tx)
+        nft_ids[NFT_STAKE] = extract_id(stake_tx)
 
     balances_after_mock = get_balances(a)
 
@@ -374,6 +379,7 @@ def all_in_1(
         registry,
         staking,
         nft,
+        nft_ids,
         dip,
         usdt,
         mock_instance_service,
@@ -404,13 +410,26 @@ def deploy_registry(
         REGISTRY_CONTRACT, 
         proxy_admin.getProxy())
 
+    print('>>> deploy nft contract {}'.format(NFT_CONTRACT._name))
+    nft = NFT_CONTRACT.deploy(
+        registry, 
+        {'from': registry_owner},
+        publish_source=publish)
+
+    print('>>> set nft contract {} in registry'.format(nft))
+    registry.setNftContract(
+        nft, 
+        registry_owner, 
+        {'from': registry_owner})
+
     print('>>> done. upgradaple registry at {} with owner {} and implementation {}'
         .format(registry, registry_owner, registry_impl))
 
     return (
         proxy_admin,
         registry_owner,
-        registry
+        registry,
+        nft
     )
 
 
