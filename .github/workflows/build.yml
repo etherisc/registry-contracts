@@ -32,7 +32,7 @@ jobs:
       - name: Compile contracts
         run: brownie compile --all
       - run: touch .env
-      # - run: .github/workflows/scripts/touch_gif_package_dotenv.sh
+      - run: .github/workflows/scripts/touch_gif_package_dotenv.sh
       - name: Execute tests
         run: brownie test -n auto
         
