@@ -14,6 +14,7 @@ from brownie import (
     BaseTypes,
     Versionable,
     OwnableProxyAdmin,
+    ChainNft,
     ChainRegistryV01,
     ChainRegistryV02,
     StakingV01,
@@ -178,6 +179,10 @@ def math(theOutsider) -> UFixedMathTest:
     return UFixedMathTest.deploy({'from': theOutsider})
 
 #=== chain registry fixtures ==================================================#
+
+@pytest.fixture(scope="module")
+def chainNftStandalone(registryOwner) -> ChainNft:
+    return ChainNft.deploy(registryOwner, {'from': registryOwner})
 
 @pytest.fixture(scope="module")
 def chainRegistryV01Implementation(theOutsider) -> ChainRegistryV01:
