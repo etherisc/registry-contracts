@@ -67,7 +67,7 @@ contract StakingV01 is
 
 
     modifier onlyApprovedToken(ChainId chain, address token) {
-        NftId id = _registryV01.getNftId(chain, token);
+        NftId id = _registryV01.getTokenNftId(chain, token);
         require(gtz(id), "ERROR:STK-005:NOT_REGISTERED");
         IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(id);
         require(info.t == _registryV01.TOKEN(), "ERROR:STK-006:NOT_TOKEN");
@@ -360,7 +360,7 @@ contract StakingV01 is
         view
         returns(bool isOwner)
     {
-        return _registryV01.ownerOf(NftId.unwrap(stakeId)) == user;
+        return _registryV01.ownerOf(stakeId) == user;
     }
 
 
@@ -558,7 +558,7 @@ contract StakingV01 is
         external 
         virtual override
         view 
-        returns(ChainRegistryV01)
+        returns(IChainRegistry)
     {
         return _registryV01;
     }

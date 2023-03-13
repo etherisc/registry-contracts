@@ -174,10 +174,10 @@ def test_staking_rate(
         s.setStakingRate(chain, usd1, sr00, {'from': theOutsider})
 
     # check restriction to registered tokens
-    with brownie.reverts('ERROR:STK-005:NOT_REGISTERED'):
+    with brownie.reverts('ERROR:CRG-133:TOKEN_NOT_REGISTERED'):
         s.setStakingRate(chain, usd1, sr00, {'from': stakingOwner})
 
-    r.registerToken(chain, usd1, {'from': registryOwner})
+    r.registerToken(chain, usd1, '', {'from': registryOwner})
 
     # check restriction to staking rates > 0
     with brownie.reverts('ERROR:STK-110:STAKING_RATE_ZERO'):
@@ -497,18 +497,21 @@ def create_mock_bundle_setup(
     tx_token = chainRegistryV01.registerToken(
             chain_id,
             usd2,
+            '',
             {'from': registryOwner})
 
     # register instance
     tx_instance = chainRegistryV01.registerInstance(
         mockRegistry,
-        "mockRegistry TEST",
+        'mockRegistry TEST',
+        '',
         {'from': registryOwner})
 
     # register riskpool
     tx_riskpool = chainRegistryV01.registerComponent(
         instance_id,
         riskpool_id,
+        '',
         {'from': registryOwner})
 
     # register bundle

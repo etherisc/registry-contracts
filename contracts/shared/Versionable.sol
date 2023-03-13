@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import "@openzeppelin-upgradeable/contracts/utils/StringsUpgradeable.sol";
 
 import "./BaseTypes.sol";
-import "./VersionType.sol";
+import "./IVersionType.sol";
 
 contract Versionable is BaseTypes {
 

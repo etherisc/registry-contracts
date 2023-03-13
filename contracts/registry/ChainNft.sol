@@ -3,14 +3,17 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
+import "./IChainNft.sol";
+
 contract ChainNft is
-    ERC721Enumerable
+    ERC721Enumerable,
+    IChainNft
 {
     string public constant NAME = "Dezentralized Insurance Protocol Registry";
     string public constant SYMBOL = "DIPR";
 
     // remember registry
-    address private _registry;
+    IChainRegistry private _registry;
 
     // remember token uri
     mapping(uint256 tokenId => string uri) private _uri;
@@ -23,7 +26,7 @@ contract ChainNft is
 
 
     modifier onlyRegistry() {
-        require(msg.sender == _registry, "ERROR:CRG-001:CALLER_NOT_REGISTRY");
+        require(msg.sender == address(_registry), "ERROR:CRG-001:CALLER_NOT_REGISTRY");
         _;
     }
 
@@ -33,12 +36,18 @@ contract ChainNft is
     {
         require(registry != address(0), "ERROR:CRG-010:REGISTRY_ZERO");
 
-        _registry = registry;
+        _registry = IChainRegistry(registry);
 
         _chainIdInt = block.chainid;
         _chainIdDigits = _countDigits(_chainIdInt);
         _chainIdMultiplier = 10 ** _chainIdDigits;
-        _idNext = 1;
+
+        // on mainnet/goerli start /1 (reserved for protocol nft) on other chains with 2
+        if(block.chainid == 1 || block.chainid == 5) {
+            _idNext = 1;
+        } else {
+            _idNext = 2;
+        }
     }
 
 
@@ -47,6 +56,7 @@ contract ChainNft is
         string memory uri
     )
         external
+        override
         onlyRegistry
         returns(uint256 tokenId)
     {
@@ -61,6 +71,7 @@ contract ChainNft is
 
     function burn(uint256 tokenId)
         external
+        override
         onlyRegistry
     {
         _requireMinted(tokenId);
@@ -71,10 +82,21 @@ contract ChainNft is
 
     function setURI(uint256 tokenId, string memory uri)
         external
+        override
         onlyRegistry
     {
         _requireMinted(tokenId);
         _uri[tokenId] = uri;
+    }
+
+
+    function exists(uint256 tokenId)
+        external
+        view
+        override
+        returns(bool)
+    {
+        return _exists(tokenId);
     }
 
 
@@ -92,7 +114,8 @@ contract ChainNft is
     function getRegistry()
         external
         view
-        returns(address registry)
+        override
+        returns(IChainRegistry registry)
     {
         return _registry;
     }

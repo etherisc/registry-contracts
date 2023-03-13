@@ -181,18 +181,21 @@ def create_mock_bundle_setup(
     tx_token = chainRegistryV01.registerToken(
             chain_id,
             usd2,
+            '',
             {'from': registryOwner})
 
     # register instance
     tx_instance = chainRegistryV01.registerInstance(
         mockRegistry,
-        "mockRegistry TEST",
+        'mockRegistry TEST',
+        '',
         {'from': registryOwner})
 
     # register riskpool
     tx_riskpool = chainRegistryV01.registerComponent(
         instance_id,
         riskpool_id,
+        '',
         {'from': registryOwner})
 
     # register bundle

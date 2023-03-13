@@ -41,6 +41,7 @@ def test_register_token(
         chainRegistryV01.registerToken(
             chain_id,
             usd1,
+            '', # token uri 
             {'from': theOutsider})
 
     chain_id_other = chainRegistryV01.toChain(web3.chain_id + 1)
@@ -49,21 +50,26 @@ def test_register_token(
         chainRegistryV01.registerToken(
             chain_id_other,
             usd1,
+            '', # token uri 
             {'from': registryOwner})
 
     with brownie.reverts('ERROR:CRG-292:TOKEN_ADDRESS_ZERO'):
         chainRegistryV01.registerToken(
             chain_id,
             ZERO_ADDRESS,
+            '', # token uri 
             {'from': registryOwner})
 
     tokenType = chainRegistryV01.TOKEN()
     assert chainRegistryV01.objects(chain_id, tokenType) == 0
-    assert chainRegistryV01.getNftId(chain_id, usd1) == 0
+
+    with brownie.reverts('ERROR:CRG-133:TOKEN_NOT_REGISTERED'):
+        assert chainRegistryV01.getTokenNftId(chain_id, usd1) == 0
 
     tx = chainRegistryV01.registerToken(
         chain_id,
         usd1,
+        '', # token uri 
         {'from': registryOwner})
 
     assert 'LogChainRegistryObjectRegistered' in tx.events
@@ -78,6 +84,7 @@ def test_register_token(
 
     tokenNftId = chainRegistryV01.getNftId(chain_id, tokenType, 0)
     assert tokenNftId == evt['id']
+    assert chainRegistryV01.getTokenNftId(chain_id, usd1) == tokenNftId
 
     info = chainRegistryV01.getNftInfo(tokenNftId).dict()
     assert info['id'] == tokenNftId
@@ -94,6 +101,7 @@ def test_register_token(
         chainRegistryV01.registerToken(
             chain_id,
             usd1,
+            '', # token uri 
             {'from': registryOwner})
 
 
@@ -112,23 +120,27 @@ def test_register_instance(
         chainRegistryV01.registerInstance(
             mockRegistry,
             instance_name,
+            '', # token uri 
             {'from': theOutsider})
 
     with brownie.reverts('ERROR:CRG-300:REGISTRY_ADDRESS_ZERO'):
         chainRegistryV01.registerInstance(
             ZERO_ADDRESS,
             instance_name,
+            '', # token uri 
             {'from': registryOwner})
 
     with brownie.reverts('ERROR:CRG-301:REGISTRY_NOT_CONTRACT'):
         chainRegistryV01.registerInstance(
             theOutsider,
             instance_name,
+            '', # token uri 
             {'from': registryOwner})
 
     chainRegistryV01.registerInstance(
         mockRegistry,
         instance_name,
+        '', # token uri 
         {'from': registryOwner})
 
     instance_id = mockInstance.getInstanceId()
@@ -136,9 +148,9 @@ def test_register_instance(
 
     # check instance registry entry, instance entry
     chain = chainRegistryV01.toChain(web3.chain_id)
-    nft_id = chainRegistryV01.getNftId['bytes32'](instance_id)
+    nft_id = chainRegistryV01.getInstanceNftId(instance_id)
     assert nft_id > 0
-    assert chainRegistryV01.getNftId(chain, mockRegistry) == nft_id
+    assert chainRegistryV01.getNftId(chain, chainRegistryV01.INSTANCE(), 0) == nft_id
 
     data = chainRegistryV01.decodeInstanceData(nft_id).dict()
     assert data['instanceId'] == instance_id
@@ -149,6 +161,7 @@ def test_register_instance(
         chainRegistryV01.registerInstance(
             mockRegistry,
             instance_name,
+            '', # token uri 
             {'from': registryOwner})
 
 
@@ -170,17 +183,20 @@ def test_register_component(
         chainRegistryV01.registerComponent(
             instance_id,
             component_id,
+            '', # token uri 
             {'from': registryOwner})
 
     chainRegistryV01.registerInstance(
         mockRegistry,
         "mockRegistry TEST",
+        '', # token uri 
         {'from': registryOwner})
 
     with brownie.reverts('ERROR:DIS-010:COMPONENT_UNKNOWN'):
         chainRegistryV01.registerComponent(
             instance_id,
             component_id,
+            '', # token uri 
             {'from': registryOwner})
 
     # add component to dummy instance
@@ -202,6 +218,7 @@ def test_register_component(
         chainRegistryV01.registerComponent(
             instance_id,
             component_id,
+            '', # token uri 
             {'from': registryOwner})
 
     # register token
@@ -209,12 +226,14 @@ def test_register_component(
     chainRegistryV01.registerToken(
             chain_id,
             usd2,
+            '', # token uri 
             {'from': registryOwner})
 
     # try again
     chainRegistryV01.registerComponent(
         instance_id,
         component_id,
+        '', # token uri 
         {'from': registryOwner})
 
     nft_id = chainRegistryV01.getComponentNftId(instance_id, component_id)
@@ -229,6 +248,7 @@ def test_register_component(
         chainRegistryV01.registerComponent(
             instance_id,
             component_id,
+            '', # token uri 
             {'from': registryOwner})
 
 
@@ -248,7 +268,8 @@ def test_register_bundle(
 
     chainRegistryV01.registerInstance(
         mockRegistry,
-        "mockRegistry TEST",
+        'mockRegistry TEST',
+        '', # uri
         {'from': registryOwner})
 
     # attempt direct registration of bundle
@@ -286,12 +307,14 @@ def test_register_bundle(
     chainRegistryV01.registerToken(
             chain_id,
             usd2,
+            '', # uri
             {'from': registryOwner})
 
     # register component
     chainRegistryV01.registerComponent(
         instance_id,
         riskpool_id,
+        '', # uri
         {'from': registryOwner})
 
     # attempt to register bundle for paused riskpool

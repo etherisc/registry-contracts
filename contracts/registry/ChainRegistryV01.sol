@@ -1,27 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-
 import "../shared/VersionedOwnable.sol";
 
 import "./IInstanceRegistryFacade.sol";
 import "./IInstanceServiceFacade.sol";
 
 import "./IChainRegistry.sol";
+import "./IChainNft.sol";
 
 // registers dip relevant objects for this chain
 contract ChainRegistryV01 is
-    ERC721EnumerableUpgradeable,
     VersionedOwnable,
     IChainRegistry
 {
     using StringsUpgradeable for uint;
     using StringsUpgradeable for address;
 
-    string public constant NAME = "Dezentralized Insurance Protocol Registry";
-    string public constant SYMBOL = "DIPR";
-    string public constant BASE_URI = "did:nft:eip155:";
+    string public constant BASE_DID = "did:nft:eip155:";
     
     // responsibility of dip foundation
     ObjectType public constant UNDEFINED = ObjectType.wrap(0); // detection of uninitialized variables
@@ -49,14 +45,15 @@ contract ChainRegistryV01 is
     mapping(NftId id => NftInfo info) internal _info;
     mapping(ObjectType t => bool isSupported) internal _typeSupported; // which nft types are currently supported for minting
 
-    // keep track of chains
+    // keep track of chains and registries
     mapping(ChainId chain => NftId id) internal _chain;
+    mapping(ChainId chain => NftId id) internal _registry;
     ChainId [] internal _chainIds;
 
     // keep track of objects per chain and type
     mapping(ChainId chain => mapping(ObjectType t => NftId [] ids)) internal _object; // which erc20 on which chains are currently supported for minting
 
-    // keep track of objects with a contract address (registries, tokens, instances)
+    // keep track of objects with a contract address (tokens, instances)
     mapping(ChainId chain => mapping(address implementation => NftId id)) internal _contractObject; // which erc20 on which chains are currently supported for minting
 
     // keep track of instances, comonents and bundles
@@ -64,22 +61,23 @@ contract ChainRegistryV01 is
     mapping(bytes32 instanceId => mapping(uint256 componentId => NftId id)) internal _component; // which erc20 on which chains are currently supported for minting
     mapping(bytes32 instanceId => mapping(uint256 bundleId => NftId id)) internal _bundle; // which erc20 on which chains are currently supported for minting
 
-    // only used for _getNextTokenId
-    uint256 internal _chainIdInt; 
-    uint256 internal _chainIdDigits;
-    uint256 internal _chainIdMultiplier;
-    uint256 internal _idNext;
-
     // registy internal data
+    IChainNft internal _nft;
     ChainId internal _chainId;
-    address internal _staking;
+    IStaking internal _staking;
     Version internal _version;
+
+
+    modifier onlyExisting(NftId id) {
+        require(exists(id), "ERROR:CRG-001:TOKEN_ID_INVALID");
+        _;
+    }
 
 
     modifier onlyRegisteredToken(ChainId chain, address token) {
         NftId id = _contractObject[chain][token];
-        require(NftId.unwrap(id) > 0, "ERROR:CRG-001:TOKEN_NOT_REGISTERED");
-        require(_info[id].t == TOKEN, "ERROR:CRG-002:ADDRESS_NOT_TOKEN");
+        require(NftId.unwrap(id) > 0, "ERROR:CRG-002:TOKEN_NOT_REGISTERED");
+        require(_info[id].t == TOKEN, "ERROR:CRG-003:ADDRESS_NOT_TOKEN");
         _;
     }
 
@@ -116,7 +114,7 @@ contract ChainRegistryV01 is
 
 
     modifier onlyStaking() {
-        require(msg.sender == _staking, "ERROR:CRG-030:SENDER_NOT_STAKING");
+        require(msg.sender == address(_staking), "ERROR:CRG-030:SENDER_NOT_STAKING");
         _;
     }
 
@@ -133,7 +131,10 @@ contract ChainRegistryV01 is
 
     // IMPORTANT 2. activate implementation needed
     // is used by proxy admin in its upgrade function
-    function activateAndSetOwner(address implementation, address newOwner)
+    function activateAndSetOwner(
+        address implementation,
+        address newOwner
+    )
         external
         virtual override
         initializer
@@ -143,15 +144,10 @@ contract ChainRegistryV01 is
 
         // initialize open zeppelin contracts
         __Ownable_init();
-        __ERC721_init(NAME, SYMBOL);
 
         // set main internal variables
         _version = version();
-        _chainIdInt = block.chainid;
-        _chainId = toChainId(_chainIdInt);
-        _chainIdDigits = _countDigits(_chainIdInt);
-        _chainIdMultiplier = 10 ** _chainIdDigits;
-        _idNext = 1;
+        _chainId = toChainId(block.chainid);
 
         // set types supported by this version
         _typeSupported[PROTOCOL] = true;
@@ -163,18 +159,32 @@ contract ChainRegistryV01 is
         _typeSupported[BUNDLE] = true;
         _typeSupported[STAKE] = true;
 
-        // register/mint dip protocol on mainnet
-        if(toInt(_chainId) == 1) {
-            _registerProtocol(_chainId, newOwner);
-        } else {
-            _idNext++; // skip 1st id if we're not on mainnet
-        }
-
-        // register current chain and this registry
-        _registerChain(_chainId, newOwner);
-        _registerRegistry(_chainId, address(this), newOwner);
-
         transferOwnership(newOwner);
+    }
+
+
+    function setNftContract(
+        address nft,
+        address newOwner
+    )
+        external
+        virtual
+        onlyOwner
+    {
+        require(address(_nft) == address(0), "ERROR:CRG-040:NFT_ALREADY_SET");
+        require(nft != address(0), "ERROR:CRG-041:NFT_ADDRESS_ZERO");
+
+        require(newOwner != address(0), "ERROR:CRG-042:NEW_OWNER_ZERO");
+
+        _nft = IChainNft(nft);
+
+        // register/mint dip protocol on mainnet and goerli
+        if(toInt(_chainId) == 1 || toInt(_chainId) == 5) {
+            _registerProtocol(newOwner);
+        }
+        // register current chain and this registry
+        _registerChain(_chainId, newOwner, "");
+        _registerRegistry(_chainId, address(this), newOwner, "");
     }
 
 
@@ -183,34 +193,34 @@ contract ChainRegistryV01 is
         virtual
         onlyOwner
     {
-        require(_staking == address(0), "ERROR:CRG-040:STAKING_ALREADY_SET");
-        require(staking != address(0), "ERROR:CRG-041:STAKING_ADDRESS_ZERO");
+        require(address(_staking) == address(0), "ERROR:CRG-050:STAKING_ALREADY_SET");
+        require(staking != address(0), "ERROR:CRG-051:STAKING_ADDRESS_ZERO");
 
-        _staking = staking;
+        _staking = IStaking(staking);
     }
 
 
-    function registerChain(ChainId chain)
+    function registerChain(ChainId chain, string memory uri)
         external
         virtual override
         onlyOwner
         returns(NftId id)
     {
-        return _registerChain(chain, owner());
+        return _registerChain(chain, owner(), uri);
     }
 
 
-    function registerRegistry(ChainId chain, address registry)
+    function registerRegistry(ChainId chain, address registry, string memory uri)
         external
         virtual override
         onlyOwner
         returns(NftId id)
     {
-        return _registerRegistry(chain, registry, owner());
+        return _registerRegistry(chain, registry, owner(), uri);
     }
 
 
-    function registerToken(ChainId chain, address token)
+    function registerToken(ChainId chain, address token, string memory uri)
         external
         virtual override
         onlyOwner
@@ -223,13 +233,16 @@ contract ChainRegistryV01 is
             owner(),
             chain,
             TOKEN,
+            ObjectState.Approved,
+            uri,
             data);
     }
 
 
     function registerInstance(
         address instanceRegistry,
-        string memory displayName
+        string memory displayName,
+        string memory uri
     )
         external 
         virtual override
@@ -246,13 +259,16 @@ contract ChainRegistryV01 is
             owner(),
             chain,
             INSTANCE,
+            ObjectState.Approved,
+            uri,
             data);
     }
 
 
     function registerComponent(
         bytes32 instanceId, 
-        uint256 componentId
+        uint256 componentId,
+        string memory uri
     )
         external 
         virtual override
@@ -271,6 +287,8 @@ contract ChainRegistryV01 is
             owner(),
             chain,
             t,
+            ObjectState.Approved,
+            uri,
             data);
     }
 
@@ -296,8 +314,11 @@ contract ChainRegistryV01 is
             owner(),
             chain,
             BUNDLE,
+            ObjectState.Approved,
+            "", // uri
             data);
     }
+
 
 
     function registerStake(
@@ -319,7 +340,18 @@ contract ChainRegistryV01 is
             staker,
             _chainId,
             STAKE,
+            ObjectState.Approved,
+            "", // uri
             data);
+    }
+
+
+    function setObjectState(NftId id, ObjectState stateNew)
+        external
+        virtual override
+        onlyOwner
+    {
+        _setObjectState(id, stateNew);
     }
 
 
@@ -359,11 +391,21 @@ contract ChainRegistryV01 is
     }
 
 
-    function stakingContract()
+    function getNft()
         external
-        virtual
+        virtual override
         view
-        returns(address staking)
+        returns(IChainNft nft)
+    {
+        return _nft;
+    }
+
+
+    function getStaking()
+        external
+        virtual override
+        view
+        returns(IStaking staking)
     {
         return _staking;
     }
@@ -384,11 +426,6 @@ contract ChainRegistryV01 is
     }
 
 
-    function getNftId(ChainId chain) external view returns(NftId id) {
-        return _chain[chain];
-    }
-
-
     function objects(ChainId chain, ObjectType t) public view returns(uint256 numberOfObjects) {
         return _object[chain][t].length;
     }
@@ -406,26 +443,47 @@ contract ChainRegistryV01 is
     }
 
 
-    function getNftId(
+    function ownerOf(NftId id) external virtual override view returns(address nftOwner) {
+        return _nft.ownerOf(NftId.unwrap(id));
+    }
+
+
+
+    function getChainNftId(ChainId chain) external virtual override view returns(NftId id) {
+        id = _chain[chain];
+        require(exists(id), "ERROR:CRG-130:CHAIN_NOT_REGISTERED");
+    }
+
+
+    function getRegistryNftId(ChainId chain) external virtual override view returns(NftId id) {
+        id = _registry[chain];
+        require(exists(id), "ERROR:CRG-131:REGISTRY_NOT_REGISTERED");
+    }
+
+
+    function getTokenNftId(
         ChainId chain,
-        address implementation
+        address token
     )
         external
         virtual override
         view
         returns(NftId id)
     {
-        return _contractObject[chain][implementation];
+        id = _contractObject[chain][token];
+        require(exists(id), "ERROR:CRG-133:TOKEN_NOT_REGISTERED");
+        require(_info[id].t == TOKEN, "ERROR:CRG-134:OBJECT_NOT_TOKEN");
     }
 
 
-    function getNftId(bytes32 instanceId)
+    function getInstanceNftId(bytes32 instanceId)
         external
         virtual override
         view
         returns(NftId id)
     {
-        return _instance[instanceId];
+        id = _instance[instanceId];
+        require(exists(id), "ERROR:CRG-135:INSTANCE_NOT_REGISTERED");
     }
 
 
@@ -435,7 +493,8 @@ contract ChainRegistryV01 is
         view
         returns(NftId id)
     {
-        return _component[instanceId][componentId];
+        id = _component[instanceId][componentId];
+        require(exists(id), "ERROR:CRG-136:COMPONENT_NOT_REGISTERED");
     }
 
 
@@ -445,7 +504,18 @@ contract ChainRegistryV01 is
         view
         returns(NftId id)
     {
-        return _bundle[instanceId][bundleId];
+        id = _bundle[instanceId][bundleId];
+        require(exists(id), "ERROR:CRG-137:BUNDLE_NOT_REGISTERED");
+    }
+
+
+    function decodeRegistryData(NftId id)
+        public
+        virtual override
+        view
+        returns(address registry)
+    {
+        (registry) = _decodeRegistryData(_info[id].data);
     }
 
 
@@ -516,23 +586,14 @@ contract ChainRegistryV01 is
     }
 
 
-    function tokenURI(uint256 id) 
-        public 
-        view 
-        virtual override 
-        returns(string memory)
-    {
-        return nftURI(NftId.wrap(id));
-    }
-
-
-    function nftURI(NftId id) 
+    function tokenDID(uint256 tokenId) 
         public 
         view 
         virtual 
         returns(string memory)
     {
-        _requireMinted(NftId.unwrap(id));
+        NftId id = NftId.wrap(tokenId);
+        require(exists(id), "ERROR:CRG-140:TOKEN_ID_INVALID");
 
         NftInfo memory info = _info[id];
         NftId registryId = _object[info.chain][REGISTRY][0];
@@ -542,12 +603,12 @@ contract ChainRegistryV01 is
 
         return string(
             abi.encodePacked(
-                BASE_URI, 
+                BASE_DID, 
                 toString(info.chain),
                 "_erc721:",
                 toString(registryAt),
                 "_",
-                toString(NftId.unwrap(id))));
+                toString(tokenId)));
     }
 
     function toChain(uint256 chainId) public virtual override pure returns(ChainId) {
@@ -571,21 +632,22 @@ contract ChainRegistryV01 is
     }
 
 
-    function _registerProtocol(ChainId chain, address protocolOwner)
+    function _registerProtocol(address protocolOwner)
         internal
         virtual
         returns(NftId id)
     {
-        require(toInt(_chainId) == 1, "ERROR:CRG-200:NOT_ON_MAINNET");
-        require(toInt(chain) == 1, "ERROR:CRG-201:NOT_MAINNET");
-        require(objects(chain, PROTOCOL) == 0, "ERROR:CRG-202:PROTOCOL_ALREADY_REGISTERED");
+        require(toInt(_chainId) == 1 || toInt(_chainId) == 5, "ERROR:CRG-200:NOT_ON_MAINNET");
+        require(objects(_chainId, PROTOCOL) == 0, "ERROR:CRG-201:PROTOCOL_ALREADY_REGISTERED");
 
         // mint token for the new chain
         id = _safeMintObject(
             protocolOwner,
-            chain,
+            _chainId,
             PROTOCOL,
-            "");
+            ObjectState.Approved,
+            "", // uri
+            ""); // data
         
         // only one protocol in dip ecosystem
         _typeSupported[PROTOCOL] = false;
@@ -594,7 +656,8 @@ contract ChainRegistryV01 is
 
     function _registerChain(
         ChainId chain,
-        address chainOwner
+        address chainOwner,
+        string memory uri
     )
         internal
         virtual
@@ -607,11 +670,18 @@ contract ChainRegistryV01 is
             chainOwner,
             chain,
             CHAIN,
+            ObjectState.Approved,
+            uri,
             "");
     }
 
 
-    function _registerRegistry(ChainId chain, address registry, address registryOwner)
+    function _registerRegistry(
+        ChainId chain,
+        address registry,
+        address registryOwner,
+        string memory uri
+    )
         internal
         virtual
         returns(NftId id)
@@ -620,12 +690,43 @@ contract ChainRegistryV01 is
         require(objects(chain, REGISTRY) == 0, "ERROR:CRG-221:REGISTRY_ALREADY_REGISTERED");
         require(registry != address(0), "ERROR:CRG-222:REGISTRY_ADDRESS_ZERO");
 
+        (bytes memory data) = _getRegistryData(chain, registry);
+
         // mint token for the new registry
         id = _safeMintObject(
             registryOwner,
             chain,
             REGISTRY,
-            abi.encode(registry));
+            ObjectState.Approved,
+            uri,
+            data);
+    }
+
+
+    function _setObjectState(NftId id, ObjectState stateNew)
+        internal
+        virtual
+        onlyExisting(id)
+    {
+        NftInfo storage info = _info[id];
+        ObjectState stateOld = info.state;
+
+        info.state = stateNew;
+
+        emit LogChainRegistryObjectStateSet(id, stateOld, stateNew, msg.sender);
+    }
+
+
+    function _getRegistryData(ChainId chain, address registry)
+        internal
+        virtual
+        view
+        returns(bytes memory data)
+    {
+        require(exists(_chain[chain]), "ERROR:CRG-280:CHAIN_NOT_SUPPORTED");
+        require(registry != address(0), "ERROR:CRG-281:REGISTRY_ADDRESS_ZERO");
+
+        data = _encodeRegistryData(registry);
     }
 
 
@@ -738,6 +839,26 @@ contract ChainRegistryV01 is
         returns(bytes memory data)
     {
         data = _encodeStakeData(target, targetType);
+    }
+
+
+    function _encodeRegistryData(address registry)
+        internal
+        virtual
+        view
+        returns(bytes memory data)
+    {
+        return abi.encode(registry);
+    }
+
+
+    function _decodeRegistryData(bytes memory data)
+        internal
+        virtual
+        view
+        returns(address registry)
+    {
+        return abi.decode(data, (address));
     }
 
 
@@ -905,41 +1026,43 @@ contract ChainRegistryV01 is
         return ORACLE;
     }
 
-
+    // https://docs.opensea.io/docs/metadata-standards
+    // uri needs to be provided at minting time. is this a good idea? likely not ...
+    // bored apes example
+    // https://etherscan.io/token/0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d#readContract
+    // tokenURI(2602) -> ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/2602
+    // this leads to json file (see below)
+    // {"image":"ipfs://Qma4pDs3j9PDk5YZ2g6ugpkPgkYk5U4SDsnx5wfXyD5Te5","attributes":[{"trait_type":"Fur","value":"Dark Brown"},{"trait_type":"Mouth","value":"Grin"},{"trait_type":"Background","value":"Gray"},{"trait_type":"Hat","value":"Spinner Hat"},{"trait_type":"Eyes","value":"Sleepy"},{"trait_type":"Earring","value":"Silver Hoop"},{"trait_type":"Clothes","value":"Vietnam Jacket"}]}
+    // the "image" attribute value in that json is again an ipfs link which holds the actual bored ape image
+    // the above information is also shown on opensea and likely obtained using the above mechanism
+    // https://opensea.io/assets/ethereum/0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d/2602
     function _safeMintObject(
         address to,
         ChainId chain,
         ObjectType t,
+        ObjectState state,
+        string memory uri,
         bytes memory data
     )
         internal
         virtual
         returns(NftId id)
     {
-        require(_typeSupported[t], "ERROR:CRG-350:OBJECT_TYPE_NOT_SUPPORTED");
+        require(address(_nft) != address(0), "ERROR:CRG-350:NFT_NOT_SET");
+        require(_typeSupported[t], "ERROR:CRG-351:OBJECT_TYPE_NOT_SUPPORTED");
 
-        // enforce uniqe token ids over all chain id
-        id = _getNextTokenId();
-        _safeMint(to, NftId.unwrap(id));
+        // mint nft
+        id = NftId.wrap(_nft.mint(to, uri));
 
+        // store nft meta data
         NftInfo storage info = _info[id];
         info.id = id;
         info.chain = chain;
         info.t = t;
+        info.state = state;
         info.mintedIn = blockNumber();
         info.updatedIn = blockNumber();
         info.version = version();
-
-        if(to == owner()) {
-            info.state = ObjectState.Approved;
-        } else if(t == STAKE) {
-            info.state = ObjectState.Approved;
-        } else if(t == BUNDLE) {
-            // TODO deal with special case self registered bundles
-            info.state = ObjectState.Proposed;
-        } else {
-            info.state = ObjectState.Proposed;
-        }
 
         // store data if provided        
         if(data.length > 0) {
@@ -953,6 +1076,8 @@ contract ChainRegistryV01 is
         if(t == CHAIN) {
             _chain[chain] = id;
             _chainIds.push(chain);
+        } else if(t == REGISTRY) {
+            _registry[chain] = id;
         } else if(t == TOKEN) {
             (address token) = _decodeTokenData(data);
             _contractObject[chain][token] = id;
@@ -972,54 +1097,54 @@ contract ChainRegistryV01 is
             _bundle[instanceId][bundleId] = id;
         }
 
-        emit LogChainRegistryObjectRegistered(id, chain, t, info.state, to);
+        emit LogChainRegistryObjectRegistered(id, chain, t, state, to);
     }
 
-    // requirement: each chain registry produces token ids that
-    // are guaranteed to not collide with any token id genereated
-    // on a different chain
-    //
-    // format concat(counter,chainid,2 digits for len-of-chain-id)
-    // restriction chainid up to 99 digits
-    // decode: from right to left:
-    // - 2 right most digits encode length of chainid
-    // - move number of digits to left as determined above (-> chainid)
-    // - the reminder to the left is the counter
-    // examples
-    // 1101
-    // ^^ ^
-    // || +- 1-digit chain id
-    // |+-- chain id = 1 (mainnet)
-    // +-- 1st token id on mainnet
-    // (1 * 10 ** 1 + 1) * 100 + 1
-    // 42987654321010
-    // ^ ^          ^
-    // | |          +- 10-digit chain id
-    // | +-- chain id = 9876543210 (hypothetical chainid)
-    // +-- 42nd token id on this chain
-    // (42 * 10 ** 10 + 9876543210) * 100 + 10
-    // (index * 10 ** digits + chainid) * 100 + digits (1 < digits < 100)
+    // // requirement: each chain registry produces token ids that
+    // // are guaranteed to not collide with any token id genereated
+    // // on a different chain
+    // //
+    // // format concat(counter,chainid,2 digits for len-of-chain-id)
+    // // restriction chainid up to 99 digits
+    // // decode: from right to left:
+    // // - 2 right most digits encode length of chainid
+    // // - move number of digits to left as determined above (-> chainid)
+    // // - the reminder to the left is the counter
+    // // examples
+    // // 1101
+    // // ^^ ^
+    // // || +- 1-digit chain id
+    // // |+-- chain id = 1 (mainnet)
+    // // +-- 1st token id on mainnet
+    // // (1 * 10 ** 1 + 1) * 100 + 1
+    // // 42987654321010
+    // // ^ ^          ^
+    // // | |          +- 10-digit chain id
+    // // | +-- chain id = 9876543210 (hypothetical chainid)
+    // // +-- 42nd token id on this chain
+    // // (42 * 10 ** 10 + 9876543210) * 100 + 10
+    // // (index * 10 ** digits + chainid) * 100 + digits (1 < digits < 100)
 
-    function _getNextTokenId() internal returns(NftId id) {
-        id = NftId.wrap(
-            (_idNext * _chainIdMultiplier + _chainIdInt) * 100 + _chainIdDigits
-        );
+    // function _getNextTokenId() internal returns(NftId id) {
+    //     id = NftId.wrap(
+    //         (_idNext * _chainIdMultiplier + _chainIdInt) * 100 + _chainIdDigits
+    //     );
 
-        _idNext++;
-    }
+    //     _idNext++;
+    // }
 
 
-    function _countDigits(uint256 num)
-        internal 
-        pure 
-        returns (uint256 count)
-    {
-        count = 0;
-        while (num != 0) {
-            count++;
-            num /= 10;
-        }
-    }
+    // function _countDigits(uint256 num)
+    //     internal 
+    //     pure 
+    //     returns (uint256 count)
+    // {
+    //     count = 0;
+    //     while (num != 0) {
+    //         count++;
+    //         num /= 10;
+    //     }
+    // }
 
 
     function _getContractSize(address contractAddress)

@@ -15,6 +15,7 @@ from brownie import (
     MockRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01,
+    ChainNft,
     StakingV01,
 )
 
@@ -190,12 +191,13 @@ def test_stake_transfer_and_unstake(
     assert chainRegistryV01.ownerOf(nft_id) == staker
     assert chainRegistryV01.ownerOf(nft_id) != staker2
 
+    nft = contract_from_address(ChainNft, chainRegistryV01.getNft())
     # ensure staker2 can not just take stake nft over
     with brownie.reverts('ERC721: caller is not token owner or approved'):
-        chainRegistryV01.transferFrom(staker, staker2, nft_id, {'from': staker2})
+        nft.transferFrom(staker, staker2, nft_id, {'from': staker2})
 
     # ordinary nft transfer
-    transfer_tx = chainRegistryV01.transferFrom(staker, staker2, nft_id, {'from': staker})
+    transfer_tx = nft.transferFrom(staker, staker2, nft_id, {'from': staker})
 
     assert 'Transfer' in transfer_tx.events
     evt = dict(transfer_tx.events['Transfer'])
@@ -460,18 +462,21 @@ def create_mock_bundle_setup(
     tx_token = chainRegistryV01.registerToken(
             chain_id,
             usd2,
+            '',
             {'from': registryOwner})
 
     # register instance
     tx_instance = chainRegistryV01.registerInstance(
         mockRegistry,
-        "mockRegistry TEST",
+        'mockRegistry TEST',
+        '',
         {'from': registryOwner})
 
     # register riskpool
     tx_riskpool = chainRegistryV01.registerComponent(
         instance_id,
         RISKPOOL_ID,
+        '',
         {'from': registryOwner})
 
     # register bundle

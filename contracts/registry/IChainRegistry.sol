@@ -2,30 +2,21 @@
 pragma solidity ^0.8.19;
 
 import "../shared/IBaseTypes.sol";
-import "../shared/VersionType.sol";
+import "../shared/IVersionType.sol";
 
+import "../staking/IStaking.sol";
+
+import "./IChainNft.sol";
 import "./IInstanceRegistryFacade.sol";
 import "./IInstanceServiceFacade.sol";
 
-type NftId is uint256;
 type ObjectType is uint8;
-
-using {
-    eqNftId as ==,
-    neNftId as !=
-}
-    for NftId global;
 
 using {
     eqObjectType as ==,
     neObjectType as !=
 }
     for ObjectType global;
-
-function eqNftId(NftId a, NftId b) pure returns(bool isSame) { return NftId.unwrap(a) == NftId.unwrap(b); }
-function neNftId(NftId a, NftId b) pure returns(bool isDifferent) { return NftId.unwrap(a) != NftId.unwrap(b); }
-function gtz(NftId a) pure returns(bool) { return NftId.unwrap(a) > 0; }
-function zeroNftId() pure returns(NftId) { return NftId.wrap(0); }
 
 function eqObjectType(ObjectType a, ObjectType b) pure returns(bool isSame) { return ObjectType.unwrap(a) == ObjectType.unwrap(b); }
 function neObjectType(ObjectType a, ObjectType b) pure returns(bool isDifferent) { return ObjectType.unwrap(a) != ObjectType.unwrap(b); }
@@ -50,6 +41,7 @@ interface IChainRegistry is
         ChainId chain;
         ObjectType t;
         ObjectState state;
+        string uri;
         bytes data;
         Blocknumber mintedIn;
         Blocknumber updatedIn;
@@ -58,19 +50,13 @@ interface IChainRegistry is
 
 
     event LogChainRegistryObjectRegistered(NftId id, ChainId chain, ObjectType t, ObjectState state, address to);
-
-    // event LogChainRegistryObjectStateUpdated(address token, uint256 chainId, ObjectState oldState, ObjectState newState);
-    // event LogChainRegistryObjectDisplayNameUpdated(bytes32 instanceId, string oldDisplayName, string newDisplayName);
-
-    // event LogInstanceRegistryInstanceRegistered(bytes32 instanceId, ObjectState state, bool isNewInstance);
-    // event LogInstanceRegistryInstanceStateUpdated(bytes32 instanceId, ObjectState oldState, ObjectState newState);
-    // event LogInstanceRegistryInstanceDisplayNameUpdated(bytes32 instanceId, string oldDisplayName, string newDisplayName);
+    event LogChainRegistryObjectStateSet(NftId id, ObjectState stateNew, ObjectState stateOld, address setBy);
 
     //--- state changing functions ------------------//
 
-    function registerChain(ChainId chain) external returns(NftId id);
-    function registerRegistry(ChainId chain, address registry) external returns(NftId id);
-    function registerToken(ChainId chain,address token) external returns(NftId id);       
+    function registerChain(ChainId chain, string memory uri) external returns(NftId id);
+    function registerRegistry(ChainId chain, address registry, string memory uri) external returns(NftId id);
+    function registerToken(ChainId chain,address token, string memory uri) external returns(NftId id);       
 
 
     function registerStake(
@@ -83,7 +69,8 @@ interface IChainRegistry is
 
     function registerInstance(
         address instanceRegistry,
-        string memory displayName
+        string memory displayName,
+        string memory uri
     )
         external
         returns(NftId id);
@@ -91,7 +78,8 @@ interface IChainRegistry is
 
     function registerComponent(
         bytes32 instanceId,
-        uint256 componentId
+        uint256 componentId,
+        string memory uri
     )
         external
         returns(NftId id);
@@ -108,51 +96,39 @@ interface IChainRegistry is
         returns(NftId id);
 
 
+    function setObjectState(NftId id, ObjectState state) external;
+
+
     //--- view and pure functions ------------------//
+
+    function getNft() external view returns(IChainNft);
+    function getStaking() external view returns(IStaking);
 
     function exists(NftId id) external view returns(bool);
 
-    function chains() external view returns(uint256 numberOfChains);
-    function getChainId(uint256 idx) external view returns(ChainId chain);
-    function getNftId(ChainId chain) external view returns(NftId id);
-
+    // generic accessors
     function objects(ChainId chain, ObjectType t) external view returns(uint256 numberOfObjects);
     function getNftId(ChainId chain, ObjectType t, uint256 idx) external view returns(NftId id);
-
     function getNftInfo(NftId id) external view returns(NftInfo memory);
+    function ownerOf(NftId id) external view returns(address nftOwner);
 
-    // get nft id for registries, tokens and instances
-    function getNftId(
-        ChainId chain,
-        address implementation
-    )
+    // chain specific accessors
+    function chains() external view returns(uint256 numberOfChains);
+    function getChainId(uint256 idx) external view returns(ChainId chain);
+    function getChainNftId(ChainId chain) external view returns(NftId id);
+
+    // type specific accessors
+    function getRegistryNftId(ChainId chain) external view returns(NftId id);
+    function getTokenNftId(ChainId chain, address token) external view returns(NftId id);
+    function getInstanceNftId(bytes32 instanceId) external view returns(NftId id);
+    function getComponentNftId(bytes32 instanceId, uint256 componentId) external view returns(NftId id);
+    function getBundleNftId(bytes32 instanceId, uint256 componentId) external view returns(NftId id);
+
+
+    function decodeRegistryData(NftId id)
         external
         view
-        returns(NftId id);
-
-    // get nft id for a given instanceId
-    function getNftId(bytes32 instanceId)
-        external
-        view
-        returns(NftId id);
-
-    // get nft id for specified compnent coordinates
-    function getComponentNftId(
-        bytes32 instanceId, 
-        uint256 componentId
-    )
-        external
-        view
-        returns(NftId id);
-
-    // get nft id for specified bundle coordinates
-    function getBundleNftId(
-        bytes32 instanceId, 
-        uint256 bundleId
-    )
-        external
-        view
-        returns(NftId id);
+        returns(address registry);
 
 
     function decodeTokenData(NftId id)

@@ -197,10 +197,16 @@ def proxyAdmin(
     return deploy_proxy(chainRegistryV01Implementation, registryOwner, proxyAdminOwner)
 
 @pytest.fixture(scope="module")
-def chainRegistryV01(proxyAdmin) -> ChainRegistryV01:
-    return contract_from_address(
+def chainRegistryV01(proxyAdmin, registryOwner) -> ChainRegistryV01:
+    registry = contract_from_address(
         ChainRegistryV01, 
         proxyAdmin.getProxy())
+    
+    nft = ChainNft.deploy(registry, {'from': registryOwner})
+
+    registry.setNftContract(nft, registryOwner, {'from': registryOwner})
+    
+    return registry
 
 #=== staking fixtures ==================================================#
 

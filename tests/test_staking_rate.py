@@ -39,7 +39,7 @@ def test_staking_rate_happy_case(
     assert rate == staking_rate_f
 
     # register token and get initial rate
-    chainRegistryV01.registerToken(chain, usd1.address, {'from': registryOwner})
+    chainRegistryV01.registerToken(chain, usd1, '', {'from': registryOwner})
     staking_rate_initial = staking.stakingRate(chain, usd1)
 
     assert staking.stakingRate(chain, usd1) == 0
@@ -65,7 +65,7 @@ def test_staking_rate_happy_case(
     assert tx.events['LogStakingStakingRateSet']['newStakingRate'] == staking_rate_now
 
     # set staking rate for usd3
-    chainRegistryV01.registerToken(chain, usd3, {'from': registryOwner})
+    chainRegistryV01.registerToken(chain, usd3, '', {'from': registryOwner})
     staking.setStakingRate(
         chain,
         usd3,
@@ -115,7 +115,7 @@ def test_conversion_calculation_usd1(
     staking_rate = staking.toRate(staking_rate_i, -exp)
 
     # set staking rate for usd1
-    chainRegistryV01.registerToken(chain, usd1.address, {'from': registryOwner})
+    chainRegistryV01.registerToken(chain, usd1, '', {'from': registryOwner})
     staking.setStakingRate(
         chain,
         usd1,
@@ -163,7 +163,7 @@ def test_conversion_calculation_usd3(
     staking_rate = staking.toRate(staking_rate_i, -exp)
 
     # set staking rate for usd1
-    chainRegistryV01.registerToken(chain, usd3, {'from': registryOwner})
+    chainRegistryV01.registerToken(chain, usd3, '', {'from': registryOwner})
     staking.setStakingRate(
         chain,
         usd3,
@@ -223,14 +223,14 @@ def test_staking_rate_failure_modes(
             {'from': registryOwner})
 
     # attempt to set rate for non-registered token
-    with brownie.reverts('ERROR:STK-005:NOT_REGISTERED'):
+    with brownie.reverts('ERROR:CRG-133:TOKEN_NOT_REGISTERED'):
         staking.setStakingRate(
             chain,
             usd1,
             staking_rate,
             {'from': stakingOwner})
 
-    chainRegistryV01.registerToken(chain, usd1, {'from': registryOwner})
+    chainRegistryV01.registerToken(chain, usd1, '', {'from': registryOwner})
 
     # attempt to set zero rate
     staking_rate_zero = 0

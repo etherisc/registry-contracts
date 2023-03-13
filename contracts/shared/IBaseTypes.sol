@@ -41,7 +41,7 @@ function neqTimestamp(Timestamp a, Timestamp b) pure returns(bool) { return Time
 
 function toTimestamp(uint256 timestamp) pure returns(Timestamp) { return Timestamp.wrap(uint40(timestamp));}
 function blockTimestamp() view returns(Timestamp) { return toTimestamp(block.timestamp); }
-function zeroTimestamp() view returns(Timestamp) { return toTimestamp(0); }
+function zeroTimestamp() pure returns(Timestamp) { return toTimestamp(0); }
 
 type Blocknumber is uint32;
 

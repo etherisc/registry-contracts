@@ -13,11 +13,12 @@ from brownie import (
     MockInstance,
     MockRegistry,
     OwnableProxyAdmin,
-    ChainRegistryV01
+    ChainRegistryV01,
+    ChainNft,
 )
 
 from scripts.const import ZERO_ADDRESS
-
+from scripts.util import contract_from_address
 
 # enforce function isolation for tests below
 @pytest.fixture(autouse=True)
@@ -30,11 +31,6 @@ def test_registry_implementation(
     theOutsider,
 ):
     ri = chainRegistryV01Implementation
-
-    # check number of tokens after deploy
-    assert ri.name() == ''
-    assert ri.symbol() == ''
-    assert ri.totalSupply() == 0
 
     # check current version
     assert ri.version() == 2 ** 16
@@ -88,12 +84,14 @@ def test_registry_basics(
     assert pa.getImplementation() == ri
 
     # check number of tokens after deploy
-    assert r.name() == 'Dezentralized Insurance Protocol Registry'
-    assert r.symbol() == 'DIPR'
+    nft = contract_from_address(ChainNft, r.getNft())
+
+    assert nft.name() == 'Dezentralized Insurance Protocol Registry'
+    assert nft.symbol() == 'DIPR'
 
     nfts = 3 if web3.chain_id == 1 else 2
-    assert r.totalSupply() == nfts
-    assert r.balanceOf(ro) == nfts
+    assert nft.totalSupply() == nfts
+    assert nft.balanceOf(ro) == nfts
 
     protocolTokenId = 1101
 
@@ -118,10 +116,10 @@ def test_registry_basics(
 
     # check chain nft
     chainId = r.toChain(web3.chain_id)
-    chainNftId = r.getNftId['bytes5'](chainId)
+    chainNftId = r.getChainNftId(chainId)
     assert r.ownerOf(chainNftId) == ro
 
-    expected_block_number = history[-1].block_number - 1
+    expected_block_number = history[-1].block_number
     info = r.getNftInfo(chainNftId).dict()
     assert info['id'] == chainNftId
     assert info['t'] == r.CHAIN()
@@ -143,7 +141,7 @@ def test_registry_basics(
     assert info['version'] == r.version()
 
     # disect uri and check its parts
-    nft_uri = r.nftURI(registryNftId)
+    nft_uri = r.tokenDID(registryNftId)
     (_, _, _, uri_chain, uri_contract) = nft_uri.split(':')
     assert uri_chain.split('_')[0] == str(web3.chain_id)
     assert uri_contract.split('_')[0] == r

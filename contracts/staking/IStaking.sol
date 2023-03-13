@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
 import "../shared/IBaseTypes.sol";
+import "../shared/IVersionType.sol";
 import "../shared/UFixedMath.sol";
 
-import "../registry/ChainRegistryV01.sol";
+import "../registry/IChainNft.sol";
 import "../registry/IChainRegistry.sol";
+import "../registry/IInstanceServiceFacade.sol";
 
 
 interface IStaking {
@@ -49,7 +53,7 @@ interface IStaking {
 
     //--- view and pure functions ------------------//
 
-    function getRegistry() external view returns(ChainRegistryV01);
+    function getRegistry() external view returns(IChainRegistry);
 
     function rewardRate() external view returns(UFixed rewardRate);
     function rewardBalance() external view returns(uint256 dipAmount);

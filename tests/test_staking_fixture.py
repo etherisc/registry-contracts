@@ -14,6 +14,7 @@ from brownie import (
     MockRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01,
+    ChainNft,
     StakingV01,
 )
 
@@ -127,11 +128,13 @@ def test_staking_basics(
     assert registry == r
     assert registry.version() == r.version()
     assert registry.owner() == r.owner()
-    assert registry.name() == 'Dezentralized Insurance Protocol Registry'
-    assert registry.symbol() == 'DIPR'
+
+    nft = contract_from_address(ChainNft, registry.getNft())
+    assert nft.name() == 'Dezentralized Insurance Protocol Registry'
+    assert nft.symbol() == 'DIPR'
 
     # check link from registry to staking
-    assert r.stakingContract() == s
+    assert r.getStaking() == s
 
     # check usdc staking rate
     chain = r.toChain(web3.chain_id)
