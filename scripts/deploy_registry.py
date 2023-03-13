@@ -265,6 +265,7 @@ def all_in_1(
     # deal with mock setup for testing, playing around
     nft = None
     mock_instance_service = None
+    instance_operator = a[INSTANCE_OPERATOR]
 
     if include_mock_setup:
         nft = {}
