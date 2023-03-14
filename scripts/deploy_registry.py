@@ -407,7 +407,7 @@ def deploy_registry(
     proxy_admin = deploy_proxy(registry_impl, registry_owner, proxy_admin_owner, publish)
 
     registry = contract_from_address(
-        registry_impl, 
+        REGISTRY_CONTRACT, 
         proxy_admin.getProxy())
 
     print('>>> deploy nft contract {}'.format(NFT_CONTRACT._name))
