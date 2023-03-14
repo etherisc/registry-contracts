@@ -17,9 +17,10 @@ from brownie import (
 )
 
 from scripts.util import (
-    get_package,
     contract_from_address,
-    unix_timestamp
+    get_package,
+    unix_timestamp,
+    wait_for_confirmations,
 )
 
 from scripts.const import (
@@ -417,10 +418,13 @@ def deploy_registry(
         publish_source=publish)
 
     print('>>> set nft contract {} in registry'.format(nft))
-    registry.setNftContract(
+    tx = registry.setNftContract(
         nft, 
         registry_owner, 
         {'from': registry_owner})
+
+    # allow sufficient time before next step
+    wait_for_confirmations(tx)
 
     print('>>> done. upgradaple registry at {} with owner {} and implementation {}'
         .format(registry, registry_owner, registry_impl))
@@ -511,9 +515,12 @@ def deploy_proxy(
         {'from': proxy_admin_owner},
         publish_source=publish)
 
-    proxy_admin.setProxy(
+    tx = proxy_admin.setProxy(
         oz_proxy,
         {'from': proxy_admin_owner})
+
+    # allow sufficient time before next step
+    wait_for_confirmations(tx)
 
     return proxy_admin
 

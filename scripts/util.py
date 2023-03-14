@@ -2,6 +2,7 @@ from datetime import datetime
 from web3 import Web3
 
 from brownie import (
+    web3,
     Contract, 
 )
 
@@ -16,6 +17,10 @@ from brownie.convert import to_bytes
 from brownie.network.account import Account
 
 CONFIG_DEPENDENCIES = 'dependencies'
+
+CHAIN_ID_MUMBAI = 80001
+CHAIN_IDS_REQUIRING_CONFIRMATIONS = [CHAIN_ID_MUMBAI]
+REQUIRED_TX_CONFIRMATIONS_DEFAULT = 2
 
 def s2h(text: str) -> str:
     return Web3.toHex(text.encode('ascii'))
@@ -58,3 +63,12 @@ def get_package(substring: str):
     
     print("no package for substring '{}' found".format(substring))
     return None
+
+
+def wait_for_confirmations(
+    tx,
+    confirmations=REQUIRED_TX_CONFIRMATIONS_DEFAULT
+):
+    if web3.chain_id in CHAIN_IDS_REQUIRING_CONFIRMATIONS:
+        print('waiting for confirmations ...')
+        tx.wait(confirmations)
