@@ -268,9 +268,9 @@ def all_in_1(
     # deal with mock setup for testing, playing around
     mock_instance_service = None
     instance_operator = a[INSTANCE_OPERATOR]
-
+    nft_ids = {}
+    
     if include_mock_setup:
-        nft_ids = {}
         chain_id = web3.chain_id
 
         print('>>> register token {} for chain {}'
