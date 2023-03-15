@@ -96,13 +96,13 @@ contract StakingV01 is
 
     // IMPORTANT 2. activate implementation needed
     // is used by proxy admin in its upgrade function
-    function activateAndSetOwner(address implementation, address newOwner)
+    function activateAndSetOwner(address implementation, address newOwner, address activatedBy)
         external
         virtual override
         initializer
     {
         // ensure proper version history
-        _activate(implementation);
+        _activate(implementation, activatedBy);
 
         // initialize open zeppelin contracts
         __Ownable_init();

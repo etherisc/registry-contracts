@@ -21,26 +21,26 @@ contract VersionedOwnable is
 
     // IMPORTANT this function needs to be implemented by each new version
     // and needs to call _activate() in derived contract implementations
-    function activate(address implementation) external override virtual { 
-        _activate(implementation);
+    function activate(address implementation, address activatedBy) external override virtual { 
+        _activate(implementation, activatedBy);
     }
 
     // default implementation for initial deployment by proxy admin
-    function activateAndSetOwner(address implementation, address newOwner)
+    function activateAndSetOwner(address implementation, address newOwner, address activatedBy)
         external
         virtual
     {
-        _activateAndSetOwner(implementation, newOwner);
+        _activateAndSetOwner(implementation, newOwner, activatedBy);
     }
 
 
-    function _activateAndSetOwner(address implementation, address newOwner)
+    function _activateAndSetOwner(address implementation, address newOwner, address activatedBy)
         internal
         virtual 
         initializer
     { 
         // ensure proper version history
-        _activate(implementation);
+        _activate(implementation, activatedBy);
 
         // initialize open zeppelin contracts
         __Ownable_init();

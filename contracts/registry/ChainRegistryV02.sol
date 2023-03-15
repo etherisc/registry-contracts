@@ -36,10 +36,10 @@ contract ChainRegistryV02 is
 
     // IMPORTANT 2. activate implementation needed
     // is used by proxy admin in its upgrade function
-    function activate(address implementation) external override virtual { 
+    function activate(address implementation, address activatedBy) external override virtual { 
         // keep track of version history
         // do some upgrade checks
-        _activate(implementation);
+        _activate(implementation, activatedBy);
 
         // upgrade version
         _version = version();

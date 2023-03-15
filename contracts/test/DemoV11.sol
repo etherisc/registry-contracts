@@ -18,9 +18,9 @@ contract DemoV11 is
 
     // IMPORTANT 2. activate implementation needed
     // is used by proxy admin in its upgrade function
-    function activate(address implementation) external virtual override { 
+    function activate(address implementation, address activatedBy) external virtual override { 
         // ensure proper version history
-        _activate(implementation);
+        _activate(implementation, activatedBy);
 
         // set main internal variables
         _value = 42;

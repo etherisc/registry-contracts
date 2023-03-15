@@ -133,14 +133,15 @@ contract ChainRegistryV01 is
     // is used by proxy admin in its upgrade function
     function activateAndSetOwner(
         address implementation,
-        address newOwner
+        address newOwner,
+        address activatedBy
     )
         external
         virtual override
         initializer
     {
         // ensure proper version history
-        _activate(implementation);
+        _activate(implementation, activatedBy);
 
         // initialize open zeppelin contracts
         __Ownable_init();
@@ -1099,52 +1100,6 @@ contract ChainRegistryV01 is
 
         emit LogChainRegistryObjectRegistered(id, chain, t, state, to);
     }
-
-    // // requirement: each chain registry produces token ids that
-    // // are guaranteed to not collide with any token id genereated
-    // // on a different chain
-    // //
-    // // format concat(counter,chainid,2 digits for len-of-chain-id)
-    // // restriction chainid up to 99 digits
-    // // decode: from right to left:
-    // // - 2 right most digits encode length of chainid
-    // // - move number of digits to left as determined above (-> chainid)
-    // // - the reminder to the left is the counter
-    // // examples
-    // // 1101
-    // // ^^ ^
-    // // || +- 1-digit chain id
-    // // |+-- chain id = 1 (mainnet)
-    // // +-- 1st token id on mainnet
-    // // (1 * 10 ** 1 + 1) * 100 + 1
-    // // 42987654321010
-    // // ^ ^          ^
-    // // | |          +- 10-digit chain id
-    // // | +-- chain id = 9876543210 (hypothetical chainid)
-    // // +-- 42nd token id on this chain
-    // // (42 * 10 ** 10 + 9876543210) * 100 + 10
-    // // (index * 10 ** digits + chainid) * 100 + digits (1 < digits < 100)
-
-    // function _getNextTokenId() internal returns(NftId id) {
-    //     id = NftId.wrap(
-    //         (_idNext * _chainIdMultiplier + _chainIdInt) * 100 + _chainIdDigits
-    //     );
-
-    //     _idNext++;
-    // }
-
-
-    // function _countDigits(uint256 num)
-    //     internal 
-    //     pure 
-    //     returns (uint256 count)
-    // {
-    //     count = 0;
-    //     while (num != 0) {
-    //         count++;
-    //         num /= 10;
-    //     }
-    // }
 
 
     function _getContractSize(address contractAddress)

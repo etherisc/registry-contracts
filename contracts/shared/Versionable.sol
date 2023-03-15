@@ -24,27 +24,27 @@ contract Versionable is BaseTypes {
 
     // controlled activation for controller contract
     constructor() {
-        _activate(address(this));
+        _activate(address(this), msg.sender);
     }
 
     // IMPORTANT this function needs to be implemented by each new version
     // and needs to call internal function call _activate() 
-    function activate(address implementation)
+    function activate(address implementation, address activatedBy)
         external 
         virtual
     { 
-        _activate(implementation);
+        _activate(implementation, activatedBy);
     }
 
 
     // can only be called once per contract
     // needs bo be called inside the proxy upgrade tx
     function _activate(
-        address implementation
+        address implementation,
+        address activatedBy
     )
         internal
     {
-        address activatedBy = tx.origin;
         Version thisVersion = version();
 
         require(

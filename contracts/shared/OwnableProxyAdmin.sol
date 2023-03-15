@@ -9,8 +9,8 @@ import "./VersionedOwnable.sol";
 contract OwnableProxyAdmin is
     Ownable
 {
-    string public constant ACTIVATE_SIGNATURE = "activate(address)";
-    string public constant ACTIVATE_AND_SET_OWNER_SIGNATURE = "activateAndSetOwner(address,address)";
+    string public constant ACTIVATE_SIGNATURE = "activate(address,address)";
+    string public constant ACTIVATE_AND_SET_OWNER_SIGNATURE = "activateAndSetOwner(address,address,address)";
 
     VersionedOwnable private _implementation;
     TransparentUpgradeableProxy private _proxy;
@@ -37,7 +37,8 @@ contract OwnableProxyAdmin is
 
     function getProxyCallData(
         address implementation,
-        address implementationOwner
+        address implementationOwner,
+        address activatedBy
     )
         external
         pure
@@ -46,7 +47,8 @@ contract OwnableProxyAdmin is
         return abi.encodeWithSignature(
             ACTIVATE_AND_SET_OWNER_SIGNATURE,
             implementation,
-            implementationOwner);
+            implementationOwner,
+            activatedBy);
     }
 
 
@@ -58,12 +60,15 @@ contract OwnableProxyAdmin is
         require(address(newImplementation) != address(0), "ERROR:PXA-021:IMPLEMENTATION_ZERO");
         require(address(newImplementation) != address(_implementation), "ERROR:PXA-022:IMPLEMENTATION_NOT_NEW");
 
+        address activatedBy = msg.sender;
+    
         _implementation = newImplementation;
         _proxy.upgradeToAndCall(
             address(newImplementation), 
             abi.encodeWithSignature(
                 ACTIVATE_SIGNATURE,
-                address(newImplementation))
+                address(newImplementation),
+                activatedBy)
         );
     }
 

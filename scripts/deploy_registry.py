@@ -505,7 +505,8 @@ def deploy_proxy(
     # create call data for deploy step
     oz_proxy_data = proxy_admin.getProxyCallData(
         impl,
-        impl_owner)
+        impl_owner,
+        proxy_admin_owner)
 
     # deploy
     oz_proxy = oz.TransparentUpgradeableProxy.deploy(
