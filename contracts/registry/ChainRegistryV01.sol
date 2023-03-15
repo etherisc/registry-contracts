@@ -172,12 +172,15 @@ contract ChainRegistryV01 is
         virtual
         onlyOwner
     {
-        require(address(_nft) == address(0), "ERROR:CRG-040:NFT_ALREADY_SET");
-        require(nft != address(0), "ERROR:CRG-041:NFT_ADDRESS_ZERO");
+        require(newOwner != address(0), "ERROR:CRG-040:NEW_OWNER_ZERO");
 
-        require(newOwner != address(0), "ERROR:CRG-042:NEW_OWNER_ZERO");
+        require(address(_nft) == address(0), "ERROR:CRG-041:NFT_ALREADY_SET");
+        require(nft != address(0), "ERROR:CRG-042:NFT_ADDRESS_ZERO");
 
-        _nft = IChainNft(nft);
+        IChainNft nftContract = IChainNft(nft);
+        require(nftContract.implementsIChainNft(), "ERROR:CRG-043:NFT_NOT_ICHAINNFT");
+
+        _nft = nftContract;
 
         // register/mint dip protocol on mainnet and goerli
         if(toInt(_chainId) == 1 || toInt(_chainId) == 5) {
@@ -196,8 +199,10 @@ contract ChainRegistryV01 is
     {
         require(address(_staking) == address(0), "ERROR:CRG-050:STAKING_ALREADY_SET");
         require(staking != address(0), "ERROR:CRG-051:STAKING_ADDRESS_ZERO");
+        IStaking stakingContract = IStaking(staking);
+        require(stakingContract.implementsIStaking(), "ERROR:CRG-052:STAKING_NOT_ISTAKING");
 
-        _staking = IStaking(staking);
+        _staking = stakingContract;
     }
 
 
@@ -1027,16 +1032,7 @@ contract ChainRegistryV01 is
         return ORACLE;
     }
 
-    // https://docs.opensea.io/docs/metadata-standards
-    // uri needs to be provided at minting time. is this a good idea? likely not ...
-    // bored apes example
-    // https://etherscan.io/token/0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d#readContract
-    // tokenURI(2602) -> ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/2602
-    // this leads to json file (see below)
-    // {"image":"ipfs://Qma4pDs3j9PDk5YZ2g6ugpkPgkYk5U4SDsnx5wfXyD5Te5","attributes":[{"trait_type":"Fur","value":"Dark Brown"},{"trait_type":"Mouth","value":"Grin"},{"trait_type":"Background","value":"Gray"},{"trait_type":"Hat","value":"Spinner Hat"},{"trait_type":"Eyes","value":"Sleepy"},{"trait_type":"Earring","value":"Silver Hoop"},{"trait_type":"Clothes","value":"Vietnam Jacket"}]}
-    // the "image" attribute value in that json is again an ipfs link which holds the actual bored ape image
-    // the above information is also shown on opensea and likely obtained using the above mechanism
-    // https://opensea.io/assets/ethereum/0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d/2602
+
     function _safeMintObject(
         address to,
         ChainId chain,

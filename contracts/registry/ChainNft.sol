@@ -122,6 +122,10 @@ contract ChainNft is
         return _registry;
     }
 
+    function implementsIChainNft() external pure override returns(bool) {
+        return true;
+    }
+
 
     // requirement: each chain registry produces token ids that
     // are guaranteed to not collide with any token id genereated

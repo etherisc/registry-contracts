@@ -29,4 +29,6 @@ interface IChainNft is
 
     function getRegistry() external view returns(IChainRegistry registry);
     function exists(uint256 tokenId) external view returns(bool);
+
+    function implementsIChainNft() external pure returns (bool);
 }
