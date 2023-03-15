@@ -886,6 +886,6 @@ contract StakingV01 is
             success = _dip.transfer(user, amount);
         }
 
-        require(success, "ERROR:STK-301:DIP_TRANSFER_FROM_FAILED");
+        require(success, "ERROR:STK-302:DIP_TRANSFER_FROM_FAILED");
     }
 }
