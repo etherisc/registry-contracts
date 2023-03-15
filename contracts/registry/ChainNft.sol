@@ -85,6 +85,8 @@ contract ChainNft is
         override
         onlyRegistry
     {
+        require(bytes(uri).length > 0, "ERROR:CRG-011:URI_EMPTY");
+
         _requireMinted(tokenId);
         _uri[tokenId] = uri;
     }
@@ -146,14 +148,14 @@ contract ChainNft is
     // (42 * 10 ** 10 + 9876543210) * 100 + 10
     // (index * 10 ** digits + chainid) * 100 + digits (1 < digits < 100)
 
-    function _getNextTokenId() internal returns(uint256 id) {
+    function _getNextTokenId() private returns(uint256 id) {
         id = (_idNext * _chainIdMultiplier + _chainIdInt) * 100 + _chainIdDigits;
         _idNext++;
     }
 
 
     function _countDigits(uint256 num)
-        internal 
+        private 
         pure 
         returns (uint256 count)
     {

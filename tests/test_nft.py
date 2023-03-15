@@ -125,9 +125,10 @@ def test_nft_set_uri(
     nft.setURI(token_id, token_uri, {'from': registryOwner})
     assert nft.tokenURI(token_id) == token_uri
 
-    # upate uri back to empty string
-    nft.setURI(token_id, '', {'from': registryOwner})
-    assert nft.tokenURI(token_id) == ''
+    # upate uri some other string
+    token_uri_new = token_uri + '123'
+    nft.setURI(token_id, token_uri_new, {'from': registryOwner})
+    assert nft.tokenURI(token_id) == token_uri_new
 
 
 def test_nft_burn(
