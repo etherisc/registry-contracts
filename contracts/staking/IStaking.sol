@@ -30,7 +30,7 @@ interface IStaking {
     event LogStakingRewardRateSet(address user, UFixed oldRewardRate, UFixed newRewardRate);
     event LogStakingStakingRateSet(address user, ChainId chain, address token, UFixed oldStakingRate, UFixed newStakingRate);
 
-    event LogStakingNewStake(NftId target, address user, NftId id);
+    event LogStakingNewStakeCreated(NftId target, address user, NftId id);
     event LogStakingStaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
     event LogStakingUnstaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
 
@@ -100,4 +100,6 @@ interface IStaking {
             bool unstakingSupported,
             uint256 stakeBalance
         );
+
+    function implementsIStaking() external pure returns(bool);
 }

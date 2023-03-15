@@ -88,18 +88,19 @@ def test_reward_reserves(
     with brownie.reverts('ERROR:STK-080:DIP_AMOUNT_ZERO'):
         s.refillRewardReserves(0, {'from': theOutsider })
 
-    # attempt to increase without allownace
+    # attempt to increase without balance
     reserves  = 10000 * 10 ** dip.decimals()
-    with brownie.reverts('ERC20: insufficient allowance'):
+    with brownie.reverts('ERROR:STK-290:DIP_BALANCE_INSUFFICIENT'):
+        s.refillRewardReserves(reserves, {'from': theOutsider })
+
+    dip.transfer(theOutsider, reserves, {'from': instanceOperator })
+
+    # attempt to increase without allownace
+    with brownie.reverts('ERROR:STK-291:DIP_ALLOWANCE_INSUFFICIENT'):
         s.refillRewardReserves(reserves, {'from': theOutsider })
 
     dip.approve(s, reserves, {'from': theOutsider })
 
-    # attempt to increase without balance
-    with brownie.reverts('ERC20: transfer amount exceeds balance'):
-        s.refillRewardReserves(reserves, {'from': theOutsider })
-
-    dip.transfer(theOutsider, reserves, {'from': instanceOperator })
     assert s.rewardReserves() == 0
     assert dip.balanceOf(theOutsider) == reserves
     assert dip.balanceOf(stakingOwner) == 0
@@ -344,8 +345,8 @@ def test_stake_bundle_happy_path(
     assert evt['newBalance'] == staking_amount
 
     # check staking nft
-    assert 'LogStakingNewStake' in staking_tx.events
-    evt = staking_tx.events['LogStakingNewStake']
+    assert 'LogStakingNewStakeCreated' in staking_tx.events
+    evt = staking_tx.events['LogStakingNewStakeCreated']
     assert evt['target'] == bundle_nft
     assert evt['user'] == staker
     assert evt['id'] == nft_id
@@ -410,9 +411,9 @@ def test_increase_stakes(
         {'from': staker })
 
     assert 'LogStakingStaked' in staking_tx.events
-    assert 'LogStakingNewStake' in staking_tx.events
+    assert 'LogStakingNewStakeCreated' in staking_tx.events
 
-    stake_id = staking_tx.events['LogStakingNewStake']['id']
+    stake_id = staking_tx.events['LogStakingNewStakeCreated']['id']
     assert stake_id > 0
 
     # prepare increasing stakes
@@ -433,7 +434,7 @@ def test_increase_stakes(
     assert dip.balanceOf(staker) == 0
     assert dip.balanceOf(stakingV01.getStakingWallet()) == staking_amount + additional_amount
 
-    assert 'LogStakingNewStakes' not in increase_tx.events
+    assert 'LogStakingNewStakeCreated' not in increase_tx.events
     assert 'LogStakingStaked' in increase_tx.events
 
     evt = increase_tx.events['LogStakingStaked']

@@ -226,7 +226,6 @@ contract StakingV01 is
         stakeId = _registryV01.registerStake(target, user);
 
         StakeInfo storage info = _info[stakeId];
-        info = _info[stakeId];
         info.id = stakeId;
         info.target = target;
         info.stakeBalance = 0;
@@ -234,9 +233,9 @@ contract StakingV01 is
         info.createdAt = blockTimestamp();
         info.version = version();
 
-        emit LogStakingNewStake(target, user, stakeId);
-
         stake(stakeId, dipAmount);
+
+        emit LogStakingNewStakeCreated(target, user, stakeId);
     }
 
 
@@ -369,7 +368,7 @@ contract StakingV01 is
         view
         returns(StakeInfo memory info)
     {
-        require(_info[id].createdAt > zeroTimestamp(), "ERROR:STK-200:STAKE_INFO_NOT_EXISTING");
+        require(_info[id].createdAt > zeroTimestamp(), "ERROR:STK-190:STAKE_INFO_NOT_EXISTING");
         return _info[id];
     }
 
@@ -430,6 +429,7 @@ contract StakingV01 is
         view
         returns(uint256 rewardsAmount)
     {
+        require(block.timestamp >= toInt(stakeInfo.updatedAt), "ERROR:STK-200:UPDATED_AT_IN_THE_FUTURE");
         uint256 timeSinceLastUpdate = block.timestamp - toInt(stakeInfo.updatedAt);
 
         // TODO potentially reduce time depending on the time when the bundle has been closed
@@ -648,6 +648,10 @@ contract StakingV01 is
         stakeAmount = _targetStakeBalance[bundleNft];
     }
 
+    function implementsIStaking() external pure returns(bool) {
+        return true;
+    }
+
     //--- internal functions ------------------//
 
     function _isStakingSupportedForBundle(NftId target)
@@ -858,7 +862,12 @@ contract StakingV01 is
         internal
         virtual
     {
-        _dip.transferFrom(user, _stakingWallet, amount);
+        require(_dip.balanceOf(user) >= amount, "ERROR:STK-290:DIP_BALANCE_INSUFFICIENT");
+        require(_dip.allowance(user, address(this)) >= amount, "ERROR:STK-291:DIP_ALLOWANCE_INSUFFICIENT");
+
+        bool success = _dip.transferFrom(user, _stakingWallet, amount);
+
+        require(success, "ERROR:STK-292:DIP_TRANSFER_FROM_FAILED");
     }
 
 
@@ -866,12 +875,17 @@ contract StakingV01 is
         internal
         virtual
     {
-        require(_dip.balanceOf(_stakingWallet) >= amount, "ERROR:STK-290:DIP_BALANCE_INSUFFICIENT");
+        require(_dip.balanceOf(_stakingWallet) >= amount, "ERROR:STK-300:DIP_BALANCE_INSUFFICIENT");
+
+        bool success;
 
         if(_stakingWallet != address(this)) {
-            _dip.transferFrom(_stakingWallet, user, amount);
+            require(_dip.allowance(_stakingWallet, address(this)) >= amount, "ERROR:STK-301:DIP_ALLOWANCE_INSUFFICIENT");
+            success = _dip.transferFrom(_stakingWallet, user, amount);
         } else {
-            _dip.transfer(user, amount);
+            success = _dip.transfer(user, amount);
         }
+
+        require(success, "ERROR:STK-301:DIP_TRANSFER_FROM_FAILED");
     }
 }
