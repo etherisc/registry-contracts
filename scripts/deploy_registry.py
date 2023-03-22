@@ -34,7 +34,8 @@ from scripts.const import (
     STAKER1,
     STAKER2,
     OUTSIDER,
-    GIF_ACTOR
+    GIF_ACTOR,
+    ZERO_ADDRESS,
 )
 
 GAS_PRICE_SAFETY_FACTOR = 2
@@ -113,7 +114,7 @@ def actor_account(actor, accts):
 
 
 def get_stakeholder_accounts(accts):
-    if len(accts) >= 20:
+    if len(accts) >= 10:
         return {
             INSTANCE_OPERATOR: actor_account(INSTANCE_OPERATOR, accts),
             PROXY_ADMIN_OWNER: actor_account(PROXY_ADMIN_OWNER, accts),
@@ -122,7 +123,7 @@ def get_stakeholder_accounts(accts):
             STAKER1: actor_account(STAKER1, accts),
         }
     
-    print('ERROR: current chain is {}. len(accounts): {}, expected 20'
+    print('WARNING: current chain is {}. len(accounts): {}, expected >= 10, check result'
         .format(web3.chain_id, len(accts)))
 
     return {
@@ -208,9 +209,15 @@ def check_funds(
     if include_mock_setup:
         g = get_balance_sum(GAS_REGISTRY, GAS_MOCK)
     
+    funds_available = 0
+    checked_accounts = 0
     g_missing = 0
+
     for s in a.keys():
         bs = a[s].balance()
+        funds_available += bs
+        checked_accounts += 1
+
         if bs >= gp * g[s]:
             print('{}.balance(): {} OK'.format(s, bs))
         else:
@@ -224,7 +231,10 @@ def check_funds(
         else:
             print('{} balance insufficient to fund other accounts. missing amount: {}'
                 .format(INSTANCE_OPERATOR, g_missing))
-    
+
+    print('total funds available ({} accounts) [ETH]: {:.6f}'
+        .format(checked_accounts, funds_available/10**18))
+
     assert g_missing == 0
 
 
@@ -233,6 +243,9 @@ def all_in_1(
     dip_address=None,
     usdt_address=None,
     include_mock_setup=True,
+    nft_address=None,
+    registry_proxy_admin_address=None,
+    staking_proxy_admin_address=None,
     publish=False
 ):
     if not stakeholder_accounts:
@@ -256,13 +269,40 @@ def all_in_1(
         registry_owner,
         registry,
         nft
-    ) = deploy_registry(a, dip, publish)
+    ) = deploy_registry(
+        a,
+        nft_address=nft_address,
+        proxy_admin_address=registry_proxy_admin_address,
+        publish=publish)
 
     (
         proxy_admin, 
         staking_owner,
         staking
-    ) = deploy_staking(a, registry, dip, publish)
+    ) = deploy_staking(
+        a,
+        proxy_admin_address=staking_proxy_admin_address,
+        publish=publish)
+
+    print('>>> set staking contract in registry')
+    # needed for onlyStaking modifier
+    # context only staking is allowed to register new staking nft
+    registry.setStakingContract(
+        staking,
+        {'from': registry_owner})
+
+    print('>>> set registry contract in staking')
+    # needed to access instance data to check for a bundle
+    # if staking/unstaking is possible or not
+    staking.setRegistry(
+        registry,
+        {'from': staking_owner})
+    
+    if web3.chain_id != 1:
+        print('>>> set dip contract in staking')
+        staking.setDipContract(
+            dip,
+            {'from': staking_owner})
 
     balances_after = get_balances(a)
 
@@ -393,38 +433,67 @@ def all_in_1(
 
 def deploy_registry(
     a, # stakeholder accounts
-    dip_address,
+    nft_address=None,
+    proxy_admin_address=None,
     publish=False
 ):
     proxy_admin_owner = a[PROXY_ADMIN_OWNER]
     registry_owner = a[REGISTRY_OWNER]
 
-    print('>>> deploy registry implementation contract {}'.format(str(REGISTRY_CONTRACT._name)))
-    registry_impl = REGISTRY_CONTRACT.deploy(
-        {'from': registry_owner},
-        publish_source=publish)
+    proxy_admin = None
+    registry = None
+    registry_impl = None
+    nft = None
 
-    print('>>> deploy registry proxy admin contract {}'.format(PROXY_ADMIN_CONTRACT._name))
-    proxy_admin = deploy_proxy(registry_impl, registry_owner, proxy_admin_owner, publish)
+    if proxy_admin_address:
+        print('>>> obtain contract {} from address {}'
+            .format(PROXY_ADMIN_CONTRACT._name, proxy_admin_address))
 
-    registry = contract_from_address(
-        REGISTRY_CONTRACT, 
-        proxy_admin.getProxy())
+        proxy_admin = contract_from_address(
+            PROXY_ADMIN_CONTRACT,
+            proxy_admin_address)
 
-    print('>>> deploy nft contract {}'.format(NFT_CONTRACT._name))
-    nft = NFT_CONTRACT.deploy(
-        registry, 
-        {'from': registry_owner},
-        publish_source=publish)
+        print('>>> obtain contract {} from address {}'
+            .format(REGISTRY_CONTRACT._name, proxy_admin.getProxy()))
 
-    print('>>> set nft contract {} in registry'.format(nft))
-    tx = registry.setNftContract(
-        nft, 
-        registry_owner, 
-        {'from': registry_owner})
+        registry_impl = proxy_admin.getImplementation()
+        registry = contract_from_address(
+            REGISTRY_CONTRACT,
+            proxy_admin.getProxy())
+    else:
+        print('>>> deploy registry implementation contract {}'.format(str(REGISTRY_CONTRACT._name)))
+        registry_impl = REGISTRY_CONTRACT.deploy(
+            {'from': registry_owner},
+            publish_source=publish)
 
-    # allow sufficient time before next step
-    wait_for_confirmations(tx)
+        print('>>> deploy registry proxy admin contract {}'.format(PROXY_ADMIN_CONTRACT._name))
+        proxy_admin = deploy_proxy(registry_impl, registry_owner, proxy_admin_owner, publish)
+
+        registry = contract_from_address(
+            REGISTRY_CONTRACT, 
+            proxy_admin.getProxy())
+
+    if nft_address:
+        print('>>> obtain nft contract {} from {}'.format(NFT_CONTRACT._name, nft_address))
+        nft = contract_from_address(NFT_CONTRACT, nft_address)
+    else:
+        print('>>> deploy nft contract {}'.format(NFT_CONTRACT._name))
+        nft = NFT_CONTRACT.deploy(
+            registry, 
+            {'from': registry_owner},
+            publish_source=publish)
+
+    if registry.getNft() != ZERO_ADDRESS:
+        print('>>> nft contract {} already set in registry'.format(nft))
+    else:
+        print('>>> set nft contract {} in registry'.format(nft))
+        tx = registry.setNftContract(
+            nft, 
+            registry_owner, 
+            {'from': registry_owner})
+
+        # allow sufficient time before next step
+        wait_for_confirmations(tx)
 
     print('>>> done. upgradaple registry at {} with owner {} and implementation {}'
         .format(registry, registry_owner, registry_impl))
@@ -439,10 +508,30 @@ def deploy_registry(
 
 def deploy_staking(
     a, # stakeholder accounts
-    registry,
-    dip,
+    proxy_admin_address=None,
     publish=False
 ):
+    if proxy_admin_address:
+        print('>>> obtain contract {} from address {}'
+            .format(PROXY_ADMIN_CONTRACT._name, proxy_admin_address))
+
+        proxy_admin = contract_from_address(
+            PROXY_ADMIN_CONTRACT,
+                proxy_admin_address)
+
+        print('>>> obtain contract {} from address {}'
+            .format(STAKING_CONTRACT._name, proxy_admin.getProxy()))
+
+        staking = contract_from_address(
+            STAKING_CONTRACT,
+            proxy_admin.getProxy())
+
+        return (
+            proxy_admin,
+            staking.owner(),
+            staking
+        )
+
     proxy_admin_owner = a[PROXY_ADMIN_OWNER]
     registry_owner = a[REGISTRY_OWNER]
     staking_owner = a[STAKING_OWNER]
@@ -461,26 +550,6 @@ def deploy_staking(
 
     print('>>> upgradaple staking at {} with owner {} and implementation {}'
         .format(staking, staking_owner, staking_impl))
-
-    print('>>> set staking contract in registry')
-    # needed for onlyStaking modifier
-    # context only staking is allowed to register new staking nft
-    registry.setStakingContract(
-        staking,
-        {'from': registry_owner})
-
-    print('>>> set registry contract in staking')
-    # needed to access instance data to check for a bundle
-    # if staking/unstaking is possible or not
-    staking.setRegistry(
-        registry,
-        {'from': staking_owner})
-    
-    if web3.chain_id != 1:
-        print('>>> set dip contract in staking')
-        staking.setDipContract(
-            dip,
-            {'from': staking_owner})
     
     return (
         proxy_admin,
@@ -496,9 +565,9 @@ def deploy_proxy(
     publish=False
 ):
 
+    print('deploying contract {}'.format(PROXY_ADMIN_CONTRACT._name))
     proxy_admin = PROXY_ADMIN_CONTRACT.deploy(
         impl,
-        # impl_owner,
         {'from': proxy_admin_owner},
         publish_source=publish)
 
@@ -508,7 +577,7 @@ def deploy_proxy(
         impl_owner,
         proxy_admin_owner)
 
-    # deploy
+    print('deploying contract oz TransparentUpgradeableProxy (=upgradable contract address)')
     oz_proxy = oz.TransparentUpgradeableProxy.deploy(
         impl,
         proxy_admin,
@@ -516,6 +585,7 @@ def deploy_proxy(
         {'from': proxy_admin_owner},
         publish_source=publish)
 
+    print('setting oz TransparentUpgradeableProxy in contract {}'.format(PROXY_ADMIN_CONTRACT._name))
     tx = proxy_admin.setProxy(
         oz_proxy,
         {'from': proxy_admin_owner})

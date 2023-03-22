@@ -201,7 +201,7 @@ def chainRegistryV01(proxyAdmin, registryOwner) -> ChainRegistryV01:
     registry = contract_from_address(
         ChainRegistryV01, 
         proxyAdmin.getProxy())
-    
+
     nft = ChainNft.deploy(registry, {'from': registryOwner})
 
     registry.setNftContract(nft, registryOwner, {'from': registryOwner})
@@ -260,11 +260,3 @@ def mockRegistry(mockInstance):
     return contract_from_address(
         MockRegistry,
         mockInstance.getRegistry())
-
-# @pytest.fixture(scope="module")
-# def instanceService(instance): return instance.getInstanceService()
-
-#=== stable coin fixtures ============================================#
-
-# @pytest.fixture(scope="module")
-# def token(instanceOperator) -> CONTRACT_CLASS_TOKEN: return CONTRACT_CLASS_TOKEN.deploy({'from': instanceOperator})

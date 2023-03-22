@@ -485,7 +485,6 @@ contract StakingV01 is
     {
         require(gtz(_stakingRate[chain][token]), "ERROR:STK-211:TOKEN_STAKING_RATE_NOT_SET");
 
-        UFixed rate = _stakingRate[chain][token];
         int8 decimals = int8(IERC20Metadata(token).decimals());
         UFixed support = itof(dipAmount, decimals - int8(uint8(DIP_DECIMALS))) * _stakingRate[chain][token];
 

@@ -15,7 +15,7 @@ using {
 function eqChainId(ChainId a, ChainId b) pure returns(bool isSame) { return ChainId.unwrap(a) == ChainId.unwrap(b); }
 function neqChainId(ChainId a, ChainId b) pure returns(bool isDifferent) { return ChainId.unwrap(a) != ChainId.unwrap(b); }
 
-function toChainId(uint256 chainId) pure returns(ChainId) { return ChainId.wrap(bytes5(abi.encodePacked(uint40(chainId))));}
+function toChainId(uint256 chainId) pure returns(ChainId) { return ChainId.wrap(bytes5(uint40(chainId)));}
 function thisChainId() view returns(ChainId) { return toChainId(block.chainid); }
 
 type Timestamp is uint40;
