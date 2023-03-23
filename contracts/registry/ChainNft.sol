@@ -23,6 +23,7 @@ contract ChainNft is
     uint256 internal _chainIdDigits;
     uint256 internal _chainIdMultiplier;
     uint256 internal _idNext;
+    uint256 internal _totalMinted;
 
 
     modifier onlyRegistry() {
@@ -61,6 +62,8 @@ contract ChainNft is
         returns(uint256 tokenId)
     {
         tokenId = _getNextTokenId();
+        _totalMinted++;
+
         _safeMint(to, tokenId);
 
         if(bytes(uri).length > 0) {
@@ -120,6 +123,10 @@ contract ChainNft is
         returns(IChainRegistry registry)
     {
         return _registry;
+    }
+
+    function totalMinted() external override view returns(uint256) {
+        return _totalMinted;
     }
 
     function implementsIChainNft() external pure override returns(bool) {

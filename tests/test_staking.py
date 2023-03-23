@@ -357,7 +357,7 @@ def test_stake_bundle_happy_path(
     state_approved = 2 # ObjectState { Undefined, Proposed, Approved, ...}
     info = chainRegistryV01.getNftInfo(nft_id).dict()
     assert info['id'] == nft_id
-    assert info['t'] == chainRegistryV01.STAKE()
+    assert info['objectType'] == chainRegistryV01.STAKE()
     assert info['state'] == state_approved
     assert info['version'] == chainRegistryV01.version()
     (target_id, target_type) = chainRegistryV01.decodeStakeData(nft_id)

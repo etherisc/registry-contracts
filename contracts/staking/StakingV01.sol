@@ -70,7 +70,7 @@ contract StakingV01 is
         NftId id = _registryV01.getTokenNftId(chain, token);
         require(gtz(id), "ERROR:STK-005:NOT_REGISTERED");
         IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(id);
-        require(info.t == _registryV01.TOKEN(), "ERROR:STK-006:NOT_TOKEN");
+        require(info.objectType == _registryV01.TOKEN(), "ERROR:STK-006:NOT_TOKEN");
         require(
             info.state == IChainRegistry.ObjectState.Approved, 
             "ERROR:STK-007:TOKEN_NOT_APPROVED");
@@ -389,7 +389,7 @@ contract StakingV01 is
         view 
         returns(bool isSupported)
     {
-        ObjectType targetType = _registryV01.getNftInfo(target).t;
+        ObjectType targetType = _registryV01.getNftInfo(target).objectType;
         if(!_stakingSupported[targetType]) {
             return false;
         }
@@ -409,7 +409,7 @@ contract StakingV01 is
         view 
         returns(bool isSupported)
     {
-        ObjectType targetType = _registryV01.getNftInfo(target).t;
+        ObjectType targetType = _registryV01.getNftInfo(target).objectType;
         if(!_stakingSupported[targetType]) {
             return false;
         }
@@ -511,8 +511,8 @@ contract StakingV01 is
         IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(target);
 
         // check target type staking support
-        require(_stakingSupported[info.t], "ERROR:STK-220:TARGET_TYPE_NOT_SUPPORTED");
-        require(info.t == _registryV01.BUNDLE(), "ERROR:STK-221:TARGET_TYPE_NOT_BUNDLE");
+        require(_stakingSupported[info.objectType], "ERROR:STK-220:TARGET_TYPE_NOT_SUPPORTED");
+        require(info.objectType == _registryV01.BUNDLE(), "ERROR:STK-221:TARGET_TYPE_NOT_BUNDLE");
 
         (,,, address token, ) = _registryV01.decodeBundleData(target);
 
@@ -583,7 +583,7 @@ contract StakingV01 is
         )
     {
         IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(target);
-        require(info.t == _registryV01.BUNDLE(), "ERROR:STK-230:OBJECT_TYPE_NOT_BUNDLE");
+        require(info.objectType == _registryV01.BUNDLE(), "ERROR:STK-230:OBJECT_TYPE_NOT_BUNDLE");
 
         // fill in object stae from registry info
         objectState = info.state;

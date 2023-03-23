@@ -39,7 +39,7 @@ interface IChainRegistry is
     struct NftInfo {
         NftId id;
         ChainId chain;
-        ObjectType t;
+        ObjectType objectType;
         ObjectState state;
         string uri;
         bytes data;
@@ -49,7 +49,7 @@ interface IChainRegistry is
     }
 
 
-    event LogChainRegistryObjectRegistered(NftId id, ChainId chain, ObjectType t, ObjectState state, address to);
+    event LogChainRegistryObjectRegistered(NftId id, ChainId chain, ObjectType objectType, ObjectState state, address to);
     event LogChainRegistryObjectStateSet(NftId id, ObjectState stateNew, ObjectState stateOld, address setBy);
 
     //--- state changing functions ------------------//

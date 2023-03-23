@@ -104,7 +104,7 @@ def test_registry_basics(
 
         info = r.getNftInfo(protocolTokenId).dict()
         assert info['id'] == protocolTokenId
-        assert info['t'] == r.PROTOCOL()
+        assert info['objectType'] == r.PROTOCOL()
         assert info['chain'] == hex(web3.chain_id)
         assert info['mintedIn'] == history[-1].block_number
         assert info['updatedIn'] == history[-1].block_number
@@ -122,7 +122,7 @@ def test_registry_basics(
     expected_block_number = history[-1].block_number
     info = r.getNftInfo(chainNftId).dict()
     assert info['id'] == chainNftId
-    assert info['t'] == r.CHAIN()
+    assert info['objectType'] == r.CHAIN()
     assert info['chain'] == hex(web3.chain_id)
     assert info['mintedIn'] == expected_block_number
     assert info['updatedIn'] == expected_block_number
@@ -134,7 +134,7 @@ def test_registry_basics(
 
     info = r.getNftInfo(registryNftId).dict()
     assert info['id'] == registryNftId
-    assert info['t'] == r.REGISTRY()
+    assert info['objectType'] == r.REGISTRY()
     assert info['chain'] == hex(web3.chain_id)
     assert info['mintedIn'] == expected_block_number
     assert info['updatedIn'] == expected_block_number

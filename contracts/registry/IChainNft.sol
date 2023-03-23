@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
 import "./IChainRegistry.sol";
 
-type NftId is uint256;
+type NftId is uint96;
 
 using {
     eqNftId as ==,
@@ -18,6 +18,7 @@ function neNftId(NftId a, NftId b) pure returns(bool isDifferent) { return NftId
 function gtz(NftId a) pure returns(bool) { return NftId.unwrap(a) > 0; }
 function zeroNftId() pure returns(NftId) { return NftId.wrap(0); }
 
+function toNftId(uint256 tokenId) pure returns(NftId) { return NftId.wrap(uint96(tokenId)); }
 
 interface IChainNft is 
     IERC721Enumerable 
@@ -29,6 +30,7 @@ interface IChainNft is
 
     function getRegistry() external view returns(IChainRegistry registry);
     function exists(uint256 tokenId) external view returns(bool);
+    function totalMinted() external view returns(uint256);
 
     function implementsIChainNft() external pure returns (bool);
 }

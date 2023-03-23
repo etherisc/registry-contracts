@@ -76,7 +76,7 @@ def test_register_token(
     evt = dict(tx.events['LogChainRegistryObjectRegistered'])
     assert evt['id'] > 0
     assert evt['chain'] == chain_id
-    assert evt['t'] == chainRegistryV01.TOKEN()
+    assert evt['objectType'] == chainRegistryV01.TOKEN()
     assert evt['state'] == 2 # enum ObjectState { Undefined, Proposed, Approved, ...
     assert evt['to'] == registryOwner
 
@@ -89,7 +89,7 @@ def test_register_token(
     info = chainRegistryV01.getNftInfo(tokenNftId).dict()
     assert info['id'] == tokenNftId
     assert info['chain'] == chain_id
-    assert info['t'] == chainRegistryV01.TOKEN()
+    assert info['objectType'] == chainRegistryV01.TOKEN()
 
     (token) = chainRegistryV01.decodeTokenData(tokenNftId)
     assert token == usd1

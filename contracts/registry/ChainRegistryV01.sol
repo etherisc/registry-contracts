@@ -77,7 +77,7 @@ contract ChainRegistryV01 is
     modifier onlyRegisteredToken(ChainId chain, address token) {
         NftId id = _contractObject[chain][token];
         require(NftId.unwrap(id) > 0, "ERROR:CRG-002:TOKEN_NOT_REGISTERED");
-        require(_info[id].t == TOKEN, "ERROR:CRG-003:ADDRESS_NOT_TOKEN");
+        require(_info[id].objectType == TOKEN, "ERROR:CRG-003:ADDRESS_NOT_TOKEN");
         _;
     }
 
@@ -339,7 +339,7 @@ contract ChainRegistryV01 is
         require(staker != address(0), "ERROR:CRG-090:STAKER_WITH_ZERO_ADDRESS");
         (bytes memory data) = _getStakeData(
             target,
-            _info[target].t);
+            _info[target].objectType);
 
         // mint new stake nft
         id = _safeMintObject(
@@ -478,7 +478,7 @@ contract ChainRegistryV01 is
     {
         id = _contractObject[chain][token];
         require(exists(id), "ERROR:CRG-133:TOKEN_NOT_REGISTERED");
-        require(_info[id].t == TOKEN, "ERROR:CRG-134:OBJECT_NOT_TOKEN");
+        require(_info[id].objectType == TOKEN, "ERROR:CRG-134:OBJECT_NOT_TOKEN");
     }
 
 
@@ -598,7 +598,7 @@ contract ChainRegistryV01 is
         virtual 
         returns(string memory)
     {
-        NftId id = NftId.wrap(tokenId);
+        NftId id = toNftId(tokenId);
         require(exists(id), "ERROR:CRG-140:TOKEN_ID_INVALID");
 
         NftInfo memory info = _info[id];
@@ -1036,7 +1036,7 @@ contract ChainRegistryV01 is
     function _safeMintObject(
         address to,
         ChainId chain,
-        ObjectType t,
+        ObjectType objectType,
         ObjectState state,
         string memory uri,
         bytes memory data
@@ -1046,16 +1046,16 @@ contract ChainRegistryV01 is
         returns(NftId id)
     {
         require(address(_nft) != address(0), "ERROR:CRG-350:NFT_NOT_SET");
-        require(_typeSupported[t], "ERROR:CRG-351:OBJECT_TYPE_NOT_SUPPORTED");
+        require(_typeSupported[objectType], "ERROR:CRG-351:OBJECT_TYPE_NOT_SUPPORTED");
 
         // mint nft
-        id = NftId.wrap(_nft.mint(to, uri));
+        id = toNftId(_nft.mint(to, uri));
 
         // store nft meta data
         NftInfo storage info = _info[id];
         info.id = id;
         info.chain = chain;
-        info.t = t;
+        info.objectType = objectType;
         info.state = state;
         info.mintedIn = blockNumber();
         info.updatedIn = blockNumber();
@@ -1067,34 +1067,34 @@ contract ChainRegistryV01 is
         }
 
         // general object book keeping
-        _object[chain][t].push(id);
+        _object[chain][objectType].push(id);
 
         // object type specific book keeping
-        if(t == CHAIN) {
+        if(objectType == CHAIN) {
             _chain[chain] = id;
             _chainIds.push(chain);
-        } else if(t == REGISTRY) {
+        } else if(objectType == REGISTRY) {
             _registry[chain] = id;
-        } else if(t == TOKEN) {
+        } else if(objectType == TOKEN) {
             (address token) = _decodeTokenData(data);
             _contractObject[chain][token] = id;
-        } else if(t == INSTANCE) {
+        } else if(objectType == INSTANCE) {
             (bytes32 instanceId, address registry, ) = _decodeInstanceData(data);
             _contractObject[chain][registry] = id;
             _instance[instanceId] = id;
         } else if(
-            t == RISKPOOL
-            || t == PRODUCT
-            || t == ORACLE
+            objectType == RISKPOOL
+            || objectType == PRODUCT
+            || objectType == ORACLE
         ) {
             (bytes32 instanceId, uint256 componentId, ) = _decodeComponentData(data);
             _component[instanceId][componentId] = id;
-        } else if(t == BUNDLE) {
+        } else if(objectType == BUNDLE) {
             (bytes32 instanceId, , uint256 bundleId, , ) = _decodeBundleData(data);
             _bundle[instanceId][bundleId] = id;
         }
 
-        emit LogChainRegistryObjectRegistered(id, chain, t, state, to);
+        emit LogChainRegistryObjectRegistered(id, chain, objectType, state, to);
     }
 
 
