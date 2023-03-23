@@ -326,7 +326,6 @@ contract ChainRegistryV01 is
     }
 
 
-
     function registerStake(
         NftId target, 
         address staker
@@ -718,6 +717,7 @@ contract ChainRegistryV01 is
         ObjectState stateOld = info.state;
 
         info.state = stateNew;
+        info.updatedIn = blockNumber();
 
         emit LogChainRegistryObjectStateSet(id, stateOld, stateNew, msg.sender);
     }
@@ -1056,10 +1056,10 @@ contract ChainRegistryV01 is
         info.id = id;
         info.chain = chain;
         info.objectType = objectType;
-        info.state = state;
         info.mintedIn = blockNumber();
-        info.updatedIn = blockNumber();
         info.version = version();
+
+        _setObjectState(id, state);
 
         // store data if provided        
         if(data.length > 0) {
