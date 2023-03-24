@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin-upgradeable/contracts/utils/StringsUpgradeable.sol";
-
-import "./BaseTypes.sol";
-import "./IVersionType.sol";
+import {Blocknumber, Timestamp, blockTimestamp} from "./IBaseTypes.sol";
+import {BaseTypes} from "./BaseTypes.sol";
+import {Version, VersionPart, toVersionParts, zeroVersion} from "./IVersionType.sol";
 
 contract Versionable is BaseTypes {
 

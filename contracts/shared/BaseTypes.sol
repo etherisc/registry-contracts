@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "./IBaseTypes.sol";
+import {IBaseTypes, ChainId, Blocknumber, Timestamp} from "./IBaseTypes.sol";
 
 
 contract BaseTypes is IBaseTypes {

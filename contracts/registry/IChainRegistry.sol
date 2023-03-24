@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "../shared/IBaseTypes.sol";
-import "../shared/IVersionType.sol";
+import {IBaseTypes, ChainId, Blocknumber} from "../shared/IBaseTypes.sol";
+import {Version} from "../shared/IVersionType.sol";
 
-import "../staking/IStaking.sol";
+import {IStaking} from "../staking/IStaking.sol";
 
-import "./IChainNft.sol";
-import "./IInstanceRegistryFacade.sol";
-import "./IInstanceServiceFacade.sol";
+import {IChainNft, NftId} from "./IChainNft.sol";
+import {IInstanceServiceFacade} from "./IInstanceServiceFacade.sol";
 
 type ObjectType is uint8;
 
@@ -163,7 +162,8 @@ interface IChainRegistry is
             uint256 riskpoolId,
             uint256 bundleId,
             address token,
-            string memory displayName);
+            string memory displayName,
+            uint256 expiryAt);
 
 
     function decodeStakeData(NftId id)

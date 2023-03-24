@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "../shared/IVersionType.sol";
+import {Version, VersionPart, toVersion, toVersionPart} from "../shared/IVersionType.sol";
 
 contract VersionTest {
 

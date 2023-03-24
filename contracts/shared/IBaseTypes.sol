@@ -40,7 +40,10 @@ function eqTimestamp(Timestamp a, Timestamp b) pure returns(bool) { return Times
 function neqTimestamp(Timestamp a, Timestamp b) pure returns(bool) { return Timestamp.unwrap(a) != Timestamp.unwrap(b); }
 
 function toTimestamp(uint256 timestamp) pure returns(Timestamp) { return Timestamp.wrap(uint40(timestamp));}
+
+// solhint-disable-next-line not-rely-on-time
 function blockTimestamp() view returns(Timestamp) { return toTimestamp(block.timestamp); }
+
 function zeroTimestamp() pure returns(Timestamp) { return toTimestamp(0); }
 
 type Blocknumber is uint32;

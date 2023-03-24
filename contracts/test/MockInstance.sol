@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import "../registry/IInstanceServiceFacade.sol";
-import "./MockRegistry.sol";
+import {IInstanceServiceFacade} from "../registry/IInstanceServiceFacade.sol";
+import {MockInstanceRegistry} from "./MockInstanceRegistry.sol";
 
 contract MockInstance is 
     Ownable,
@@ -18,13 +19,13 @@ contract MockInstance is
         address token;
     }
 
-    mapping(uint256 componentId => ComponentInfo info) _component;
-    mapping(uint256 bundleId => Bundle bundle) _bundle;
-    MockRegistry private _registry;
+    mapping(uint256 componentId => ComponentInfo info) private _component;
+    mapping(uint256 bundleId => Bundle bundle) private _bundle;
+    MockInstanceRegistry private _registry;
 
 
     constructor() Ownable() { 
-        _registry = new MockRegistry();
+        _registry = new MockInstanceRegistry();
         _registry.setInstanceServiceAddress(address(this));
     }
 
@@ -60,6 +61,7 @@ contract MockInstance is
         bundle.riskpoolId = riskpoolId;
         bundle.state = state;
         bundle.capital = capital;
+        // solhint-disable-next-line not-rely-on-time
         bundle.createdAt = block.timestamp;
     }
 
@@ -67,7 +69,7 @@ contract MockInstance is
     function getRegistry()
         external
         view
-        returns(MockRegistry registry)
+        returns(MockInstanceRegistry registry)
     {
         return _registry;
     }

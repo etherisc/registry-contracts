@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "../registry/IInstanceRegistryFacade.sol";
+import {IInstanceRegistryFacade} from "../registry/IInstanceRegistryFacade.sol";
 
-contract MockRegistry is IInstanceRegistryFacade {
+contract MockInstanceRegistry is IInstanceRegistryFacade {
 
     address private _instanceService;
 

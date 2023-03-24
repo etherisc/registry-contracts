@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {ERC721, ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-import "./IChainNft.sol";
+import {IChainNft, IChainRegistry} from "./IChainNft.sol";
 
 contract ChainNft is
     ERC721Enumerable,

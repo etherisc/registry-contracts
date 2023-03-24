@@ -11,7 +11,6 @@ from brownie import (
     USD2,
     DIP,
     MockInstance,
-    MockRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01,
     ChainNft,

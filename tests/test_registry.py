@@ -11,7 +11,7 @@ from brownie import (
     USD2,
     DIP,
     MockInstance,
-    MockRegistry,
+    MockInstanceRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01
 )
@@ -107,7 +107,7 @@ def test_register_token(
 
 def test_register_instance(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
     chainRegistryV01: ChainRegistryV01,
@@ -167,7 +167,7 @@ def test_register_instance(
 
 def test_register_component(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -188,7 +188,7 @@ def test_register_component(
 
     chainRegistryV01.registerInstance(
         mockRegistry,
-        "mockRegistry TEST",
+        "MockInstanceRegistry TEST",
         '', # token uri 
         {'from': registryOwner})
 
@@ -254,7 +254,7 @@ def test_register_component(
 
 def test_register_bundle(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -268,7 +268,7 @@ def test_register_bundle(
 
     chainRegistryV01.registerInstance(
         mockRegistry,
-        'mockRegistry TEST',
+        'MockInstanceRegistry TEST',
         '', # uri
         {'from': registryOwner})
 

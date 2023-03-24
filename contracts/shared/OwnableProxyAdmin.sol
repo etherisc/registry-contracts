@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import "./VersionedOwnable.sol";
+import {VersionedOwnable} from "./VersionedOwnable.sol";
 
 contract OwnableProxyAdmin is
     Ownable

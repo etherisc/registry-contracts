@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "../shared/VersionedOwnable.sol";
+import {Version, toVersion, toVersionPart} from "../shared/IVersionType.sol";
+
+import {VersionedOwnable} from "../shared/VersionedOwnable.sol";
 
 contract DemoV10 is
     VersionedOwnable

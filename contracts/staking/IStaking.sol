@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import "../shared/IBaseTypes.sol";
-import "../shared/IVersionType.sol";
-import "../shared/UFixedMath.sol";
+import {ChainId, Timestamp} from "../shared/IBaseTypes.sol";
+import {Version} from "../shared/IVersionType.sol";
+import {UFixed} from "../shared/UFixedMath.sol";
 
-import "../registry/IChainNft.sol";
-import "../registry/IChainRegistry.sol";
-import "../registry/IInstanceServiceFacade.sol";
+import {NftId} from "../registry/IChainNft.sol";
+import {IChainRegistry, ObjectType} from "../registry/IChainRegistry.sol";
+import {IInstanceServiceFacade} from "../registry/IInstanceServiceFacade.sol";
 
 
 interface IStaking {
@@ -24,6 +24,7 @@ interface IStaking {
         Version version;
     }
 
+    event LogStakingWalletChanged(address user, address oldWallet, address newWallet);
     event LogStakingRewardReservesIncreased(address user, uint256 amount, uint256 newBalance);
     event LogStakingRewardReservesDecreased(address user, uint256 amount, uint256 newBalance);
 
@@ -38,6 +39,8 @@ interface IStaking {
     event LogStakingRewardsClaimed(NftId id, uint256 amount, uint256 newBalance);
 
     //--- state changing functions ------------------//
+
+    function setStakingWallet(address stakingWalletNew) external;
 
     function refillRewardReserves(uint256 dipAmount) external;
     function withdrawRewardReserves(uint256 dipAmount) external;
@@ -55,7 +58,8 @@ interface IStaking {
 
     function getRegistry() external view returns(IChainRegistry);
 
-    function rewardRate() external view returns(UFixed rewardRate);
+    function maxRewardRate() external view returns(UFixed rate);
+    function rewardRate() external view returns(UFixed rate);
     function rewardBalance() external view returns(uint256 dipAmount);
     function rewardReserves() external view returns(uint256 dipAmount);
     function stakingRate(ChainId chain, address token) external view returns(UFixed stakingRate);

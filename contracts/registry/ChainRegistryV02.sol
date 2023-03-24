@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "./ChainRegistryV01.sol";
+import {Version, toVersion, toVersionPart} from "../shared/IVersionType.sol";
+import {ChainId} from "../shared/IBaseTypes.sol";
+import {ChainRegistryV01} from "./ChainRegistryV01.sol";
 
 contract ChainRegistryV02 is
     ChainRegistryV01

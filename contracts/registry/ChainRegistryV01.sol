@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "../shared/VersionedOwnable.sol";
+import {StringsUpgradeable} from "@openzeppelin-upgradeable/contracts/utils/StringsUpgradeable.sol";
 
-import "./IInstanceRegistryFacade.sol";
-import "./IInstanceServiceFacade.sol";
+import {ChainId, toChainId} from "../shared/IBaseTypes.sol";
+import {Version, toVersion, toVersionPart} from "../shared/IVersionType.sol";
+import {VersionedOwnable} from "../shared/VersionedOwnable.sol";
 
-import "./IChainRegistry.sol";
-import "./IChainNft.sol";
+import {IInstanceRegistryFacade} from "./IInstanceRegistryFacade.sol";
+import {IInstanceServiceFacade} from "./IInstanceServiceFacade.sol";
+
+import {IChainRegistry, IStaking, ObjectType} from "./IChainRegistry.sol";
+import {IChainNft, NftId, toNftId} from "./IChainNft.sol";
 
 // registers dip relevant objects for this chain
 contract ChainRegistryV01 is
@@ -313,7 +317,7 @@ contract ChainRegistryV01 is
         returns(NftId id)
     {
         (ChainId chain, bytes memory data) 
-        = _getBundleData(instanceId, riskpoolId, bundleId, displayName);
+        = _getBundleData(instanceId, riskpoolId, bundleId, displayName, expiryAt);
 
         // mint token for the new erc20 token
         id = _safeMintObject(
@@ -391,7 +395,8 @@ contract ChainRegistryV01 is
                 instanceId = instanceService.getInstanceId();
                 isValidId = (instanceId == keccak256(abi.encodePacked(block.chainid, registry)));
             }
-            catch { } // no-empty-blocks is ok here (see default return values above)
+            // solhint-disable-next-line no-empty-blocks
+            catch { }
         } 
     }
 
@@ -571,7 +576,8 @@ contract ChainRegistryV01 is
             uint256 riskpoolId,
             uint256 bundleId,
             address token,
-            string memory displayName
+            string memory displayName,
+            uint256 expiryAt
         )
     {
         return _decodeBundleData(_info[id].data);
@@ -815,7 +821,8 @@ contract ChainRegistryV01 is
         bytes32 instanceId,
         uint256 riskpoolId,
         uint256 bundleId,
-        string memory displayName
+        string memory displayName,
+        uint256 expiryAt
     )
         internal
         virtual
@@ -834,7 +841,7 @@ contract ChainRegistryV01 is
         address token = address(instanceService.getComponentToken(riskpoolId));
 
         chain = toChainId(instanceService.getChainId());
-        data = _encodeBundleData(instanceId, riskpoolId, bundleId, token, displayName);
+        data = _encodeBundleData(instanceId, riskpoolId, bundleId, token, displayName, expiryAt);
     }
 
 
@@ -951,14 +958,15 @@ contract ChainRegistryV01 is
         uint256 riskpoolId,
         uint256 bundleId,
         address token,
-        string memory displayName
+        string memory displayName,
+        uint256 expiryAt
     )
         internal 
         virtual
         pure 
         returns(bytes memory)
     {
-        return abi.encode(instanceId, riskpoolId, bundleId, token, displayName);
+        return abi.encode(instanceId, riskpoolId, bundleId, token, expiryAt, displayName);
     }
 
 
@@ -971,11 +979,12 @@ contract ChainRegistryV01 is
             uint256 riskpoolId,
             uint256 bundleId,
             address token,
-            string memory displayName
+            string memory displayName,
+            uint256 expiryAt
         )
     {
-        (instanceId, riskpoolId, bundleId, token, displayName) 
-            = abi.decode(data, (bytes32, uint256, uint256, address, string));
+        (instanceId, riskpoolId, bundleId, token, expiryAt, displayName) 
+            = abi.decode(data, (bytes32, uint256, uint256, address, uint256, string));
     }
 
 
@@ -1090,7 +1099,7 @@ contract ChainRegistryV01 is
             (bytes32 instanceId, uint256 componentId, ) = _decodeComponentData(data);
             _component[instanceId][componentId] = id;
         } else if(objectType == BUNDLE) {
-            (bytes32 instanceId, , uint256 bundleId, , ) = _decodeBundleData(data);
+            (bytes32 instanceId, , uint256 bundleId, , , ) = _decodeBundleData(data);
             _bundle[instanceId][bundleId] = id;
         }
 
@@ -1103,6 +1112,7 @@ contract ChainRegistryV01 is
         view
         returns(uint256 size)
     {
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             size := extcodesize(contractAddress)
         }

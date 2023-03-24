@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import "../shared/BaseTypes.sol";
-import "../shared/UFixedMath.sol";
-import "../shared/VersionedOwnable.sol";
+import {ChainId, Timestamp, blockTimestamp, thisChainId, toChainId, toTimestamp, zeroTimestamp} from "../shared/IBaseTypes.sol";
+import {BaseTypes} from "../shared/BaseTypes.sol";
+import {UFixed, UFixedType, gtz} from "../shared/UFixedMath.sol";
+import {Version, toVersion, toVersionPart, zeroVersion} from "../shared/IVersionType.sol";
+import {VersionedOwnable} from "../shared/VersionedOwnable.sol";
 
-import "../registry/IInstanceServiceFacade.sol";
-import "../registry/ChainRegistryV01.sol";
+import {IInstanceServiceFacade} from "../registry/IInstanceServiceFacade.sol";
+import {NftId, gtz} from "../registry/IChainNft.sol";
+import {IChainRegistry, ChainRegistryV01, ObjectType} from "../registry/ChainRegistryV01.sol";
 
-import "./IStaking.sol";
+import {IStaking} from "./IStaking.sol";
 
 
 contract StakingV01 is
@@ -28,8 +31,6 @@ contract StakingV01 is
     uint256 public constant MAX_REWARD_RATE_VALUE = 333;
     int8 public constant MAX_REWARD_RATE_EXP = -3;
     uint256 public constant YEAR_DURATION = 365 days;
-
-    uint256 public constant BUNDLE_LIFETIME_DEFAULT = 6 * 30 * 24 * 3600;
 
     // staking wallet (ccount holding dips)
     IERC20Metadata internal _dip; 
@@ -120,6 +121,31 @@ contract StakingV01 is
         _rewardRateMax = itof(MAX_REWARD_RATE_VALUE, MAX_REWARD_RATE_EXP);
 
         transferOwnership(newOwner);
+    }
+
+
+    function setStakingWallet(address stakingWalletNew)
+        external
+        virtual override
+        onlyOwner
+    {
+        require(stakingWalletNew != address(0), "ERROR:STK-030:STAKING_WALLET_ZERO");
+        require(stakingWalletNew != _stakingWallet, "ERROR:STK-031:STAKING_WALLET_SAME");
+
+        address stakingWalletOld = _stakingWallet;
+        _stakingWallet = stakingWalletNew;
+
+        // special case: current wallet is staking contract and dip is set
+        if(stakingWalletOld == address(this) && address(_dip) != address(0)) {
+            uint256 amount = _dip.balanceOf(stakingWalletOld);
+
+            if(amount > 0) {
+                bool success = _dip.transfer(stakingWalletNew, amount);
+                require(success, "ERROR:STK-032:DIP_TRANSFER_FAILED");
+            }
+        }
+
+        emit LogStakingWalletChanged(msg.sender, stakingWalletOld, stakingWalletNew);
     }
 
 
@@ -429,8 +455,10 @@ contract StakingV01 is
         view
         returns(uint256 rewardsAmount)
     {
+        /* solhint-disable not-rely-on-time */
         require(block.timestamp >= toInt(stakeInfo.updatedAt), "ERROR:STK-200:UPDATED_AT_IN_THE_FUTURE");
         uint256 timeSinceLastUpdate = block.timestamp - toInt(stakeInfo.updatedAt);
+        /* solhint-enable not-rely-on-time */
 
         // TODO potentially reduce time depending on the time when the bundle has been closed
 
@@ -514,7 +542,7 @@ contract StakingV01 is
         require(_stakingSupported[info.objectType], "ERROR:STK-220:TARGET_TYPE_NOT_SUPPORTED");
         require(info.objectType == _registryV01.BUNDLE(), "ERROR:STK-221:TARGET_TYPE_NOT_BUNDLE");
 
-        (,,, address token, ) = _registryV01.decodeBundleData(target);
+        (,,, address token, , ) = _registryV01.decodeBundleData(target);
 
         return calculateCapitalSupport(
             info.chain, 
@@ -565,6 +593,7 @@ contract StakingV01 is
 
     function maxRewardRate()
         external
+        virtual override
         view
         returns(UFixed)
     {
@@ -592,10 +621,11 @@ contract StakingV01 is
         // can be done thanks to onlySameChain modifier
         (
             bytes32 instanceId,
-            ,
-            uint256 bundleId
-            ,
-            ,
+            , // rikspool id not needed
+            uint256 bundleId,
+            , // token not needed
+            , // display name not needed
+            uint256 expiryAtUint
         ) = _registryV01.decodeBundleData(target);
 
         IInstanceServiceFacade instanceService = _registryV01.getInstanceServiceFacade(instanceId);
@@ -603,10 +633,7 @@ contract StakingV01 is
         
         // fill in other properties from bundle info
         bundleState = bundle.state;
-        // approx to actual expiry at, good enough for initial staking
-        // TODO once expiry at is available via instance service replace
-        // this by actual value
-        expiryAt = toTimestamp(bundle.createdAt + BUNDLE_LIFETIME_DEFAULT);
+        expiryAt = toTimestamp(expiryAtUint);
     }
 
     //--- view and pure functions (target type specific) ------------------//
@@ -633,7 +660,8 @@ contract StakingV01 is
             riskpoolId,
             bundleId,
             token,
-            displayName
+            displayName,
+            // expiry at 
         ) = _registryV01.decodeBundleData(bundleNft);
 
         (
@@ -660,7 +688,7 @@ contract StakingV01 is
         returns(bool isSupported)
     {
         (
-            IChainRegistry.ObjectState objectState,
+            , // not using IChainRegistry.ObjectState objectState
             IInstanceServiceFacade.BundleState bundleState,
             Timestamp expiryAt
         ) = getBundleState(target);
@@ -686,7 +714,7 @@ contract StakingV01 is
         returns(bool isSupported)
     {
         (
-            IChainRegistry.ObjectState objectState,
+            , // not using IChainRegistry.ObjectState objectState
             IInstanceServiceFacade.BundleState bundleState,
             Timestamp expiryAt
         ) = getBundleState(target);

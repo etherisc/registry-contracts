@@ -12,7 +12,7 @@ from brownie import (
     USD2,
     DIP,
     MockInstance,
-    MockRegistry,
+    MockInstanceRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01,
     ChainNft,
@@ -42,7 +42,7 @@ def isolation(fn_isolation):
 
 def test_stake_and_unstake_simple(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -133,7 +133,7 @@ def test_stake_and_unstake_simple(
 
 def test_stake_transfer_and_unstake(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -256,7 +256,7 @@ def test_stake_transfer_and_unstake(
 
 def test_stake_and_claim_rewards(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -423,7 +423,7 @@ def prepare_staker(
 
 def create_mock_bundle_setup(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,

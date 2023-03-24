@@ -12,7 +12,7 @@ from brownie import (
     USD2,
     DIP,
     MockInstance,
-    MockRegistry,
+    MockInstanceRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01,
     StakingV01,
@@ -32,7 +32,7 @@ def isolation(fn_isolation):
 
 def test_stake_bundle_happy_path(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -53,7 +53,8 @@ def test_stake_bundle_happy_path(
         proxyAdminOwner,
         chainRegistryV01,
         registryOwner,
-        theOutsider)
+        theOutsider,
+        bundle_lifetime = int(stakingV01.YEAR_DURATION() * 0.6666))
     
     assert bundle_nft > 0
 
@@ -140,13 +141,14 @@ def prepare_staker(
 
 def create_mock_bundle_setup(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
     chainRegistryV01: ChainRegistryV01,
     registryOwner: Account,
-    theOutsider: Account
+    theOutsider: Account,
+    bundle_lifetime = 14 * 24 * 3600
 ) -> int:
     # setup attributes
     chain_id = chainRegistryV01.toChain(mockInstance.getChainId())
@@ -155,7 +157,8 @@ def create_mock_bundle_setup(
     bundle_id = 1
     bundle_name = 'my test bundle'
     bundle_funding = 10000 * 10 ** usd2.decimals()
-    bundle_expiry_at = unix_timestamp() + 14 * 24 * 3600
+    bundle_lifetime
+    bundle_expiry_at = unix_timestamp() + bundle_lifetime
 
     # setup mock instance
     type_riskpool = 2

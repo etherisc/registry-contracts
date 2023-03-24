@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "../shared/UFixedMath.sol";
+import {UFixed, UFixedType, delta, eqz, gtz} from "../shared/UFixedMath.sol";
 
 contract UFixedMathTest is UFixedType {
 

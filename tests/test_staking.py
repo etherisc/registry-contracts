@@ -12,7 +12,7 @@ from brownie import (
     USD2,
     DIP,
     MockInstance,
-    MockRegistry,
+    MockInstanceRegistry,
     OwnableProxyAdmin,
     ChainRegistryV01,
     StakingV01,
@@ -206,7 +206,7 @@ def test_staking_rate(
 
 def test_is_staking_supported(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -219,6 +219,7 @@ def test_is_staking_supported(
     staker: Account,
     theOutsider: Account
 ):
+    bundle_lifetime = 90 * 24 * 3600
     bundle_nft = create_mock_bundle_setup(
         mockInstance,
         mockRegistry,
@@ -227,7 +228,8 @@ def test_is_staking_supported(
         proxyAdminOwner,
         chainRegistryV01,
         registryOwner,
-        theOutsider)
+        theOutsider,
+        bundle_lifetime=bundle_lifetime)
     
     assert bundle_nft > 0
 
@@ -236,7 +238,8 @@ def test_is_staking_supported(
         riskpool_id,
         bundle_id,
         token,
-        name
+        name,
+        expiry_at
     ) = chainRegistryV01.decodeBundleData(bundle_nft)
     
     instance_service = contract_from_address(
@@ -274,7 +277,8 @@ def test_is_staking_supported(
     assert stakingV01.isStakingSupported(bundle_nft) is True
 
     # wait long enough and check that staking is no longer possible
-    chain.sleep(stakingV01.BUNDLE_LIFETIME_DEFAULT() - 10)
+    
+    chain.sleep(expiry_at - unix_timestamp() - 10)
     chain.mine(1)
 
     # staking should still be good
@@ -289,7 +293,7 @@ def test_is_staking_supported(
 
 def test_stake_bundle_happy_path(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -378,7 +382,7 @@ def test_stake_bundle_happy_path(
 
 def test_increase_stakes(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
@@ -457,13 +461,14 @@ def prepare_staker(
 
 def create_mock_bundle_setup(
     mockInstance: MockInstance,
-    mockRegistry: MockRegistry,
+    mockRegistry: MockInstanceRegistry,
     usd2: USD2,
     proxyAdmin: OwnableProxyAdmin,
     proxyAdminOwner: Account,
     chainRegistryV01: ChainRegistryV01,
     registryOwner: Account,
-    theOutsider: Account
+    theOutsider: Account,
+    bundle_lifetime = 14 * 24 * 3600
 ) -> int:
     # setup attributes
     chain_id = chainRegistryV01.toChain(mockInstance.getChainId())
@@ -472,7 +477,7 @@ def create_mock_bundle_setup(
     bundle_id = 1
     bundle_name = 'my test bundle'
     bundle_funding = 10000 * 10 ** usd2.decimals()
-    bundle_expiry_at = unix_timestamp() + 14 * 24 * 3600
+    bundle_expiry_at = unix_timestamp() + bundle_lifetime
 
     # setup mock instance
     type_riskpool = 2

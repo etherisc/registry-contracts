@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
-import "./IChainRegistry.sol";
+import {IChainRegistry} from "./IChainRegistry.sol";
 
 type NftId is uint96;
 

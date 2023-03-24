@@ -30,6 +30,7 @@ def test_nft_fixture(
     assert nft.symbol() == nft.SYMBOL()
     assert nft.getRegistry() == registryOwner
 
+    assert nft.totalMinted() == 0
     assert nft.totalSupply() == 0
     assert nft.balanceOf(theOutsider) == 0
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
 
-import "./Versionable.sol";
+import {Versionable} from "./Versionable.sol";
 
 contract VersionedOwnable is
     Versionable,

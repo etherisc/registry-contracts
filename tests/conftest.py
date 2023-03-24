@@ -9,7 +9,7 @@ from brownie import (
     USD3,
     DIP,
     MockInstance,
-    MockRegistry,
+    MockInstanceRegistry,
     UFixedMathTest,
     BaseTypes,
     Versionable,
@@ -258,5 +258,5 @@ def mockInstance(instanceOperator) -> MockInstance:
 @pytest.fixture(scope="module")
 def mockRegistry(mockInstance): 
     return contract_from_address(
-        MockRegistry,
+        MockInstanceRegistry,
         mockInstance.getRegistry())

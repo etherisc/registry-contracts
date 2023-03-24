@@ -9,7 +9,7 @@ from brownie import (
     USD1,
     USD2,
     MockInstance,
-    MockRegistry,
+    MockInstanceRegistry,
     OwnableProxyAdmin,
     ChainNft,
     ChainRegistryV01,
@@ -61,7 +61,7 @@ REGISTRY_CONTRACT = ChainRegistryV01
 STAKING_CONTRACT = StakingV01
 
 MOCK_INSTANCE_CONTRACT = MockInstance
-MOCK_REGISTRY_CONTRACT = MockRegistry
+MOCK_REGISTRY_CONTRACT = MockInstanceRegistry
 
 MOCK_RISKPOOL_ID = 3
 MOCK_BUNDLE_ID = 8
@@ -113,7 +113,7 @@ def actor_account(actor, accts):
     return accts[account_idx]
 
 
-def get_stakeholder_accounts(accts):
+def get_stakeholder_accounts_ganache(accts):
     if len(accts) >= 10:
         return {
             INSTANCE_OPERATOR: actor_account(INSTANCE_OPERATOR, accts),
@@ -135,6 +135,18 @@ def get_stakeholder_accounts(accts):
     }
 
 
+def get_stakeholder_accounts(accts):
+    if len(accts.keys()) >= 10:
+        return {
+            INSTANCE_OPERATOR: accts[INSTANCE_OPERATOR],
+            PROXY_ADMIN_OWNER: accts[PROXY_ADMIN_OWNER],
+            REGISTRY_OWNER: accts[REGISTRY_OWNER],
+            STAKING_OWNER: accts[STAKING_OWNER],
+            STAKER1: accts[STAKER1],
+        }
+
+
+
 def get_accounts(mnemonic=None):
     if not mnemonic and len(accounts) >= 20:
         return accounts
@@ -151,6 +163,13 @@ def get_gas_price():
         return 1
     
     return web3.eth.gas_price
+
+
+def _print_constants(gas_price, safety_factor, gp):
+    print('chain id: {}'.format(web3.eth.chain_id))
+    print('gas price [GWei]: {}'.format(gas_price/10**9))
+    print('safe gas price [GWei]: {}'.format(gp/10**9))
+    print('gas price safety factor: {}'.format(safety_factor))
 
 
 def amend_funds(
@@ -208,7 +227,9 @@ def check_funds(
     g = GAS_REGISTRY
     if include_mock_setup:
         g = get_balance_sum(GAS_REGISTRY, GAS_MOCK)
-    
+
+    _print_constants(gas_price, safety_factor, gp)
+
     funds_available = 0
     checked_accounts = 0
     g_missing = 0
@@ -219,20 +240,20 @@ def check_funds(
         checked_accounts += 1
 
         if bs >= gp * g[s]:
-            print('{}.balance(): {} OK'.format(s, bs))
+            print('{} funding OK, has [ETH]{:.5f}'.format(s, bs/10**18))
         else:
             ms = gp * g[s] - bs
-            print('{}.balance(): {} MISSING: {}'.format(s, bs, ms))
+            print('{} needs [ETH]{:.5f}, has [ETH]{:.5f}'.format(s, ms/10**18, bs/10**18))
             g_missing += ms
 
     if g_missing > 0:
         if a[INSTANCE_OPERATOR].balance() >= gp * g[INSTANCE_OPERATOR] + g_missing:
             print('{} balance sufficient to fund other accounts, use amend_funds(a) and try again'.format(INSTANCE_OPERATOR))
         else:
-            print('{} balance insufficient to fund other accounts. missing amount: {}'
-                .format(INSTANCE_OPERATOR, g_missing))
+            print('{} balance insufficient to fund other accounts. missing amount [ETH]{:.5f} ({})'
+                .format(INSTANCE_OPERATOR, g_missing/10**18, g_missing))
 
-    print('total funds available ({} accounts) [ETH]: {:.6f}'
+    print('total funds available ({} accounts) [ETH]{:.5f}'
         .format(checked_accounts, funds_available/10**18))
 
     assert g_missing == 0
