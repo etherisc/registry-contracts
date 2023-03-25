@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {IInstanceServiceFacade} from "../registry/IInstanceServiceFacade.sol";
+import {IInstanceServiceFacade, IComponent} from "../registry/IInstanceServiceFacade.sol";
 import {MockInstanceRegistry} from "./MockInstanceRegistry.sol";
 
 contract MockInstance is 
@@ -89,7 +89,11 @@ contract MockInstance is
         return owner();
     }
 
-    function getComponentType(uint256 componentId) external view returns(ComponentType componentType) {
+    function getComponent(uint256 componentId) external override view returns(IComponent component) {
+        // eventually implement 
+    }
+
+    function getComponentType(uint256 componentId) external override view returns(ComponentType componentType) {
         require(_component[componentId].id > 0, "ERROR:DIS-010:COMPONENT_UNKNOWN");
         return _component[componentId].t;
     }

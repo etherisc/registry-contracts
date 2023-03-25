@@ -3,6 +3,7 @@ from brownie.network.account import Account
 
 from brownie import (
     interface,
+    history,
     network,
     web3,
     DIP,
@@ -105,6 +106,160 @@ def help():
     print("registry.getNftInfo(nft['stake']).dict()")
     print("registry.decodeStakeData(nft['stake']).dict()")
     print("staking.getInfo(nft['stake']).dict()")
+
+
+def link_to_product(
+    staking_address, 
+    product_address, 
+    staking_owner,
+    registry_owner,
+    riskpool_keeper,
+    instance_name = None,
+    reward_rate = 0.125,
+    staking_rate = 0.100,
+    bundle_lifetime = 14 * 24 * 3600
+):
+
+    print('1) obtaining staking and registry contracts')
+    staking = contract_from_address(StakingV01, staking_address)
+    registry = contract_from_address(ChainRegistryV01, staking.getRegistry())
+
+    print('2) obtaining product and token contracts')
+    product = contract_from_address(interface.IProductFacade, product_address)
+    token = contract_from_address(interface.IERC20Metadata, product.getToken())
+
+    print('3) obtaining instance service')
+    registry_address = product.getRegistry()
+
+    (
+        is_contract,
+        contract_size,
+        chain_id,
+        instance_id,
+        is_valid,
+        instance_service_address
+    ) = registry.probeInstance(registry_address)
+
+    if not is_valid:
+        print('ERROR: registry address {} leads to invalid instance'.format(registry_address))
+
+        return (
+            registry,
+            staking,
+            product,
+            None
+        )
+    
+    print('4) obtaining riskpool contract')
+    instance_service = contract_from_address(interface.IInstanceServiceFacade, instance_service_address)
+    (riskpool, riskpool_id) = get_riskpool(instance_service, product)
+    instance_id = instance_service.getInstanceId()
+
+    fro = {'from': registry_owner}
+    fso = {'from': staking_owner}
+    frk = {'from': riskpool_keeper}
+
+    print('5) token {} registration'.format(token.symbol()))
+    try:
+        nft_id = registry.getTokenNftId(chain_id, token)
+        print('   token already registered (nftId: {})'.format(nft_id))
+    except Exception as e:
+        tx = registry.registerToken(chain_id, token, '', fro)
+        print_registry_tx_info(tx)
+
+    print("6) instance '{}' registration (instance id: {})".format(instance_name, instance_id))
+    try:
+        nft_id = registry.getInstanceNftId(instance_id)
+        print('   instance already registered (nftId: {})'.format(nft_id))
+    except Exception as e:
+        tx = registry.registerInstance(registry_address, instance_name, '', fro)
+        wait_for_confirmations(tx)
+        print_registry_tx_info(tx)
+
+    print('7) riskpool {} registration'.format(riskpool_id))
+    try:
+        nft_id = registry.getComponentNftId(instance_id, riskpool_id)
+        print('   token already registered (nftId: {})'.format(nft_id))
+    except Exception as e:
+        tx = registry.registerComponent(instance_id, riskpool_id, '', fro)
+        wait_for_confirmations(tx)
+        print_registry_tx_info(tx)
+
+    active_bundles = riskpool.activeBundles()
+    if active_bundles > 0:
+        print('8) bundle registration ({} bundles)'.format(active_bundles))
+
+        for i in range(active_bundles):
+            bundle_id = riskpool.getActiveBundleId(i)
+
+            try:
+                nft_id = registry.getBundleNftId(instance_id, bundle_id)
+                print('   bundle {} already registered (bundleId: {}, nftId: {})'
+                    .format(i+1, bundle_id, nft_id))
+            except Exception as e:
+                bundle_name = 'bundle-{}'.format(i)
+                bundle_expiry_at = unix_timestamp() + bundle_lifetime
+                print('   register bundle {} (bundleId: {}, lifetime: {})'
+                    .format(i+1, bundle_id, bundle_lifetime))
+                tx = registry.registerBundle(
+                    instance_id,
+                    riskpool_id,
+                    bundle_id,
+                    bundle_name,
+                    bundle_expiry_at,
+                    fro)
+                print_registry_tx_info(tx)
+
+    print('9) checking reward rate (target: {:.3f})'.format(reward_rate))
+    current_rate = staking.rewardRate()
+    target_rate = staking.toRate(int(1000 * reward_rate), -3)
+    if current_rate == target_rate:
+        print('   reward rate already adjusting ')
+    else:
+        print('   adjusting reward rate from {:.3f} to target'.format(current_rate/10**staking.rateDecimals()))
+        staking.setRewardRate(target_rate, fso)
+
+    print('10) checking dip/usdt staking rate (target: {:.3f})'.format(staking_rate))
+    current_rate = staking.stakingRate(chain_id, token)
+    target_rate = staking.toRate(int(1000 * staking_rate), -3)
+    if current_rate == target_rate:
+        print('   staking rate already adjusting ')
+    else:
+        print('   adjusting staking rate from {:.3f} to target'.format(current_rate/10**staking.rateDecimals()))
+        staking.setStakingRate(chain_id, token, target_rate, fso)
+
+    print('11) link riskpool {} with staking {})'.format(riskpool_id, staking))
+    if riskpool.getStaking() == staking:
+        print('   riskpool and staking already linked')
+    else:
+        riskpool.setStakingAddress(staking, frk)
+
+    print('linking process completed')
+
+    return (
+        registry,
+        staking,
+        product,
+        instance_service
+    )
+
+
+def print_registry_tx_info(tx):
+    if 'LogChainRegistryObjectRegistered' in tx.events:
+        evt = dict(history[-1].events['LogChainRegistryObjectRegistered'])
+        print('nft minted (id: {}, type: {})'.format(evt['id'], evt['objectType']))
+
+        return evt['id']
+    
+    return 0
+
+
+def get_riskpool(instance_service, product):
+    riskpool_id = product.getRiskpoolId()
+    riskpool_address = instance_service.getComponent(riskpool_id)
+    riskpool = contract_from_address(interface.IRiskpoolFacade, riskpool_address)
+
+    return (riskpool, riskpool_id)
 
 
 def actor_account(actor, accts):

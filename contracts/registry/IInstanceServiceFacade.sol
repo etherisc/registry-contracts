@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-
 // needs to be in sync with definition in IInstanceService
+
+interface IComponent {
+
+    function getId() external view returns(uint256);
+}
+
+
 interface IInstanceServiceFacade {
 
     // needs to be in sync with definition in IComponent
@@ -52,6 +57,7 @@ interface IInstanceServiceFacade {
     function getInstanceId() external view returns(bytes32 instanceId);
     function getInstanceOperator() external view returns(address instanceOperator);
 
+    function getComponent(uint256 componentId) external view returns(IComponent component);
     function getComponentType(uint256 componentId) external view returns(ComponentType componentType);
     function getComponentState(uint256 componentId) external view returns(ComponentState componentState);
     function getComponentToken(uint256 componentId) external view returns(IERC20Metadata token);
