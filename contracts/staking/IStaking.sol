@@ -5,6 +5,8 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 
 import {ChainId, Timestamp} from "../shared/IBaseTypes.sol";
 import {Version} from "../shared/IVersionType.sol";
+import {IVersionable} from "../shared/IVersionable.sol";
+
 import {UFixed} from "../shared/UFixedMath.sol";
 
 import {NftId} from "../registry/IChainNft.sol";
@@ -12,7 +14,9 @@ import {IChainRegistry, ObjectType} from "../registry/IChainRegistry.sol";
 import {IInstanceServiceFacade} from "../registry/IInstanceServiceFacade.sol";
 
 
-interface IStaking {
+interface IStaking is
+    IVersionable
+{
 
     struct StakeInfo {
         NftId id;

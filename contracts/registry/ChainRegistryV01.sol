@@ -4,7 +4,9 @@ pragma solidity ^0.8.19;
 import {StringsUpgradeable} from "@openzeppelin-upgradeable/contracts/utils/StringsUpgradeable.sol";
 
 import {ChainId, toChainId} from "../shared/IBaseTypes.sol";
-import {Version, toVersion, toVersionPart} from "../shared/IVersionType.sol";
+import {Version, toVersion, toVersionPart, zeroVersion} from "../shared/IVersionType.sol";
+import {IVersionable} from "../shared/IVersionable.sol";
+import {Versionable} from "../shared/Versionable.sol";
 import {VersionedOwnable} from "../shared/VersionedOwnable.sol";
 
 import {IInstanceRegistryFacade} from "./IInstanceRegistryFacade.sol";
@@ -126,7 +128,12 @@ contract ChainRegistryV01 is
     // IMPORTANT 1. version needed for upgradable versions
     // _activate is using this to check if this is a new version
     // and if this version is higher than the last activated version
-    function version() public override virtual pure returns(Version) {
+    function version()
+        public 
+        virtual override(IVersionable, Versionable) 
+        pure 
+        returns(Version)
+    {
         return toVersion(
             toVersionPart(0),
             toVersionPart(1),
@@ -196,15 +203,17 @@ contract ChainRegistryV01 is
     }
 
 
-    function setStakingContract(address staking)
+    function setStaking(address stakingAddress)
         external
         virtual
         onlyOwner
     {
         require(address(_staking) == address(0), "ERROR:CRG-050:STAKING_ALREADY_SET");
-        require(staking != address(0), "ERROR:CRG-051:STAKING_ADDRESS_ZERO");
-        IStaking stakingContract = IStaking(staking);
+        require(stakingAddress != address(0), "ERROR:CRG-051:STAKING_ADDRESS_ZERO");
+        IStaking stakingContract = IStaking(stakingAddress);
+
         require(stakingContract.implementsIStaking(), "ERROR:CRG-052:STAKING_NOT_ISTAKING");
+        require(stakingContract.version() > zeroVersion(), "ERROR:STK-053:STAKING_VERSION_ZERO");
 
         _staking = stakingContract;
     }
@@ -620,6 +629,10 @@ contract ChainRegistryV01 is
                 toString(registryAt),
                 "_",
                 toString(tokenId)));
+    }
+
+    function implementsIChainRegistry() external override pure returns(bool) {
+        return true;
     }
 
     function toChain(uint256 chainId) public virtual override pure returns(ChainId) {

@@ -89,6 +89,7 @@ contract MockInstance is
         return owner();
     }
 
+    // solhint-disable-next-line no-empty-blocks
     function getComponent(uint256 componentId) external override view returns(IComponent component) {
         // eventually implement 
     }

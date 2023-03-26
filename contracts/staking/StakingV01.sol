@@ -7,6 +7,8 @@ import {ChainId, Timestamp, blockTimestamp, thisChainId, toChainId, toTimestamp,
 import {BaseTypes} from "../shared/BaseTypes.sol";
 import {UFixed, UFixedType, gtz} from "../shared/UFixedMath.sol";
 import {Version, toVersion, toVersionPart, zeroVersion} from "../shared/IVersionType.sol";
+import {IVersionable} from "../shared/IVersionable.sol";
+import {Versionable} from "../shared/Versionable.sol";
 import {VersionedOwnable} from "../shared/VersionedOwnable.sol";
 
 import {IInstanceServiceFacade} from "../registry/IInstanceServiceFacade.sol";
@@ -54,24 +56,25 @@ contract StakingV01 is
     mapping(ChainId chain => mapping(address token => UFixed rate)) internal _stakingRate;
 
     // link to chain registry
-    ChainRegistryV01 internal _registryV01;
+    IChainRegistry internal _registry;
+    ChainRegistryV01 internal _registryConstant;
 
     // staking internal data
     Version internal _version;
 
 
     modifier onlySameChain(NftId id) {
-        require(_registryV01.getNftInfo(id).chain == thisChainId(),
+        require(_registry.getNftInfo(id).chain == thisChainId(),
         "ERROR:STK-001:DIFFERENT_CHAIN_NOT_SUPPORTET");
         _;
     }
 
 
     modifier onlyApprovedToken(ChainId chain, address token) {
-        NftId id = _registryV01.getTokenNftId(chain, token);
+        NftId id = _registry.getTokenNftId(chain, token);
         require(gtz(id), "ERROR:STK-005:NOT_REGISTERED");
-        IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(id);
-        require(info.objectType == _registryV01.TOKEN(), "ERROR:STK-006:NOT_TOKEN");
+        IChainRegistry.NftInfo memory info = _registry.getNftInfo(id);
+        require(info.objectType == _registryConstant.TOKEN(), "ERROR:STK-006:NOT_TOKEN");
         require(
             info.state == IChainRegistry.ObjectState.Approved, 
             "ERROR:STK-007:TOKEN_NOT_APPROVED");
@@ -88,7 +91,12 @@ contract StakingV01 is
     // IMPORTANT 1. version needed for upgradable versions
     // _activate is using this to check if this is a new version
     // and if this version is higher than the last activated version
-    function version() public override virtual pure returns(Version) {
+    function version()
+        public
+        virtual override(IVersionable, Versionable)
+        pure
+        returns(Version)
+    {
         return toVersion(
             toVersionPart(0),
             toVersionPart(0),
@@ -164,26 +172,28 @@ contract StakingV01 is
     }
 
     // sets the on-chain registry that keeps track of all protocol objects on this chain
-    function setRegistry(ChainRegistryV01 registry)
+    function setRegistry(address registryAddress)
         external
         virtual
         onlyOwner
     {
-        require(registry.version() > zeroVersion(), "ERROR:STK-050:REGISTRY_VERSION_ZERO");
-        require(
-            address(_registryV01) == address(0)
-                || registry.version() >= _registryV01.version(),
-            "ERROR:STK-051:REGISTRY_VERSION_DECREASING");
+        require(address(_registry) == address(0), "ERROR:CRG-050:REGISTRY_ALREADY_SET");
+        require(registryAddress != address(0), "ERROR:CRG-051:REGISTRY_ADDRESS_ZERO");
+        IChainRegistry registryContract = IChainRegistry(registryAddress);
 
-        _registryV01 = registry;
+        require(registryContract.implementsIChainRegistry(), "ERROR:STK-052:REGISTRY_NOT_ICHAINREGISTRY");
+        require(registryContract.version() > zeroVersion(), "ERROR:STK-053:REGISTRY_VERSION_ZERO");
+
+        _registry = registryContract;
+        _registryConstant = ChainRegistryV01(registryAddress);
 
         // explicit setting of staking support per object type
-        _stakingSupported[_registryV01.PROTOCOL()] = false;
-        _stakingSupported[_registryV01.INSTANCE()] = false;
-        _stakingSupported[_registryV01.PRODUCT()] = false;
-        _stakingSupported[_registryV01.ORACLE()] = false;
-        _stakingSupported[_registryV01.RISKPOOL()] = false;
-        _stakingSupported[_registryV01.BUNDLE()] = true;
+        _stakingSupported[_registryConstant.PROTOCOL()] = false;
+        _stakingSupported[_registryConstant.INSTANCE()] = false;
+        _stakingSupported[_registryConstant.PRODUCT()] = false;
+        _stakingSupported[_registryConstant.ORACLE()] = false;
+        _stakingSupported[_registryConstant.RISKPOOL()] = false;
+        _stakingSupported[_registryConstant.BUNDLE()] = true;
     }
 
 
@@ -249,7 +259,7 @@ contract StakingV01 is
     {
         // no validation here, validation is done via calling stake() at the end
         address user = msg.sender;
-        stakeId = _registryV01.registerStake(target, user);
+        stakeId = _registry.registerStake(target, user);
 
         StakeInfo storage info = _info[stakeId];
         info.id = stakeId;
@@ -385,7 +395,7 @@ contract StakingV01 is
         view
         returns(bool isOwner)
     {
-        return _registryV01.ownerOf(stakeId) == user;
+        return _registry.ownerOf(stakeId) == user;
     }
 
 
@@ -415,13 +425,13 @@ contract StakingV01 is
         view 
         returns(bool isSupported)
     {
-        ObjectType targetType = _registryV01.getNftInfo(target).objectType;
+        ObjectType targetType = _registry.getNftInfo(target).objectType;
         if(!_stakingSupported[targetType]) {
             return false;
         }
 
         // deal with special cases
-        if(targetType == _registryV01.BUNDLE()) {
+        if(targetType == _registryConstant.BUNDLE()) {
             return _isStakingSupportedForBundle(target);
         }
 
@@ -435,13 +445,13 @@ contract StakingV01 is
         view 
         returns(bool isSupported)
     {
-        ObjectType targetType = _registryV01.getNftInfo(target).objectType;
+        ObjectType targetType = _registry.getNftInfo(target).objectType;
         if(!_stakingSupported[targetType]) {
             return false;
         }
 
         // deal with special cases
-        if(targetType == _registryV01.BUNDLE()) {
+        if(targetType == _registryConstant.BUNDLE()) {
             return _isUnstakingSupportedForBundle(target);
         }
 
@@ -536,13 +546,13 @@ contract StakingV01 is
         view 
         returns(uint256 capitalAmount)
     {
-        IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(target);
+        IChainRegistry.NftInfo memory info = _registry.getNftInfo(target);
 
         // check target type staking support
         require(_stakingSupported[info.objectType], "ERROR:STK-220:TARGET_TYPE_NOT_SUPPORTED");
-        require(info.objectType == _registryV01.BUNDLE(), "ERROR:STK-221:TARGET_TYPE_NOT_BUNDLE");
+        require(info.objectType == _registryConstant.BUNDLE(), "ERROR:STK-221:TARGET_TYPE_NOT_BUNDLE");
 
-        (,,, address token, , ) = _registryV01.decodeBundleData(target);
+        (,,, address token, , ) = _registry.decodeBundleData(target);
 
         return calculateCapitalSupport(
             info.chain, 
@@ -587,7 +597,7 @@ contract StakingV01 is
         view 
         returns(IChainRegistry)
     {
-        return _registryV01;
+        return _registry;
     }
 
 
@@ -611,8 +621,8 @@ contract StakingV01 is
             Timestamp expiryAt
         )
     {
-        IChainRegistry.NftInfo memory info = _registryV01.getNftInfo(target);
-        require(info.objectType == _registryV01.BUNDLE(), "ERROR:STK-230:OBJECT_TYPE_NOT_BUNDLE");
+        IChainRegistry.NftInfo memory info = _registry.getNftInfo(target);
+        require(info.objectType == _registryConstant.BUNDLE(), "ERROR:STK-230:OBJECT_TYPE_NOT_BUNDLE");
 
         // fill in object stae from registry info
         objectState = info.state;
@@ -626,9 +636,9 @@ contract StakingV01 is
             , // token not needed
             , // display name not needed
             uint256 expiryAtUint
-        ) = _registryV01.decodeBundleData(target);
+        ) = _registry.decodeBundleData(target);
 
-        IInstanceServiceFacade instanceService = _registryV01.getInstanceServiceFacade(instanceId);
+        IInstanceServiceFacade instanceService = _registry.getInstanceServiceFacade(instanceId);
         IInstanceServiceFacade.Bundle memory bundle = instanceService.getBundle(bundleId);
         
         // fill in other properties from bundle info
@@ -662,7 +672,7 @@ contract StakingV01 is
             token,
             displayName,
             // expiry at 
-        ) = _registryV01.decodeBundleData(bundleNft);
+        ) = _registry.decodeBundleData(bundleNft);
 
         (
             ,

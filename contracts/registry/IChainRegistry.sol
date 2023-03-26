@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import {IBaseTypes, ChainId, Blocknumber} from "../shared/IBaseTypes.sol";
 import {Version} from "../shared/IVersionType.sol";
+import {IVersionable} from "../shared/IVersionable.sol";
 
 import {IStaking} from "../staking/IStaking.sol";
 
@@ -22,7 +23,8 @@ function neObjectType(ObjectType a, ObjectType b) pure returns(bool isDifferent)
 
 
 interface IChainRegistry is 
-    IBaseTypes 
+    IBaseTypes,
+    IVersionable
 {
 
     enum ObjectState {
@@ -197,4 +199,5 @@ interface IChainRegistry is
             bool isValidId, 
             IInstanceServiceFacade instanceService);
 
+    function implementsIChainRegistry() external pure returns(bool);
 }

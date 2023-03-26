@@ -4,18 +4,12 @@ pragma solidity ^0.8.19;
 import {Blocknumber, Timestamp, blockTimestamp} from "./IBaseTypes.sol";
 import {BaseTypes} from "./BaseTypes.sol";
 import {Version, VersionPart, toVersionParts, zeroVersion} from "./IVersionType.sol";
+import {IVersionable} from "./IVersionable.sol";
 
-contract Versionable is BaseTypes {
-
-    struct VersionInfo {
-        Version version;
-        address implementation;
-        address activatedBy; // tx.origin
-        Blocknumber activatedIn;
-        Timestamp activatedAt;
-    }
-
-    event LogVersionableActivated(Version version, address implementation, address activatedBy);
+contract Versionable is 
+    BaseTypes,
+    IVersionable
+{
 
     mapping(Version version => VersionInfo info) private _versionHistory;
     Version [] private _versions;
@@ -30,7 +24,7 @@ contract Versionable is BaseTypes {
     // and needs to call internal function call _activate() 
     function activate(address implementation, address activatedBy)
         external 
-        virtual
+        virtual override
     { 
         _activate(implementation, activatedBy);
     }
@@ -74,21 +68,21 @@ contract Versionable is BaseTypes {
     }
 
 
-    function isActivated(Version _version) public view returns(bool) {
+    function isActivated(Version _version) public override view returns(bool) {
         return toInt(_versionHistory[_version].activatedIn) > 0;
     }
 
 
     // returns current version (ideally immutable)
-    function version() public virtual pure returns(Version) {
+    function version() public virtual override pure returns(Version) {
         return zeroVersion();
     }
 
 
     function versionParts()
         external
-        virtual 
-        view
+        override 
+        pure
         returns(
             VersionPart major,
             VersionPart minor,
@@ -104,13 +98,13 @@ contract Versionable is BaseTypes {
     }
 
 
-    function getVersion(uint256 idx) external view returns(Version) {
+    function getVersion(uint256 idx) external override view returns(Version) {
         require(idx < _versions.length, "ERROR:VRN-010:INDEX_TOO_LARGE");
         return _versions[idx];
     }
 
 
-    function getVersionInfo(Version _version) external view returns(VersionInfo memory) {
+    function getVersionInfo(Version _version) external override view returns(VersionInfo memory) {
         require(isActivated(_version), "ERROR:VRN-020:VERSION_UNKNOWN");
         return _versionHistory[_version];
     }

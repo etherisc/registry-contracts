@@ -2,6 +2,10 @@
 pragma solidity ^0.8.19;
 
 import {Version, toVersion, toVersionPart} from "../shared/IVersionType.sol";
+import {IVersionable} from "../shared/IVersionable.sol";
+import {Versionable} from "../shared/Versionable.sol";
+import {VersionedOwnable} from "../shared/VersionedOwnable.sol";
+
 import {ChainId} from "../shared/IBaseTypes.sol";
 import {ChainRegistryV01} from "./ChainRegistryV01.sol";
 
@@ -29,7 +33,12 @@ contract ChainRegistryV02 is
     // IMPORTANT 1. version needed for upgradable versions
     // _activate is using this to check if this is a new version
     // and if this version is higher than the last activated version
-    function version() public override virtual pure returns(Version) {
+    function version()
+        public 
+        virtual override
+        pure
+        returns(Version)
+    {
         return toVersion(
             toVersionPart(0),
             toVersionPart(1),
@@ -38,7 +47,10 @@ contract ChainRegistryV02 is
 
     // IMPORTANT 2. activate implementation needed
     // is used by proxy admin in its upgrade function
-    function activate(address implementation, address activatedBy) external override virtual { 
+    function activate(address implementation, address activatedBy)
+        external 
+        virtual override(IVersionable, VersionedOwnable)
+    { 
         // keep track of version history
         // do some upgrade checks
         _activate(implementation, activatedBy);

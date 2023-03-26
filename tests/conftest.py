@@ -235,7 +235,7 @@ def stakingV01(
         StakingV01, 
         stakingProxyAdmin.getProxy())
 
-    chainRegistryV01.setStakingContract(
+    chainRegistryV01.setStaking(
         staking,
         {'from': registryOwner})
 

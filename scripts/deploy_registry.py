@@ -97,8 +97,9 @@ STATE_BUNDLE = {
 oz = get_package('OpenZeppelin')
 
 def help():
-    print('from scripts.deploy_registry import all_in_1, get_accounts, get_stakeholder_accounts, check_funds, amend_funds, verify_deploy, help')
+    print('from scripts.deploy_registry import all_in_1, get_accounts, get_stakeholder_accounts, get_stakeholder_accounts_ganache, check_funds, amend_funds, verify_deploy, help')
     print('a = get_accounts()')
+    print('stakeholder_accounts = get_stakeholder_accounts_ganache(a)')
     print('stakeholder_accounts = get_stakeholder_accounts(a)')
     print('check_funds(stakeholder_accounts)')
     print('(registry, staking, nft, nft_ids, dip, usdt, instance_service, instance_operator, registry_owner, staking_owner, proxy_admin) = all_in_1(stakeholder_accounts)')
@@ -463,7 +464,7 @@ def all_in_1(
     print('>>> set staking contract in registry')
     # needed for onlyStaking modifier
     # context only staking is allowed to register new staking nft
-    registry.setStakingContract(
+    registry.setStaking(
         staking,
         {'from': registry_owner})
 
@@ -741,7 +742,7 @@ def deploy_proxy(
     publish=False
 ):
 
-    print('deploying contract {}'.format(PROXY_ADMIN_CONTRACT._name))
+    print('--- (1/3) deploying contract {}'.format(PROXY_ADMIN_CONTRACT._name))
     proxy_admin = PROXY_ADMIN_CONTRACT.deploy(
         impl,
         {'from': proxy_admin_owner},
@@ -753,7 +754,7 @@ def deploy_proxy(
         impl_owner,
         proxy_admin_owner)
 
-    print('deploying contract oz TransparentUpgradeableProxy (=upgradable contract address)')
+    print('--- (2/3) deploying contract oz TransparentUpgradeableProxy (=upgradable contract address)')
     oz_proxy = oz.TransparentUpgradeableProxy.deploy(
         impl,
         proxy_admin,
@@ -761,7 +762,7 @@ def deploy_proxy(
         {'from': proxy_admin_owner},
         publish_source=publish)
 
-    print('setting oz TransparentUpgradeableProxy in contract {}'.format(PROXY_ADMIN_CONTRACT._name))
+    print('--- (3/3) setting oz TransparentUpgradeableProxy in contract {}'.format(PROXY_ADMIN_CONTRACT._name))
     tx = proxy_admin.setProxy(
         oz_proxy,
         {'from': proxy_admin_owner})
@@ -894,10 +895,17 @@ def get_balance_sum(b1, b2):
 
 def get_balance_delta(b1, b2):
     d = {}
+    total = 0
 
     for a in b1:
-        d[a] = b1[a] - b2[a]
+        amount = b1[a] - b2[a]
+        total += amount
+
+        d[a] = amount
     
+    d['total'] = total
+    d['total_eth_at_20gwei'] = '{:.5f}'.format((total * 20 * 10**9)/10**18)
+
     return d
 
 
