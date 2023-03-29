@@ -135,8 +135,8 @@ contract ChainRegistryV01 is
         returns(Version)
     {
         return toVersion(
-            toVersionPart(0),
             toVersionPart(1),
+            toVersionPart(0),
             toVersionPart(0));
     }
 

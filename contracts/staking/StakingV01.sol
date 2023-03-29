@@ -98,9 +98,9 @@ contract StakingV01 is
         returns(Version)
     {
         return toVersion(
+            toVersionPart(1),
             toVersionPart(0),
-            toVersionPart(0),
-            toVersionPart(1));
+            toVersionPart(0));
     }
 
     // IMPORTANT 2. activate implementation needed
@@ -356,6 +356,16 @@ contract StakingV01 is
         returns(uint256 dips)
     {
         return _rewardReserves;
+    }
+
+
+    function stakeBalance()
+        external
+        virtual
+        view
+        returns(uint256 dips)
+    {
+        return _stakeBalance;
     }
 
 

@@ -32,10 +32,10 @@ def test_registry_implementation(
     ri = chainRegistryV01Implementation
 
     # check current version
-    assert ri.version() == 2 ** 16
+    assert ri.version() == 1 * 2**32 + 0 * 2**16 + 0 * 2**0
 
     (major, minor, patch) = ri.versionParts()
-    assert (major, minor, patch) == (0, 1, 0)
+    assert (major, minor, patch) == (1, 0, 0)
 
     # check version info after deploy
     assert ri.versions() == 1
@@ -158,10 +158,10 @@ def test_registry_basics(
     assert int(digits_part) == chain_digits
 
     # check current version
-    assert r.version() == 2 ** 16
+    assert r.version() == 1 * 2**32 + 0 * 2**16 + 0 * 2**0
 
     (major, minor, patch) = ri.versionParts()
-    assert (major, minor, patch) == (0, 1, 0)
+    assert (major, minor, patch) == (1, 0, 0)
 
     # check version info after deploy
     assert r.versions() == 1
