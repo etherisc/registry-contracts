@@ -135,6 +135,9 @@ def test_staking_facade(
     assert s_facade.capitalSupport(bundle_nft) == capital_support_expected
     assert s_facade.capitalSupport(bundle_nft) == s.capitalSupport(bundle_nft)
 
+    assert s_facade.stakeBalance() == dip_amount
+    assert s_facade.stakeBalance() == s.stakeBalance()
+
     # check implementsIStaking
     assert s_facade.implementsIStaking() is True
     assert s_facade.implementsIStaking() == s.implementsIStaking()
