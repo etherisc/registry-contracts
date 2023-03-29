@@ -104,18 +104,19 @@ STATE_BUNDLE = {
 oz = get_package('OpenZeppelin')
 
 def help():
-    print('from scripts.util import contract_from_address, get_package')
-    print('from scripts.deploy_registry import all_in_1, get_accounts, get_stakeholder_accounts, stakeholder_accounts_ganache, get_stakeholder_accounts_ganache, check_funds, amend_funds, verify_deploy, help')
-    print('a = get_accounts()')
-    print('stakeholder_accounts = stakeholder_accounts_ganache()')
-    print('stakeholder_accounts = get_stakeholder_accounts_ganache(a)')
+    print('from scripts.util import contract_from_address, new_accounts, get_package')
+    print('from scripts.deploy_registry import all_in_1, get_accounts, get_stakeholder_accounts, check_funds, amend_funds, verify_deploy, help')
+    print('a = get_accounts() # opt param mnemonic=None')
+    print('(a, mnemonic) = new_accounts() # opt param count=20')
     print('stakeholder_accounts = get_stakeholder_accounts(a)')
     print('check_funds(stakeholder_accounts)')
+    print('# amend_funds(stakeholder_accounts)')
+    print()
     print('(registry, staking, nft, nft_ids, dip, usdt, instance_service, instance_operator, registry_owner, staking_owner, proxy_admin) = all_in_1(stakeholder_accounts)')
     print('instance_service.getBundle({}).dict()'.format(MOCK_BUNDLE_ID))
-    print("registry.getNftInfo(nft['stake']).dict()")
-    print("registry.decodeStakeData(nft['stake']).dict()")
-    print("staking.getInfo(nft['stake']).dict()")
+    print("registry.getNftInfo(nft_ids['stake']).dict()")
+    print("registry.decodeStakeData(nft_ids['stake']).dict()")
+    print("staking.getInfo(nft_ids['stake']).dict()")
 
 
 def link_to_product(
@@ -272,79 +273,15 @@ def get_riskpool(instance_service, product):
     return (riskpool, riskpool_id)
 
 
-def actor_account(actor, accts):
-    assert actor in GIF_ACTOR
-    account_idx = GIF_ACTOR[actor]
-    return accts[account_idx]
-
-
-def stakeholder_accounts_ganache(accs=None, use_default_accounts=True):
-
-    a = accounts
-
-    if accs and len(accs) >= 15:
-        print('... using provided account list with {} accounts'.format(len(accs)))
-        a = accs
-    elif not use_default_accounts:
-        sample_phrase = 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat'
-        print('... using new empty accounts from: {}'.format(sample_phrase))
-        a = accounts.from_mnemonic(sample_phrase, count=20)
-
-    # define stakeholder accounts  
-    instanceOperator=a[0]
-    instanceWallet=a[1]
-    riskpoolKeeper=a[2]
-    riskpoolWallet=a[3]
-    investor=a[4]
-    productOwner=a[5]
-    customer=a[6]
-    customer2=a[7]
-    registryOwner=a[13]
-    proxyAdminOwner=a[14]
-    stakingOwner=a[15]
-    staker=a[8]
-
-    return {
-        INSTANCE_OPERATOR: instanceOperator,
-        PROXY_ADMIN_OWNER: proxyAdminOwner,
-        REGISTRY_OWNER: registryOwner,
-        STAKING_OWNER: stakingOwner,
-        STAKER1: staker,
-    }
-
-
-def get_stakeholder_accounts_ganache(accts):
+def get_stakeholder_accounts(accts):
     if len(accts) >= 10:
         return {
-            INSTANCE_OPERATOR: actor_account(INSTANCE_OPERATOR, accts),
-            PROXY_ADMIN_OWNER: actor_account(PROXY_ADMIN_OWNER, accts),
-            REGISTRY_OWNER: actor_account(REGISTRY_OWNER, accts),
-            STAKING_OWNER: actor_account(STAKING_OWNER, accts),
-            STAKER1: actor_account(STAKER1, accts),
+            INSTANCE_OPERATOR: accts[GIF_ACTOR[INSTANCE_OPERATOR]],
+            PROXY_ADMIN_OWNER: accts[GIF_ACTOR[PROXY_ADMIN_OWNER]],
+            REGISTRY_OWNER: accts[GIF_ACTOR[REGISTRY_OWNER]],
+            STAKING_OWNER: accts[GIF_ACTOR[STAKING_OWNER]],
+            STAKER1: accts[GIF_ACTOR[STAKER1]],
         }
-    
-    print('WARNING: current chain is {}. len(accounts): {}, expected >= 10, check result'
-        .format(web3.chain_id, len(accts)))
-
-    return {
-        INSTANCE_OPERATOR: None,
-        PROXY_ADMIN_OWNER: None,
-        REGISTRY_OWNER: None,
-        STAKING_OWNER: None,
-        STAKER1: None,
-    }
-
-
-def get_stakeholder_accounts(accts):
-    if len(accts.keys()) >= 10:
-        return {
-            INSTANCE_OPERATOR: accts[INSTANCE_OPERATOR],
-            PROXY_ADMIN_OWNER: accts[PROXY_ADMIN_OWNER],
-            REGISTRY_OWNER: accts[REGISTRY_OWNER],
-            STAKING_OWNER: accts[STAKING_OWNER],
-            STAKER1: accts[STAKER1],
-        }
-
 
 
 def get_accounts(mnemonic=None):
@@ -449,7 +386,7 @@ def check_funds(
     checked_accounts = 0
     g_missing = 0
 
-    for s in a.keys():
+    for s in g.keys():
         bs = a[s].balance()
         funds_available += bs
         checked_accounts += 1
