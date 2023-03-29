@@ -405,6 +405,9 @@ def test_increase_stakes(
         registryOwner,
         theOutsider)
 
+    # check staked total amount befor staking anything
+    assert stakingV01.stakeBalance() == 0
+
     # prepare inital stakes
     staking_amount = 5000 * 10 ** dip.decimals()
     prepare_staker(staker, staking_amount, dip, instanceOperator, stakingV01)
@@ -419,6 +422,9 @@ def test_increase_stakes(
 
     stake_id = staking_tx.events['LogStakingNewStakeCreated']['id']
     assert stake_id > 0
+
+    # check staked total amount so far
+    assert stakingV01.stakeBalance() == staking_amount
 
     # prepare increasing stakes
     additional_amount = 42 * 10 ** dip.decimals()
@@ -446,6 +452,103 @@ def test_increase_stakes(
     assert evt['user'] == staker
     assert evt['amount'] == additional_amount
     assert evt['newBalance'] == staking_amount + additional_amount
+
+    # check staked total amount after increase
+    assert stakingV01.stakeBalance() == staking_amount + additional_amount
+
+
+def test_two_stakers(
+    mockInstance: MockInstance,
+    mockRegistry: MockInstanceRegistry,
+    usd2: USD2,
+    proxyAdmin: OwnableProxyAdmin,
+    proxyAdminOwner: Account,
+    chainRegistryV01: ChainRegistryV01,
+    registryOwner: Account,
+    dip: DIP,
+    instanceOperator: Account,
+    stakingV01: StakingV01,
+    stakingOwner: Account,
+    staker: Account,
+    staker2: Account,
+    theOutsider: Account
+):
+    bundle_lifetime = 60 * 24 * 3600
+    bundle_nft = create_mock_bundle_setup(
+        mockInstance,
+        mockRegistry,
+        usd2,
+        proxyAdmin,
+        proxyAdminOwner,
+        chainRegistryV01,
+        registryOwner,
+        theOutsider,
+        bundle_lifetime=bundle_lifetime)
+
+    # prepare some reward reserves
+    reserves = 1000 * 10**dip.decimals()
+    dip.approve(stakingV01.getStakingWallet(), reserves, {'from': instanceOperator})
+    stakingV01.refillRewardReserves(reserves, {'from': instanceOperator })
+
+    # check staked total amount at beginning
+    assert stakingV01.stakeBalance() == 0
+
+    # prepare inital stakes
+    staking_amount_1 = 2000 * 10 ** dip.decimals()
+    staking_amount_2 = 5000 * 10 ** dip.decimals()
+
+    prepare_staker(staker, staking_amount_1, dip, instanceOperator, stakingV01)
+    prepare_staker(staker2, staking_amount_2, dip, instanceOperator, stakingV01)
+
+    tx = stakingV01.createStake(
+        bundle_nft,
+        staking_amount_1,
+        {'from': staker })
+
+    stake_id_1 = tx.events['LogStakingNewStakeCreated']['id']
+
+    # check staked total amount after 1st stake
+    assert stakingV01.stakeBalance() == staking_amount_1
+
+    tx = stakingV01.createStake(
+        bundle_nft,
+        staking_amount_2,
+        {'from': staker2 })
+
+    stake_id_2 = tx.events['LogStakingNewStakeCreated']['id']
+
+    # check staked total amount after 2nd stake
+    assert stakingV01.stakeBalance() == staking_amount_1 + staking_amount_2
+
+    # wait long enough so unstaking is possible
+    chain.sleep(bundle_lifetime)
+    chain.mine(1)
+
+    # start unstaking
+    unstake_amount_1 = 500 * 10 ** dip.decimals()
+    unstake_amount_2 = 500 * 10 ** dip.decimals()
+
+    stakingV01.unstake(stake_id_2, unstake_amount_2, {'from': staker2 })
+
+    # check staked total amount after unstaking from staker2
+    assert stakingV01.stakeBalance() == staking_amount_1 + staking_amount_2 - unstake_amount_2
+
+    stakingV01.unstake(stake_id_1, unstake_amount_1, {'from': staker })
+
+    # check staked total amount after unstaking from staker
+    assert stakingV01.stakeBalance() == staking_amount_1 + staking_amount_2 - unstake_amount_2 - unstake_amount_1
+
+    # staker2 unstaking full balance and claiming reewards
+    stakingV01.unstakeAndClaimRewards(stake_id_2, {'from': staker2 })
+
+    # check staked total amount after complete unstaking from staker2
+    assert stakingV01.stakeBalance() == staking_amount_1 - unstake_amount_1
+
+    # full unstaking by staker
+    stakingV01.unstakeAndClaimRewards(stake_id_1, {'from': staker })
+
+    # all dip stakes pulled out --> dip stake balance == 0
+    assert stakingV01.stakeBalance() == 0
 
 
 def prepare_staker(
