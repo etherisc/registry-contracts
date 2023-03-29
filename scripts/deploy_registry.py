@@ -39,21 +39,28 @@ from scripts.const import (
     ZERO_ADDRESS,
 )
 
-GAS_PRICE_SAFETY_FACTOR = 2
+GAS_PRICE_SAFETY_FACTOR = 1.25
+
+GAS_0 = 0
+GAS_S = 1 * 10**6
+GAS_SM = 3 * 10**6
+GAS_M = 6 * 10**6
+GAS_L = 10 * 10**6
+
 GAS_REGISTRY = {
-    INSTANCE_OPERATOR: 1500000, # dip,usdt token for testnets
-    PROXY_ADMIN_OWNER: 3700000, # proxy adins for registry, staking
-    REGISTRY_OWNER: 5700000, # registry contract, some wiring
-    STAKING_OWNER: 4200000, # staking contract, some wiring
-    STAKER1: 0
+    INSTANCE_OPERATOR: GAS_SM, # dip,usdt token for testnets
+    PROXY_ADMIN_OWNER: GAS_M, # proxy adins for registry, staking
+    REGISTRY_OWNER: GAS_L, # registry contract, some wiring
+    STAKING_OWNER: GAS_M, # staking contract some wiring
+    STAKER1: GAS_S
 }
 
 GAS_MOCK = {
-    INSTANCE_OPERATOR: 1200000, # mock instance and instance registry, some transfers
-    PROXY_ADMIN_OWNER: 0, # proxy adins for registry, staking
-    REGISTRY_OWNER: 1800000, # registration of protocol, chain, token, instance, riskpool, bundle
-    STAKING_OWNER: 0,
-    STAKER1: 700000, # create bundle stake
+    INSTANCE_OPERATOR: GAS_0, # included in registry seteup
+    PROXY_ADMIN_OWNER: GAS_0, # included in registry seteup
+    REGISTRY_OWNER: GAS_0, # included in registry seteup
+    STAKING_OWNER: GAS_0, # included in registry seteup
+    STAKER1: GAS_0, # included in registry seteup
 }
 
 PROXY_ADMIN_CONTRACT = OwnableProxyAdmin
@@ -97,8 +104,10 @@ STATE_BUNDLE = {
 oz = get_package('OpenZeppelin')
 
 def help():
-    print('from scripts.deploy_registry import all_in_1, get_accounts, get_stakeholder_accounts, get_stakeholder_accounts_ganache, check_funds, amend_funds, verify_deploy, help')
+    print('from scripts.util import contract_from_address, get_package')
+    print('from scripts.deploy_registry import all_in_1, get_accounts, get_stakeholder_accounts, stakeholder_accounts_ganache, get_stakeholder_accounts_ganache, check_funds, amend_funds, verify_deploy, help')
     print('a = get_accounts()')
+    print('stakeholder_accounts = stakeholder_accounts_ganache()')
     print('stakeholder_accounts = get_stakeholder_accounts_ganache(a)')
     print('stakeholder_accounts = get_stakeholder_accounts(a)')
     print('check_funds(stakeholder_accounts)')
@@ -269,6 +278,41 @@ def actor_account(actor, accts):
     return accts[account_idx]
 
 
+def stakeholder_accounts_ganache(accs=None, use_default_accounts=True):
+
+    a = accounts
+
+    if accs and len(accs) >= 15:
+        print('... using provided account list with {} accounts'.format(len(accs)))
+        a = accs
+    elif not use_default_accounts:
+        sample_phrase = 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat'
+        print('... using new empty accounts from: {}'.format(sample_phrase))
+        a = accounts.from_mnemonic(sample_phrase, count=20)
+
+    # define stakeholder accounts  
+    instanceOperator=a[0]
+    instanceWallet=a[1]
+    riskpoolKeeper=a[2]
+    riskpoolWallet=a[3]
+    investor=a[4]
+    productOwner=a[5]
+    customer=a[6]
+    customer2=a[7]
+    registryOwner=a[13]
+    proxyAdminOwner=a[14]
+    stakingOwner=a[15]
+    staker=a[8]
+
+    return {
+        INSTANCE_OPERATOR: instanceOperator,
+        PROXY_ADMIN_OWNER: proxyAdminOwner,
+        REGISTRY_OWNER: registryOwner,
+        STAKING_OWNER: stakingOwner,
+        STAKER1: staker,
+    }
+
+
 def get_stakeholder_accounts_ganache(accts):
     if len(accts) >= 10:
         return {
@@ -315,9 +359,6 @@ def get_accounts(mnemonic=None):
 
 
 def get_gas_price():
-    if web3.eth.chain_id == 1337:
-        return 1
-    
     return web3.eth.gas_price
 
 
@@ -334,6 +375,10 @@ def amend_funds(
     safety_factor=GAS_PRICE_SAFETY_FACTOR,
     include_mock_setup=True
 ):
+    if web3.chain_id == 1:
+        print('amend_funds not available on mainnet')
+        return
+
     # check stakeholder accounts
     a = stakeholder_accounts
     assert INSTANCE_OPERATOR in a
@@ -365,7 +410,8 @@ def check_funds(
     stakeholder_accounts,
     gas_price=None,
     safety_factor=GAS_PRICE_SAFETY_FACTOR,
-    include_mock_setup=True
+    include_mock_setup=True,
+    print_requirements=False
 ):
     # check stakeholder accounts
     a = stakeholder_accounts
@@ -386,6 +432,19 @@ def check_funds(
 
     _print_constants(gas_price, safety_factor, gp)
 
+    if print_requirements:
+        print('--- funding requirements ---')
+        print('Name;Address;ETH')
+
+        for accountName, requiredAmount in g.items():
+            print('{};{};{:.4f}'.format(
+                accountName,
+                a[accountName],
+                gp * requiredAmount / 10**18
+            ))
+
+        print('--- end of funding requirements ---')
+
     funds_available = 0
     checked_accounts = 0
     g_missing = 0
@@ -396,23 +455,25 @@ def check_funds(
         checked_accounts += 1
 
         if bs >= gp * g[s]:
-            print('{} funding OK, has [ETH]{:.5f}'.format(s, bs/10**18))
+            print('{} funding OK, has [ETH]{:.5f} ([wei]{})'.format(s, bs/10**18, bs))
         else:
             ms = gp * g[s] - bs
-            print('{} needs [ETH]{:.5f}, has [ETH]{:.5f}'.format(s, ms/10**18, bs/10**18))
+            print('{} needs [ETH]{:.5f}, has [ETH]{:.5f} ([wei]{})'.format(s, ms/10**18, bs/10**18, bs))
             g_missing += ms
 
     if g_missing > 0:
         if a[INSTANCE_OPERATOR].balance() >= gp * g[INSTANCE_OPERATOR] + g_missing:
             print('{} balance sufficient to fund other accounts, use amend_funds(a) and try again'.format(INSTANCE_OPERATOR))
         else:
-            print('{} balance insufficient to fund other accounts. missing amount [ETH]{:.5f} ({})'
+            # add max tx gas to distribute funds (1x eth transfer tx=21k gas)
+            g_missing += (len(g.keys()) - 1) * 21000
+            print('{} needs additional funding of [ETH]{:.6f} ([wei]{}) to fund other accounts'
                 .format(INSTANCE_OPERATOR, g_missing/10**18, g_missing))
 
-    print('total funds available ({} accounts) [ETH]{:.5f}'
-        .format(checked_accounts, funds_available/10**18))
+    print('total funds available ({} accounts) [ETH] {:.6f}, [wei] {}'
+        .format(checked_accounts, funds_available/10**18, funds_available))
 
-    assert g_missing == 0
+    assert g_missing == 0, "ERROR missing funds/wrong fund distribution detected"
 
 
 def all_in_1(
@@ -517,6 +578,8 @@ def all_in_1(
             instance_name,
             '',
             {'from': registry_owner})
+        
+        wait_for_confirmations(instance_tx)
 
         nft_ids[NFT_INSTANCE] = extract_id(instance_tx)
 
@@ -528,6 +591,8 @@ def all_in_1(
             MOCK_RISKPOOL_ID,
             '',
             {'from': registry_owner})
+
+        wait_for_confirmations(riskpool_tx)
 
         nft_ids[NFT_RISKPOOL] = extract_id(riskpool_tx)
 
