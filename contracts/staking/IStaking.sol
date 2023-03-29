@@ -66,6 +66,8 @@ interface IStaking is
     function rewardRate() external view returns(UFixed rate);
     function rewardBalance() external view returns(uint256 dipAmount);
     function rewardReserves() external view returns(uint256 dipAmount);
+
+    function stakeBalance() external view returns(uint256 dipAmount);
     function stakingRate(ChainId chain, address token) external view returns(UFixed stakingRate);
     function getStakingWallet() external view returns(address stakingWallet);
     function getDip() external view returns(IERC20Metadata);

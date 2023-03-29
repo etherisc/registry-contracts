@@ -361,7 +361,7 @@ contract StakingV01 is
 
     function stakeBalance()
         external
-        virtual
+        virtual override
         view
         returns(uint256 dips)
     {
