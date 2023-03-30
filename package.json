@@ -1,6 +1,6 @@
 {
   "name": "@etherisc/registry-contracts",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Etherisc's smart contracts for the registry.",
   "repository": {
     "type": "git",
