@@ -143,8 +143,8 @@ def test_staking_facade(
     assert s_facade.implementsIStaking() == s.implementsIStaking()
 
     # check version(parts)
-    assert s_facade.version() == 1 * 2**32 + 0 * 2**16 + 0 * 2**0
+    assert s_facade.version() == 1 * 2**32 + 0 * 2**16 + 1 * 2**0
     assert s_facade.version() == s.version()
 
-    assert s_facade.versionParts() == (1, 0, 0)
+    assert s_facade.versionParts() == (1, 0, 1)
     assert s_facade.versionParts() == s.versionParts()

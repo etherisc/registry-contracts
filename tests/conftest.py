@@ -18,6 +18,7 @@ from brownie import (
     ChainRegistryV01,
     ChainRegistryV02,
     StakingV01,
+    StakingV02
 )
 
 from brownie.network import accounts
@@ -211,20 +212,20 @@ def chainRegistryV01(proxyAdmin, registryOwner) -> ChainRegistryV01:
 #=== staking fixtures ==================================================#
 
 @pytest.fixture(scope="module")
-def stakingV01Implementation(theOutsider) -> StakingV01:
+def stakingV01ImplementationBeta(theOutsider) -> StakingV01:
     return StakingV01.deploy({'from': theOutsider})
 
 @pytest.fixture(scope="module")
 def stakingProxyAdmin(
-    stakingV01Implementation,
+    stakingV01ImplementationBeta,
     stakingOwner,
     proxyAdminOwner
 ) -> OwnableProxyAdmin:
-    return deploy_proxy(stakingV01Implementation, stakingOwner, proxyAdminOwner)
+    return deploy_proxy(stakingV01ImplementationBeta, stakingOwner, proxyAdminOwner)
 
 
 @pytest.fixture(scope="module")
-def stakingV01(
+def stakingV01Beta(
     stakingProxyAdmin, 
     stakingOwner, 
     dip,
@@ -248,6 +249,27 @@ def stakingV01(
         {'from': stakingOwner})
 
     return staking
+
+# TODO eventually rename into generic staking
+# it turned out that it wasn't such a good iedea to include
+# a version indicator in the name of these fixtures
+@pytest.fixture(scope="module")
+def stakingV01Implementation(theOutsider) -> StakingV01:
+    return StakingV02.deploy({'from': theOutsider})
+
+
+@pytest.fixture(scope="module")
+def stakingV01(
+    stakingV01Beta, # IMPORTANT: is needed to enforce complete/working setup based on v01 impl
+    stakingV01Implementation,
+    stakingProxyAdmin, 
+    proxyAdminOwner,
+    theOutsider
+) -> StakingV02:
+    stakingProxyAdmin.upgrade(stakingV01Implementation, {'from': proxyAdminOwner})
+
+    return contract_from_address(StakingV02, stakingProxyAdmin.getProxy())
+
 
 #=== gif instance fixtures ====================================================#
 

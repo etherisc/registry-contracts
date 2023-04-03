@@ -803,7 +803,7 @@ def connect_to_usdt(a, token, publish=False):
     if web3.chain_id == 1:
         return contract_from_address(
             USD2, 
-            TETHER_MAINNET_ADDRESS)
+            USDT_MAINNET_ADDRESS)
 
     if token:
         return contract_from_address(
