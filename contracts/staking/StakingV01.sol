@@ -188,7 +188,7 @@ contract StakingV01 is
         _registryConstant = ChainRegistryV01(registryAddress);
 
         // explicit setting of staking support per object type
-        _stakingSupported[_registryConstant.PROTOCOL()] = false;
+        _stakingSupported[_registryConstant.PROTOCOL()] = true;
         _stakingSupported[_registryConstant.INSTANCE()] = false;
         _stakingSupported[_registryConstant.PRODUCT()] = false;
         _stakingSupported[_registryConstant.ORACLE()] = false;
@@ -435,7 +435,8 @@ contract StakingV01 is
         view 
         returns(bool isSupported)
     {
-        ObjectType targetType = _registry.getNftInfo(target).objectType;
+        // ObjectType targetType = _registry.getNftInfo(target).objectType;
+        ObjectType targetType = _registry.getObjectType(target);
         if(!_stakingSupported[targetType]) {
             return false;
         }
@@ -636,24 +637,25 @@ contract StakingV01 is
 
         // fill in object stae from registry info
         objectState = info.state;
+        (bundleState, expiryAt) = _registry.getBundleStateAndExpiry(target);
 
-        // read bundle data directly from instance/riskpool
-        // can be done thanks to onlySameChain modifier
-        (
-            bytes32 instanceId,
-            , // rikspool id not needed
-            uint256 bundleId,
-            , // token not needed
-            , // display name not needed
-            uint256 expiryAtUint
-        ) = _registry.decodeBundleData(target);
+        // // read bundle data directly from instance/riskpool
+        // // can be done thanks to onlySameChain modifier
+        // (
+        //     bytes32 instanceId,
+        //     , // rikspool id not needed
+        //     uint256 bundleId,
+        //     , // token not needed
+        //     , // display name not needed
+        //     uint256 expiryAtUint
+        // ) = _registry.decodeBundleData(target);
 
-        IInstanceServiceFacade instanceService = _registry.getInstanceServiceFacade(instanceId);
-        IInstanceServiceFacade.Bundle memory bundle = instanceService.getBundle(bundleId);
+        // IInstanceServiceFacade instanceService = _registry.getInstanceServiceFacade(instanceId);
+        // IInstanceServiceFacade.Bundle memory bundle = instanceService.getBundle(bundleId);
         
-        // fill in other properties from bundle info
-        bundleState = bundle.state;
-        expiryAt = toTimestamp(expiryAtUint);
+        // // fill in other properties from bundle info
+        // bundleState = bundle.state;
+        // expiryAt = toTimestamp(expiryAtUint);
     }
 
     //--- view and pure functions (target type specific) ------------------//

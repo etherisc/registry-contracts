@@ -88,7 +88,7 @@ def test_registry_basics(
     assert nft.name() == 'Dezentralized Insurance Protocol Registry'
     assert nft.symbol() == 'DIPR'
 
-    nfts = 3 if web3.chain_id == 1 else 2
+    nfts = 3 if web3.chain_id in [1, 1337] else 2
     assert nft.totalSupply() == nfts
     assert nft.balanceOf(ro) == nfts
 

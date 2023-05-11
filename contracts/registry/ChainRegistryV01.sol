@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {StringsUpgradeable} from "@openzeppelin-upgradeable/contracts/utils/StringsUpgradeable.sol";
 
-import {ChainId, toChainId} from "../shared/IBaseTypes.sol";
+import {ChainId, Timestamp, toChainId, toTimestamp} from "../shared/IBaseTypes.sol";
 import {Version, toVersion, toVersionPart, zeroVersion} from "../shared/IVersionType.sol";
 import {IVersionable} from "../shared/IVersionable.sol";
 import {Versionable} from "../shared/Versionable.sol";
@@ -12,7 +12,7 @@ import {VersionedOwnable} from "../shared/VersionedOwnable.sol";
 import {IInstanceRegistryFacade} from "./IInstanceRegistryFacade.sol";
 import {IInstanceServiceFacade} from "./IInstanceServiceFacade.sol";
 
-import {IChainRegistry, IStaking, ObjectType} from "./IChainRegistry.sol";
+import {IChainRegistry, IStaking, ObjectType, Blocknumber} from "./IChainRegistry.sol";
 import {IChainNft, NftId, toNftId} from "./IChainNft.sol";
 
 // registers dip relevant objects for this chain
@@ -62,8 +62,13 @@ contract ChainRegistryV01 is
     // keep track of objects with a contract address (tokens, instances)
     mapping(ChainId chain => mapping(address implementation => NftId id)) internal _contractObject; // which erc20 on which chains are currently supported for minting
 
-    // keep track of instances, comonents and bundles
+    // keep track of instances
     mapping(bytes32 instanceId => NftId id) internal _instance; // which erc20 on which chains are currently supported for minting
+    // only for same chain instances
+    mapping(bytes32 instanceId => IInstanceServiceFacade instanceService) internal _instanceService;
+    mapping(NftId id => IInstanceServiceFacade instanceService) internal _instanceServiceForNft;
+
+    // keep track of instances, comonents and bundles
     mapping(bytes32 instanceId => mapping(uint256 componentId => NftId id)) internal _component; // which erc20 on which chains are currently supported for minting
     mapping(bytes32 instanceId => mapping(uint256 bundleId => NftId id)) internal _bundle; // which erc20 on which chains are currently supported for minting
 
@@ -102,7 +107,7 @@ contract ChainRegistryV01 is
 
     modifier onlyActiveRiskpool(bytes32 instanceId, uint256 riskpoolId) {
         require(NftId.unwrap(_component[instanceId][riskpoolId]) > 0, "ERROR:CRG-010:RISKPOOL_NOT_REGISTERED");
-        IInstanceServiceFacade instanceService = getInstanceServiceFacade(instanceId);
+        IInstanceServiceFacade instanceService = _instanceService[instanceId];
         IInstanceServiceFacade.ComponentType cType = instanceService.getComponentType(riskpoolId);
         require(cType == IInstanceServiceFacade.ComponentType.Riskpool, "ERROR:CRG-011:COMPONENT_NOT_RISKPOOL");
         IInstanceServiceFacade.ComponentState state = instanceService.getComponentState(riskpoolId);
@@ -194,7 +199,7 @@ contract ChainRegistryV01 is
         _nft = nftContract;
 
         // register/mint dip protocol on mainnet and goerli
-        if(toInt(_chainId) == 1 || toInt(_chainId) == 5) {
+        if(toInt(_chainId) == 1 || toInt(_chainId) == 5 || toInt(_chainId) == 1337) {
             _registerProtocol(newOwner);
         }
         // register current chain and this registry
@@ -270,7 +275,9 @@ contract ChainRegistryV01 is
     {
         (
             ChainId chain,
-            bytes memory data
+            bytes memory data,
+            bytes32 instanceId,
+            IInstanceServiceFacade instanceService
         ) = _getInstanceData(instanceRegistry, displayName);
 
         // mint token for the new erc20 token
@@ -281,6 +288,9 @@ contract ChainRegistryV01 is
             ObjectState.Approved,
             uri,
             data);
+        
+        _instanceService[instanceId] = instanceService;
+        _instanceServiceForNft[id] = instanceService;
     }
 
 
@@ -431,7 +441,7 @@ contract ChainRegistryV01 is
 
 
     function exists(NftId id) public virtual override view returns(bool) {
-        return NftId.unwrap(_info[id].id) > 0;
+        return Blocknumber.unwrap(_info[id].mintedIn) > 0;
     }
 
 
@@ -459,6 +469,37 @@ contract ChainRegistryV01 is
     function getNftInfo(NftId id) external virtual override view returns(NftInfo memory) {
         require(exists(id), "ERROR:CRG-120:NFT_ID_INVALID");
         return _info[id];
+    }
+
+    function getObjectType(NftId id) external virtual override view returns(ObjectType objectType) {
+        return _info[id].objectType;
+    }
+
+    function getBundleStateAndExpiry(NftId id)
+        external 
+        virtual override 
+        view 
+        returns(
+            IInstanceServiceFacade.BundleState bundleState, 
+            Timestamp expiryAt
+        )
+    {
+        require(_info[id].objectType == BUNDLE, "ERROR:CRG-122:NFT_NOT_BUNDLE");
+
+        (
+            bytes32 instanceId, // instance id not needed
+            , // rikspool id not needed
+            uint256 bundleId,
+            , // token not needed
+            , // display name not needed
+            uint256 expiryAtUint
+        ) = _decodeBundleData(_info[id].data);
+
+        IInstanceServiceFacade.Bundle memory bundle = _instanceService[instanceId].getBundle(bundleId);
+        
+        // fill in other properties from bundle info
+        bundleState = bundle.state;
+        expiryAt = toTimestamp(expiryAtUint);
     }
 
 
@@ -661,7 +702,6 @@ contract ChainRegistryV01 is
         virtual
         returns(NftId id)
     {
-        require(toInt(_chainId) == 1 || toInt(_chainId) == 5, "ERROR:CRG-200:NOT_ON_MAINNET");
         require(objects(_chainId, PROTOCOL) == 0, "ERROR:CRG-201:PROTOCOL_ALREADY_REGISTERED");
 
         // mint token for the new chain
@@ -778,7 +818,9 @@ contract ChainRegistryV01 is
         view
         returns(
             ChainId chain,
-            bytes memory data
+            bytes memory data,
+            bytes32 instanceId,
+            IInstanceServiceFacade instanceService
         )
     {
         require(instanceRegistry != address(0), "ERROR:CRG-300:REGISTRY_ADDRESS_ZERO");
@@ -788,9 +830,9 @@ contract ChainRegistryV01 is
             bool isContract,
             , // don't care about contract size
             ChainId chainId,
-            bytes32 instanceId,
+            bytes32 instId,
             bool hasValidId,
-            // don't care about instanceservice
+            IInstanceServiceFacade service
         ) = probeInstance(instanceRegistry);
 
         require(isContract, "ERROR:CRG-301:REGISTRY_NOT_CONTRACT");
@@ -799,7 +841,9 @@ contract ChainRegistryV01 is
         require(!exists(_contractObject[chainId][instanceRegistry]), "ERROR:CRG-304:INSTANCE_ALREADY_REGISTERED");
 
         chain = chainId;
-        data = _encodeInstanceData(instanceId, instanceRegistry, displayName);
+        data = _encodeInstanceData(instId, instanceRegistry, displayName);
+        instanceId = instId;
+        instanceService = service;
     }
 
 
@@ -818,7 +862,7 @@ contract ChainRegistryV01 is
     {
         require(!exists(_component[instanceId][componentId]), "ERROR:CRG-310:COMPONENT_ALREADY_REGISTERED");
 
-        IInstanceServiceFacade instanceService = getInstanceServiceFacade(instanceId);
+        IInstanceServiceFacade instanceService = _instanceService[instanceId];
         IInstanceServiceFacade.ComponentType cType = instanceService.getComponentType(componentId);
 
         t = _toObjectType(cType);
@@ -847,7 +891,7 @@ contract ChainRegistryV01 is
     {
         require(!exists(_bundle[instanceId][bundleId]), "ERROR:CRG-320:BUNDLE_ALREADY_REGISTERED");
 
-        IInstanceServiceFacade instanceService = getInstanceServiceFacade(instanceId);
+        IInstanceServiceFacade instanceService = _instanceService[instanceId];
         IInstanceServiceFacade.Bundle memory bundle = instanceService.getBundle(bundleId);
         require(bundle.riskpoolId == riskpoolId, "ERROR:CRG-321:BUNDLE_RISKPOOL_MISMATCH");
 
@@ -1024,6 +1068,14 @@ contract ChainRegistryV01 is
             = abi.decode(data, (NftId, ObjectType));
     }
 
+    function getInstanceServiceForNft(NftId id)
+        public
+        view
+        returns(IInstanceServiceFacade instanceService)
+    {
+        instanceService = _instanceServiceForNft[id];
+    }
+
 
     function getInstanceServiceFacade(bytes32 instanceId) 
         public
@@ -1031,9 +1083,11 @@ contract ChainRegistryV01 is
         view
         returns(IInstanceServiceFacade instanceService)
     {
-        NftId id = _instance[instanceId];
-        (, address registry, ) = decodeInstanceData(id);
-        (,,,,, instanceService) = probeInstance(registry);
+        instanceService = _instanceService[instanceId];
+
+        // NftId id = _instance[instanceId];
+        // (, address registry, ) = decodeInstanceData(id);
+        // (,,,,, instanceService) = probeInstance(registry);
     }
 
 
@@ -1092,28 +1146,30 @@ contract ChainRegistryV01 is
         _object[chain][objectType].push(id);
 
         // object type specific book keeping
-        if(objectType == CHAIN) {
-            _chain[chain] = id;
-            _chainIds.push(chain);
-        } else if(objectType == REGISTRY) {
-            _registry[chain] = id;
-        } else if(objectType == TOKEN) {
-            (address token) = _decodeTokenData(data);
-            _contractObject[chain][token] = id;
-        } else if(objectType == INSTANCE) {
-            (bytes32 instanceId, address registry, ) = _decodeInstanceData(data);
-            _contractObject[chain][registry] = id;
-            _instance[instanceId] = id;
-        } else if(
-            objectType == RISKPOOL
-            || objectType == PRODUCT
-            || objectType == ORACLE
-        ) {
-            (bytes32 instanceId, uint256 componentId, ) = _decodeComponentData(data);
-            _component[instanceId][componentId] = id;
-        } else if(objectType == BUNDLE) {
-            (bytes32 instanceId, , uint256 bundleId, , , ) = _decodeBundleData(data);
-            _bundle[instanceId][bundleId] = id;
+        if(objectType != STAKE) {
+            if(objectType == CHAIN) {
+                _chain[chain] = id;
+                _chainIds.push(chain);
+            } else if(objectType == REGISTRY) {
+                _registry[chain] = id;
+            } else if(objectType == TOKEN) {
+                (address token) = _decodeTokenData(data);
+                _contractObject[chain][token] = id;
+            } else if(objectType == INSTANCE) {
+                (bytes32 instanceId, address registry, ) = _decodeInstanceData(data);
+                _contractObject[chain][registry] = id;
+                _instance[instanceId] = id;
+            } else if(
+                objectType == RISKPOOL
+                || objectType == PRODUCT
+                || objectType == ORACLE
+            ) {
+                (bytes32 instanceId, uint256 componentId, ) = _decodeComponentData(data);
+                _component[instanceId][componentId] = id;
+            } else if(objectType == BUNDLE) {
+                (bytes32 instanceId, , uint256 bundleId, , , ) = _decodeBundleData(data);
+                _bundle[instanceId][bundleId] = id;
+            }
         }
 
         emit LogChainRegistryObjectRegistered(id, chain, objectType, state, to);

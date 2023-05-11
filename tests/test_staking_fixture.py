@@ -147,7 +147,7 @@ def test_staking_basics(
     assert s.getStakingWallet() == s
 
     # check staking object type support
-    assert s.isStakingSupportedForType(r.PROTOCOL()) is False
+    assert s.isStakingSupportedForType(r.PROTOCOL()) is True
     assert s.isStakingSupportedForType(r.INSTANCE()) is False
     assert s.isStakingSupportedForType(r.PRODUCT()) is False
     assert s.isStakingSupportedForType(r.ORACLE()) is False

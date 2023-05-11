@@ -50,7 +50,7 @@ def test_registry_facade_fixture(
     nft_facade = contract_from_address(interface.IChainNftFacade, r_facade.getNft())
     assert nft_facade.name() == 'Dezentralized Insurance Protocol Registry'
     assert nft_facade.symbol() == 'DIPR'
-    assert nft_facade.totalMinted() == 2 # 2 tokens: 1xchain + 1xregistry
+    assert nft_facade.totalMinted() == 3 # 3 tokens: 1xprotocol, 1xchain + 1xregistry
 
     # check objects
     chain_id = r_facade.toChain(web3.chain_id)

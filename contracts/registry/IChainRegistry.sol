@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import {IBaseTypes, ChainId, Blocknumber} from "../shared/IBaseTypes.sol";
+import {IBaseTypes, ChainId, Timestamp, Blocknumber} from "../shared/IBaseTypes.sol";
 import {Version} from "../shared/IVersionType.sol";
 import {IVersionable} from "../shared/IVersionable.sol";
 
@@ -111,6 +111,8 @@ interface IChainRegistry is
     function objects(ChainId chain, ObjectType t) external view returns(uint256 numberOfObjects);
     function getNftId(ChainId chain, ObjectType t, uint256 idx) external view returns(NftId id);
     function getNftInfo(NftId id) external view returns(NftInfo memory);
+    function getObjectType(NftId id) external view returns(ObjectType);
+
     function ownerOf(NftId id) external view returns(address nftOwner);
 
     // chain specific accessors
@@ -125,6 +127,8 @@ interface IChainRegistry is
     function getComponentNftId(bytes32 instanceId, uint256 componentId) external view returns(NftId id);
     function getBundleNftId(bytes32 instanceId, uint256 componentId) external view returns(NftId id);
 
+    // object specific accessors 
+    function getBundleStateAndExpiry(NftId id) external view returns(IInstanceServiceFacade.BundleState bundleState, Timestamp expiredAt);
 
     function decodeRegistryData(NftId id)
         external
