@@ -16,6 +16,7 @@ from brownie import (
     OwnableProxyAdmin,
     ChainRegistryV01,
     StakingV01,
+    StakingV03,
 )
 
 from scripts.const import ZERO_ADDRESS
@@ -30,7 +31,8 @@ def isolation(fn_isolation):
     pass
 
 
-def test_stake_bundle_happy_path(
+def test_create_stake_v3_happy_path(
+    stakingProxyAdmin: OwnableProxyAdmin,
     mockInstance: MockInstance,
     mockRegistry: MockInstanceRegistry,
     usd2: USD2,
@@ -40,11 +42,15 @@ def test_stake_bundle_happy_path(
     registryOwner: Account,
     dip: DIP,
     instanceOperator: Account,
-    stakingV01: StakingV01,
+    stakingV01: StakingV03,
     stakingOwner: Account,
     staker: Account,
     theOutsider: Account
 ):
+
+    registry = contract_from_address(ChainRegistryV01, stakingV01.getRegistry())
+
+    bundle_lifetime = 100 * 24 * 3600
     bundle_nft = create_mock_bundle_setup(
         mockInstance,
         mockRegistry,
@@ -54,18 +60,17 @@ def test_stake_bundle_happy_path(
         chainRegistryV01,
         registryOwner,
         theOutsider,
-        bundle_lifetime = int(stakingV01.YEAR_DURATION() * 0.6666))
+        bundle_lifetime=bundle_lifetime)
     
     assert bundle_nft > 0
 
-    # prepare reward rate: 20.0% apr
-    reward_rate = stakingV01.toRate(20, -2)
-    stakingV01.setRewardRate(reward_rate, {'from': stakingOwner})
-    assert stakingV01.rewardRate() == reward_rate
-
-    # prepare staker
-    staking_amount = 100000 * 10 ** dip.decimals()
+    # attempt to stake
+    staking_amount = 5000 * 10 ** dip.decimals()
     prepare_staker(staker, 2 * staking_amount, dip, instanceOperator, stakingV01)
+
+    # check balances before staking
+    assert dip.balanceOf(staker) == 2 * staking_amount
+    assert dip.balanceOf(stakingV01.getStakingWallet()) == 0
 
     staking_tx = stakingV01.createStake(
         bundle_nft,
@@ -80,54 +85,48 @@ def test_stake_bundle_happy_path(
     assert 'LogStakingStaked' in staking_tx.events
     evt = staking_tx.events['LogStakingStaked']
     nft_id = evt['id']
+    assert evt['target'] == bundle_nft
+    assert evt['user'] == staker
+    assert evt['amount'] == staking_amount
+    assert evt['newBalance'] == staking_amount
 
-    # check staking info for nft right after creation of stake
+    # check staking nft
+    assert 'LogStakingNewStakeCreated' in staking_tx.events
+    evt = staking_tx.events['LogStakingNewStakeCreated']
+    assert evt['target'] == bundle_nft
+    assert evt['user'] == staker
+    assert evt['id'] == nft_id
+
+    # check nft info in registry
+    assert chainRegistryV01.ownerOf(nft_id) == staker
+
+    state_approved = 2 # ObjectState { Undefined, Proposed, Approved, ...}
+    info = chainRegistryV01.getNftInfo(nft_id).dict()
+    assert info['id'] == nft_id
+    assert info['objectType'] == chainRegistryV01.STAKE()
+    assert info['state'] == state_approved
+    assert info['version'] == chainRegistryV01.version()
+    (target_id, target_type) = chainRegistryV01.decodeStakeData(nft_id)
+    assert target_id == bundle_nft
+    assert target_type == chainRegistryV01.BUNDLE()
+
+    # get bundle expiry at
+    expiry_at = registry.decodeBundleData(bundle_nft).dict()['expiryAt']
+    assert abs(expiry_at - (mockInstance.getBundle(1).dict()['createdAt'] + bundle_lifetime)) <= 2
+
+    # check staking info for nft
     info = stakingV01.getInfo(nft_id).dict()
-    created_at = web3.eth.getBlock(web3.eth.block_number)['timestamp']
+    block_timestamp = web3.eth.getBlock(web3.eth.block_number)['timestamp']
     assert info['id'] == nft_id
     assert info['target'] == bundle_nft
     assert info['stakeBalance'] == staking_amount
     assert info['rewardBalance'] == 0
-    assert info['createdAt'] == created_at
-    assert info['updatedAt'] == created_at
-
-    # wait for quarter of a year (20% apr -> 5% for a quarter year)
-    quarter_year = int(stakingV01.YEAR_DURATION() / 4)
-    chain.sleep(quarter_year)
-    chain.mine(1)
-
-    # increase stake to force reward calculation
-    increase_tx = stakingV01.stake(
-        nft_id,
-        staking_amount,
-        {'from': staker })
-
-    # calculate expected reward amount
-    updated_at = web3.eth.getBlock(web3.eth.block_number)['timestamp']
-    year_fraction = (updated_at - created_at) / stakingV01.YEAR_DURATION()
-    expected_reward_amount = int(staking_amount * 0.2 * year_fraction)
-
-    #  check event
-    assert 'LogStakingRewardsUpdated' in increase_tx.events
-    evt = increase_tx.events['LogStakingRewardsUpdated']
-    assert evt['id'] == nft_id
-    assert delta_is_tiny(evt['amount'], expected_reward_amount)
-    assert delta_is_tiny(evt['newBalance'], expected_reward_amount)
-
-    # check info update
-    info = stakingV01.getInfo(nft_id).dict()
-    assert info['id'] == nft_id
-    assert info['target'] == bundle_nft
-    assert info['stakeBalance'] == 2 * staking_amount
-    assert delta_is_tiny(info['rewardBalance'], expected_reward_amount)
-    assert info['createdAt'] == created_at
-    assert info['updatedAt'] == updated_at
+    assert info['createdAt'] == block_timestamp
+    assert info['updatedAt'] == block_timestamp
+    assert info['lockedUntil'] == expiry_at
+    assert info['version'] == stakingV01.version()
 
     # assert False
-
-
-def delta_is_tiny(a, b, epsilon=10 ** -10):
-    return abs(1 - (a / b)) < 10 ** -10
 
 
 def prepare_staker(
@@ -159,7 +158,6 @@ def create_mock_bundle_setup(
     bundle_id = 1
     bundle_name = 'my test bundle'
     bundle_funding = 10000 * 10 ** usd2.decimals()
-    bundle_lifetime
     bundle_expiry_at = unix_timestamp() + bundle_lifetime
 
     # setup mock instance

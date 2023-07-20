@@ -44,24 +44,24 @@ function zeroVersion() pure returns(Version) {
 }
 
 
-function toVersionParts(Version _version)
-    pure
-    returns(
-        VersionPart major,
-        VersionPart minor,
-        VersionPart patch
-    )
-{
-    uint versionInt = versionToInt(_version);
-    uint16 majorInt = uint16(versionInt >> 32);
+// function toVersionParts(Version _version)
+//     pure
+//     returns(
+//         VersionPart major,
+//         VersionPart minor,
+//         VersionPart patch
+//     )
+// {
+//     uint versionInt = versionToInt(_version);
+//     uint16 majorInt = uint16(versionInt >> 32);
 
-    versionInt -= majorInt << 32;
-    uint16 minorInt = uint16(versionInt >> 16);
-    uint16 patchInt = uint16(versionInt - (minorInt << 16));
+//     versionInt -= majorInt << 32;
+//     uint16 minorInt = uint16(versionInt >> 16);
+//     uint16 patchInt = uint16(versionInt - (minorInt << 16));
 
-    return (
-        toVersionPart(majorInt),
-        toVersionPart(minorInt),
-        toVersionPart(patchInt)
-    );
-}
+//     return (
+//         toVersionPart(majorInt),
+//         toVersionPart(minorInt),
+//         toVersionPart(patchInt)
+//     );
+// }

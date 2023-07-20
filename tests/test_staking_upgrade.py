@@ -16,6 +16,7 @@ from brownie import (
     ChainNft,
     StakingV01,
     StakingV02,
+    StakingV03,
 )
 
 from scripts.const import ZERO_ADDRESS
@@ -95,17 +96,79 @@ def test_staking_upgrade(
     assert stakingV01Beta.rewardReserves() == reward_reserves
 
 
+def test_staking_upgrade_v3(
+    proxyAdminOwner: Account,
+    stakingProxyAdminBase: OwnableProxyAdmin,
+    stakingV01Base: StakingV01,
+    stakingV01ImplementationBeta: StakingV01,
+    stakingV02Implementation: StakingV02,
+    stakingV03Implementation: StakingV03,
+    stakingOwner: Account,
+    dip: interface.IERC20Metadata,
+    instanceOperator: Account,
+    chainRegistryV01: ChainRegistryV01,
+    registryOwner: Account,
+    theOutsider: Account,
+):
+
+    # check proxy admin setup
+    assert stakingProxyAdminBase.getImplementation() == stakingV01ImplementationBeta
+    assert stakingProxyAdminBase.getProxy() == stakingV01Base
+    assert stakingProxyAdminBase.owner() == proxyAdminOwner
+
+    # check current version
+    assert stakingV01Base.version() == 1 * 2**32 + 0 * 2**16 + 0 * 2**0
+    (major, minor, patch) = stakingV01Base.versionParts()
+    assert (major, minor, patch) == (1, 0, 0)
+
+    # upgrade to V02
+    stakingProxyAdminBase.upgrade(stakingV02Implementation, {'from': proxyAdminOwner})
+
+    # check V02
+    assert stakingProxyAdminBase.getProxy() == stakingV01Base
+    assert stakingProxyAdminBase.getImplementation() == stakingV02Implementation
+
+    assert stakingV01Base.version() == 1 * 2**32 + 0 * 2**16 + 1 * 2**0
+    (major, minor, patch) = stakingV01Base.versionParts()
+    assert (major, minor, patch) == (1, 0, 1)
+
+    # test some new functionality not available with version 02
+    rate = stakingV01Base.toRate(5, -2)
+    duration = stakingV01Base.YEAR_DURATION()
+    stakingV03 = contract_from_address(StakingV03, stakingV01Base)
+
+    # check that V02 reverts
+    with brownie.reverts():
+        stakingV03.calculateRewards(1000, duration, rate)
+
+    # upgrade to V03
+    stakingProxyAdminBase.upgrade(stakingV03Implementation, {'from': proxyAdminOwner})
+
+    # check new version
+    assert stakingProxyAdminBase.getProxy() == stakingV01Base
+    assert stakingProxyAdminBase.getImplementation() == stakingV03Implementation
+
+    assert stakingV01Base.version() == 1 * 2**32 + 1 * 2**16 + 0 * 2**0
+    (major, minor, patch) = stakingV01Base.versionParts()
+    assert (major, minor, patch) == (1, 1, 0)
+
+    # check that V03 passes
+    assert stakingV03.calculateRewards(1000, duration, rate) == 50
+
+
 def test_upgraded_staking_fixture(
     instanceOperator: Account,
-    stakingV01: StakingV02,
+    stakingV01: StakingV03,
+    stakingOwner: Account,
     dip: interface.IERC20Metadata,
     chainRegistryV01: ChainRegistryV01,
 ):
     # check version
     (major, minor, patch) = stakingV01.versionParts()
-    assert (major, minor, patch) == (1, 0, 1)
+    assert (major, minor, patch) == (1, 1, 0)
 
-    # test some random existing unchanged functionalities by version 02
+    # test some random existing unchanged functionalities by version 02/03
+    # do some stuff with reward reserves
     assert stakingV01.getRegistry() == chainRegistryV01
     assert stakingV01.rewardReserves() == 0
 
@@ -114,3 +177,14 @@ def test_upgraded_staking_fixture(
     stakingV01.refillRewardReserves(reward_reserves, {'from': instanceOperator})
 
     assert stakingV01.rewardReserves() == reward_reserves
+
+    # do some stuff with reward rate
+    stakingV01.setRewardRate(stakingV01.toRate(125, -3), {'from': stakingOwner})
+    assert stakingV01.rewardRate() / 10**stakingV01.decimals() == 0.125
+    assert stakingV01.calculateRewards(1000, stakingV01.YEAR_DURATION()) == 125
+
+    # test some new functionality from version 03
+    # check reward rate calculation
+    rate = stakingV01.toRate(5, -2)
+    duration = stakingV01.YEAR_DURATION()
+    assert stakingV01.calculateRewards(1000, duration, rate) == 50

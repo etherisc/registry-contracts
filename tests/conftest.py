@@ -18,7 +18,8 @@ from brownie import (
     ChainRegistryV01,
     ChainRegistryV02,
     StakingV01,
-    StakingV02
+    StakingV02,
+    StakingV03,
 )
 
 from brownie.network import accounts
@@ -216,12 +217,57 @@ def stakingV01ImplementationBeta(theOutsider) -> StakingV01:
     return StakingV01.deploy({'from': theOutsider})
 
 @pytest.fixture(scope="module")
+def stakingV02Implementation(theOutsider) -> StakingV02:
+    return StakingV02.deploy({'from': theOutsider})
+
+@pytest.fixture(scope="module")
+def stakingV03Implementation(theOutsider) -> StakingV03:
+    return StakingV03.deploy({'from': theOutsider})
+
+@pytest.fixture(scope="module")
 def stakingProxyAdmin(
     stakingV01ImplementationBeta,
     stakingOwner,
     proxyAdminOwner
 ) -> OwnableProxyAdmin:
     return deploy_proxy(stakingV01ImplementationBeta, stakingOwner, proxyAdminOwner)
+
+@pytest.fixture(scope="module")
+def stakingProxyAdminBase(
+    stakingV01ImplementationBeta,
+    stakingOwner,
+    proxyAdminOwner
+) -> OwnableProxyAdmin:
+    return deploy_proxy(stakingV01ImplementationBeta, stakingOwner, proxyAdminOwner)
+
+
+@pytest.fixture(scope="module")
+def stakingV01Base(
+    stakingProxyAdminBase, 
+    stakingOwner, 
+    dip,
+    chainRegistryV01,
+    registryOwner
+) -> StakingV01:
+
+    staking = contract_from_address(
+        StakingV01, 
+        stakingProxyAdminBase.getProxy())
+
+    # chainRegistryV01.setStaking(
+    #     staking,
+    #     {'from': registryOwner})
+
+    staking.setDipContract(
+        dip,
+        {'from': stakingOwner})
+
+    staking.setRegistry(
+        chainRegistryV01,
+        {'from': stakingOwner})
+
+    return staking
+
 
 
 @pytest.fixture(scope="module")
@@ -232,6 +278,7 @@ def stakingV01Beta(
     chainRegistryV01,
     registryOwner
 ) -> StakingV01:
+
     staking = contract_from_address(
         StakingV01, 
         stakingProxyAdmin.getProxy())
@@ -250,12 +297,14 @@ def stakingV01Beta(
 
     return staking
 
+
 # TODO eventually rename into generic staking
 # it turned out that it wasn't such a good iedea to include
 # a version indicator in the name of these fixtures
 @pytest.fixture(scope="module")
 def stakingV01Implementation(theOutsider) -> StakingV01:
-    return StakingV02.deploy({'from': theOutsider})
+    # return StakingV02.deploy({'from': theOutsider})
+    return StakingV03.deploy({'from': theOutsider})
 
 
 @pytest.fixture(scope="module")
@@ -265,10 +314,10 @@ def stakingV01(
     stakingProxyAdmin, 
     proxyAdminOwner,
     theOutsider
-) -> StakingV02:
+) -> StakingV03:
     stakingProxyAdmin.upgrade(stakingV01Implementation, {'from': proxyAdminOwner})
 
-    return contract_from_address(StakingV02, stakingProxyAdmin.getProxy())
+    return contract_from_address(StakingV03, stakingProxyAdmin.getProxy())
 
 
 #=== gif instance fixtures ====================================================#

@@ -26,12 +26,14 @@ interface IStaking is
         Timestamp createdAt;
         Timestamp updatedAt;
         Version version;
+        Timestamp lockedUntil; // introduced with V03
     }
 
     event LogStakingWalletChanged(address user, address oldWallet, address newWallet);
     event LogStakingRewardReservesIncreased(address user, uint256 amount, uint256 newBalance);
     event LogStakingRewardReservesDecreased(address user, uint256 amount, uint256 newBalance);
 
+    event LogTargetRewardRateSet(address user, NftId target, UFixed oldRewardRate, UFixed newRewardRate);
     event LogStakingRewardRateSet(address user, UFixed oldRewardRate, UFixed newRewardRate);
     event LogStakingStakingRateSet(address user, ChainId chain, address token, UFixed oldStakingRate, UFixed newStakingRate);
 

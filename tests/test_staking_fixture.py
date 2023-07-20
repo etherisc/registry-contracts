@@ -34,10 +34,10 @@ def test_staking_implementation(
     si = stakingV01Implementation
 
     # check current version
-    assert si.version() == 1 * 2**32 + 0 * 2**16 + 1 * 2**0
+    assert si.version() == 1 * 2**32 + 1 * 2**16 + 0 * 2**0
 
     (major, minor, patch) = si.versionParts()
-    assert (major, minor, patch) == (1, 0, 1)
+    assert (major, minor, patch) == (1, 1, 0)
 
     # check version info after deploy
     assert si.versions() == 1
@@ -96,9 +96,9 @@ def test_staking_basics(
     assert pa.getImplementation() == si
 
     # check current version
-    assert s.version() == 1 * 2**32 + 0 * 2**16 + 1 * 2**0
+    assert s.version() == 1 * 2**32 + 1 * 2**16 + 0 * 2**0
     (major, minor, patch) = si.versionParts()
-    assert (major, minor, patch) == (1, 0, 1)
+    assert (major, minor, patch) == (1, 1, 0)
 
     # check version info after deploy
     assert s.versions() == 2
