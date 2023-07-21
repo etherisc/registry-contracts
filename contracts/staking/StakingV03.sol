@@ -79,6 +79,7 @@ contract StakingV03 is
     function updateRewards(NftId stakeId)
         external
         virtual
+        onlyOwner
     {
         // input validation (stake needs to exist)
         StakeInfo storage info = _info[stakeId];
@@ -109,6 +110,21 @@ contract StakingV03 is
         stake(stakeId, dipAmount);
 
         emit LogStakingNewStakeCreated(target, user, stakeId);
+    }
+
+
+    function isUnstakingAvailable(NftId stake)
+        public
+        virtual
+        view 
+        returns(bool isAvailable)
+    {
+        Timestamp lockedUntil = _info[stake].lockedUntil;
+        if(lockedUntil == zeroTimestamp()) {
+            return false;
+        }
+
+        return blockTimestamp() >= lockedUntil;
     }
 
 
@@ -177,6 +193,57 @@ contract StakingV03 is
         UFixed yearFraction = itof(duration) / itof(YEAR_DURATION);
         UFixed rewardDuration = rate * yearFraction;
         rewardAmount = ftoi(itof(amount) * rewardDuration);
+    }
+
+
+    function _unstake(
+        NftId id,
+        address user, 
+        uint256 amount
+
+    ) 
+        internal
+        virtual override
+    {
+        StakeInfo storage info = _info[id];
+        require(_canUnstake(info), "ERROR:STK-250:UNSTAKE_NOT_SUPPORTED");
+        require(amount > 0, "ERROR:STK-251:UNSTAKE_AMOUNT_ZERO");
+
+        _updateRewards(info);
+
+        bool unstakeAll = (amount == type(uint256).max);
+        if(unstakeAll) {
+            amount = info.stakeBalance;
+        }
+
+        _decreaseStakes(info, amount);
+        _withdrawDip(user, amount);
+
+        emit LogStakingUnstaked(
+            info.target,
+            user,
+            info.id,
+            amount,
+            info.stakeBalance
+        );
+
+        if(unstakeAll) {
+            _claimRewards(user, info);
+        }
+    }
+
+
+    function _canUnstake(StakeInfo storage info)
+        internal
+        virtual
+        view
+        returns(bool canUnstake)
+    {
+        if(info.lockedUntil > zeroTimestamp() && blockTimestamp() >= info.lockedUntil) {
+            return true;
+        }
+
+        return this.isUnstakingSupported(info.target);
     }
 
 }
