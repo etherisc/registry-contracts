@@ -1,0 +1,392 @@
+{
+    "storage": [
+        {
+            "label": "_versionHistory",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_userDefinedValueType(Version)dd167,t_struct(VersionInfo)64155_storage)"
+        },
+        {
+            "label": "_versions",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_userDefinedValueType(Version)dd167)dyn_storage"
+        },
+        {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint8"
+        },
+        {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "2",
+            "type": "t_bool"
+        },
+        {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_array(t_uint256)7325f_storage"
+        },
+        {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_address"
+        },
+        {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_array(t_uint256)7325f_storage"
+        },
+        {
+            "label": "_dip",
+            "offset": 0,
+            "slot": "103",
+            "type": "t_contract(IERC20Metadata)8b411"
+        },
+        {
+            "label": "_rewardRate",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_userDefinedValueType(UFixed)d4d1b"
+        },
+        {
+            "label": "_rewardRateMax",
+            "offset": 0,
+            "slot": "105",
+            "type": "t_userDefinedValueType(UFixed)d4d1b"
+        },
+        {
+            "label": "_rewardBalance",
+            "offset": 0,
+            "slot": "106",
+            "type": "t_uint256"
+        },
+        {
+            "label": "_rewardReserves",
+            "offset": 0,
+            "slot": "107",
+            "type": "t_uint256"
+        },
+        {
+            "label": "_stakeBalance",
+            "offset": 0,
+            "slot": "108",
+            "type": "t_uint256"
+        },
+        {
+            "label": "_stakingWallet",
+            "offset": 0,
+            "slot": "109",
+            "type": "t_address"
+        },
+        {
+            "label": "_stakingSupported",
+            "offset": 0,
+            "slot": "110",
+            "type": "t_mapping(t_userDefinedValueType(ObjectType)64db6,t_bool)"
+        },
+        {
+            "label": "_info",
+            "offset": 0,
+            "slot": "111",
+            "type": "t_mapping(t_userDefinedValueType(NftId)7c506,t_struct(StakeInfo)8ac2b_storage)"
+        },
+        {
+            "label": "_targetStakeBalance",
+            "offset": 0,
+            "slot": "112",
+            "type": "t_mapping(t_userDefinedValueType(NftId)7c506,t_uint256)"
+        },
+        {
+            "label": "_stakingRate",
+            "offset": 0,
+            "slot": "113",
+            "type": "t_mapping(t_userDefinedValueType(ChainId)debf0,t_mapping(t_address,t_userDefinedValueType(UFixed)d4d1b))"
+        },
+        {
+            "label": "_registry",
+            "offset": 0,
+            "slot": "114",
+            "type": "t_contract(IChainRegistry)0943e"
+        },
+        {
+            "label": "_registryConstant",
+            "offset": 0,
+            "slot": "115",
+            "type": "t_contract(ChainRegistryV01)500ea"
+        },
+        {
+            "label": "_version",
+            "offset": 20,
+            "slot": "115",
+            "type": "t_userDefinedValueType(Version)dd167"
+        },
+        {
+            "label": "_targetRewardRate",
+            "offset": 0,
+            "slot": "116",
+            "type": "t_mapping(t_userDefinedValueType(NftId)7c506,t_struct(RewardInfo)bb0ef_storage)"
+        }
+    ],
+    "types": {
+        "t_address": {
+            "encoding": "inplace",
+            "label": "address",
+            "numberOfBytes": "20"
+        },
+        "t_array(t_uint256)7325f_storage": {
+            "base": "t_uint256",
+            "encoding": "inplace",
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+        },
+        "t_array(t_userDefinedValueType(Version)dd167)dyn_storage": {
+            "base": "t_userDefinedValueType(Version)dd167",
+            "encoding": "dynamic_array",
+            "label": "Version[]",
+            "numberOfBytes": "32"
+        },
+        "t_bool": {
+            "encoding": "inplace",
+            "label": "bool",
+            "numberOfBytes": "1"
+        },
+        "t_contract(ChainRegistryV01)500ea": {
+            "encoding": "inplace",
+            "label": "contract ChainRegistryV01",
+            "numberOfBytes": "20"
+        },
+        "t_contract(IChainRegistry)0943e": {
+            "encoding": "inplace",
+            "label": "contract IChainRegistry",
+            "numberOfBytes": "20"
+        },
+        "t_contract(IERC20Metadata)8b411": {
+            "encoding": "inplace",
+            "label": "contract IERC20Metadata",
+            "numberOfBytes": "20"
+        },
+        "t_mapping(t_address,t_userDefinedValueType(UFixed)d4d1b)": {
+            "encoding": "mapping",
+            "key": "t_address",
+            "label": "mapping(address => UFixed)",
+            "numberOfBytes": "32",
+            "value": "t_userDefinedValueType(UFixed)d4d1b"
+        },
+        "t_mapping(t_userDefinedValueType(ChainId)debf0,t_mapping(t_address,t_userDefinedValueType(UFixed)d4d1b))": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(ChainId)debf0",
+            "label": "mapping(ChainId => mapping(address => UFixed))",
+            "numberOfBytes": "32",
+            "value": "t_mapping(t_address,t_userDefinedValueType(UFixed)d4d1b)"
+        },
+        "t_mapping(t_userDefinedValueType(NftId)7c506,t_struct(RewardInfo)bb0ef_storage)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(NftId)7c506",
+            "label": "mapping(NftId => struct StakingV03.RewardInfo)",
+            "numberOfBytes": "32",
+            "value": "t_struct(RewardInfo)bb0ef_storage"
+        },
+        "t_mapping(t_userDefinedValueType(NftId)7c506,t_struct(StakeInfo)8ac2b_storage)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(NftId)7c506",
+            "label": "mapping(NftId => struct IStaking.StakeInfo)",
+            "numberOfBytes": "32",
+            "value": "t_struct(StakeInfo)8ac2b_storage"
+        },
+        "t_mapping(t_userDefinedValueType(NftId)7c506,t_uint256)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(NftId)7c506",
+            "label": "mapping(NftId => uint256)",
+            "numberOfBytes": "32",
+            "value": "t_uint256"
+        },
+        "t_mapping(t_userDefinedValueType(ObjectType)64db6,t_bool)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(ObjectType)64db6",
+            "label": "mapping(ObjectType => bool)",
+            "numberOfBytes": "32",
+            "value": "t_bool"
+        },
+        "t_mapping(t_userDefinedValueType(Version)dd167,t_struct(VersionInfo)64155_storage)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(Version)dd167",
+            "label": "mapping(Version => struct IVersionable.VersionInfo)",
+            "numberOfBytes": "32",
+            "value": "t_struct(VersionInfo)64155_storage"
+        },
+        "t_struct(RewardInfo)bb0ef_storage": {
+            "encoding": "inplace",
+            "label": "struct StakingV03.RewardInfo",
+            "members": [
+                {
+                    "label": "rewardRate",
+                    "offset": 0,
+                    "slot": "0",
+                    "type": "t_userDefinedValueType(UFixed)d4d1b"
+                },
+                {
+                    "label": "createdAt",
+                    "offset": 0,
+                    "slot": "1",
+                    "type": "t_userDefinedValueType(Timestamp)115a2"
+                },
+                {
+                    "label": "updatedAt",
+                    "offset": 5,
+                    "slot": "1",
+                    "type": "t_userDefinedValueType(Timestamp)115a2"
+                }
+            ],
+            "numberOfBytes": "64"
+        },
+        "t_struct(StakeInfo)8ac2b_storage": {
+            "encoding": "inplace",
+            "label": "struct IStaking.StakeInfo",
+            "members": [
+                {
+                    "label": "id",
+                    "offset": 0,
+                    "slot": "0",
+                    "type": "t_userDefinedValueType(NftId)7c506"
+                },
+                {
+                    "label": "target",
+                    "offset": 12,
+                    "slot": "0",
+                    "type": "t_userDefinedValueType(NftId)7c506"
+                },
+                {
+                    "label": "stakeBalance",
+                    "offset": 0,
+                    "slot": "1",
+                    "type": "t_uint256"
+                },
+                {
+                    "label": "rewardBalance",
+                    "offset": 0,
+                    "slot": "2",
+                    "type": "t_uint256"
+                },
+                {
+                    "label": "createdAt",
+                    "offset": 0,
+                    "slot": "3",
+                    "type": "t_userDefinedValueType(Timestamp)115a2"
+                },
+                {
+                    "label": "updatedAt",
+                    "offset": 5,
+                    "slot": "3",
+                    "type": "t_userDefinedValueType(Timestamp)115a2"
+                },
+                {
+                    "label": "version",
+                    "offset": 10,
+                    "slot": "3",
+                    "type": "t_userDefinedValueType(Version)dd167"
+                },
+                {
+                    "label": "lockedUntil",
+                    "offset": 16,
+                    "slot": "3",
+                    "type": "t_userDefinedValueType(Timestamp)115a2"
+                }
+            ],
+            "numberOfBytes": "128"
+        },
+        "t_struct(VersionInfo)64155_storage": {
+            "encoding": "inplace",
+            "label": "struct IVersionable.VersionInfo",
+            "members": [
+                {
+                    "label": "version",
+                    "offset": 0,
+                    "slot": "0",
+                    "type": "t_userDefinedValueType(Version)dd167"
+                },
+                {
+                    "label": "implementation",
+                    "offset": 6,
+                    "slot": "0",
+                    "type": "t_address"
+                },
+                {
+                    "label": "activatedBy",
+                    "offset": 0,
+                    "slot": "1",
+                    "type": "t_address"
+                },
+                {
+                    "label": "activatedIn",
+                    "offset": 20,
+                    "slot": "1",
+                    "type": "t_userDefinedValueType(Blocknumber)f1284"
+                },
+                {
+                    "label": "activatedAt",
+                    "offset": 24,
+                    "slot": "1",
+                    "type": "t_userDefinedValueType(Timestamp)115a2"
+                }
+            ],
+            "numberOfBytes": "64"
+        },
+        "t_uint256": {
+            "encoding": "inplace",
+            "label": "uint256",
+            "numberOfBytes": "32"
+        },
+        "t_uint8": {
+            "encoding": "inplace",
+            "label": "uint8",
+            "numberOfBytes": "1"
+        },
+        "t_userDefinedValueType(Blocknumber)f1284": {
+            "encoding": "inplace",
+            "label": "Blocknumber",
+            "numberOfBytes": "4"
+        },
+        "t_userDefinedValueType(ChainId)debf0": {
+            "encoding": "inplace",
+            "label": "ChainId",
+            "numberOfBytes": "5"
+        },
+        "t_userDefinedValueType(NftId)7c506": {
+            "encoding": "inplace",
+            "label": "NftId",
+            "numberOfBytes": "12"
+        },
+        "t_userDefinedValueType(ObjectType)64db6": {
+            "encoding": "inplace",
+            "label": "ObjectType",
+            "numberOfBytes": "1"
+        },
+        "t_userDefinedValueType(Timestamp)115a2": {
+            "encoding": "inplace",
+            "label": "Timestamp",
+            "numberOfBytes": "5"
+        },
+        "t_userDefinedValueType(UFixed)d4d1b": {
+            "encoding": "inplace",
+            "label": "UFixed",
+            "numberOfBytes": "32"
+        },
+        "t_userDefinedValueType(Version)dd167": {
+            "encoding": "inplace",
+            "label": "Version",
+            "numberOfBytes": "6"
+        }
+    },
+    "params": {
+        "file_name": "contracts/staking/StakingV03.sol",
+        "unify": true,
+        "solc": "/home/vscode/.solcx/solc-v0.8.19",
+        "remappings": "@openzeppelin-upgradeable=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts-upgradeable@4.8.2 @openzeppelin=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.8.2"
+    }
+}
