@@ -57,6 +57,7 @@ contract StakingV03 is
     function setTargetRewardRate(NftId target, UFixed newRewardRate)
         external
         virtual
+        onlyOwner
     {
         require(_registry.exists(target), "ERROR:STK-310:TARGET_NOT_EXISTING");
         require(newRewardRate <= _rewardRateMax, "ERROR:STK-311:REWARD_EXCEEDS_MAX_VALUE");
