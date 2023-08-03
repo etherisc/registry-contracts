@@ -24,14 +24,17 @@ from scripts.util import (
 def help():
     print('from scripts.util import contract_from_address')
     print('from scripts.deploy_experiment import all_in_1, help')
-    print('(nft, registry, instance, product, component_owner_service, registry_owner, instance_owner, product_owner) = all_in_1(accounts)')
+    print('(nft, registry, chhain_id, instance, product, component_owner_service, registry_owner, instance_owner, product_owner) = all_in_1(accounts)')
     print('')
     print('instance.nftId()')
-    print('instance.instanceId()')
+    print('product.nftId()')
     print('')
     print('registry.objects(registry.chainId(), registry.INSTANCE())')
+    print('registry.objects(registry.chainId(), registry.PRODUCT())')
+    print('')
     print('info = registry.getNftInfo(instance.nftId()).dict()')
-    print('data = registry.decodeInstanceData(instance.nftId()).dict()')
+    print('idata = registry.decodeInstanceData(instance.nftId()).dict()')
+    print('pdata = registry.decodeInstanceData(product.nftId()).dict()')
 
 
 def all_in_1(
@@ -59,11 +62,12 @@ def all_in_1(
 
     # deploy and register product
     product = Product.deploy(instance, "First Product", {'from': product_owner})
-    # product.register({'from': product_owner})
+    product.register({'from': product_owner})
 
     return (
         nft,
         registry,
+        registry.chainId(),
         instance,
         product,
         component_owner_service,

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
+// import {AccessControlEnumerableUpgradeable} from "@openzeppelin-upgradeable/contracts/access/AccessControlEnumerableUpgradeable.sol";
 
 import {IChainNft, NftId, toNftId} from "../registry/IChainNft.sol";
 import {ChainRegistry} from "./ChainRegistry.sol";
@@ -8,7 +9,10 @@ import {ChainRegistry} from "./ChainRegistry.sol";
 import {IInstance, IComponent, IComponentOwnerService} from "./IServices.sol";
 
 
-contract Instance is IInstance {
+contract Instance is 
+    IInstance
+    // AccessControlEnumerableUpgradeable
+{
 
     event LogDebug(uint id);
 
@@ -56,6 +60,7 @@ contract Instance is IInstance {
         override
         returns(NftId id)
     {
+        // TODO add access control (only component owner service)
         // TODO add validations (prevent duplicate registrations, etc ..)
 
         id = _registry.selfRegisterComponent(
@@ -64,8 +69,8 @@ contract Instance is IInstance {
             _nftId
         );
 
-        // _component[id] = info;
-        // _componentByAddress[info.componentAddress] = info;
+        _component[id] = info;
+        _componentByAddress[info.componentAddress] = info;
     }
 
 

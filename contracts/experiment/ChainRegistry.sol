@@ -178,6 +178,10 @@ contract ChainRegistry {
         return _object[chain][t].length;
     }
 
+    function getNftId(ChainId chain, ObjectType t, uint256 idx) public view returns(NftId id) {
+        return _object[chain][t][idx];
+    }
+
 
     function getNftInfo(NftId id) external view returns(NftInfo memory) {
         require(exists(id), "ERROR:CRG-120:NFT_ID_INVALID");

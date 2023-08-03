@@ -11,6 +11,8 @@ contract ComponentOwnerService
     is IComponentOwnerService 
 {
 
+    event LogComponentRegister(IComponent.ComponentInfo info);
+
     function register(
         IInstance instance, 
         IComponent component
@@ -20,10 +22,12 @@ contract ComponentOwnerService
         returns(NftId id)
     {
         IComponent.ComponentInfo memory info;
-        info.componentAddress = address(this);
+        info.componentAddress = address(component);
         info.componentType = component.componentType();
         info.state = IComponent.ComponentState.Created;
         info.name = component.name();
+
+        emit LogComponentRegister(info);
 
         return instance.registerComponent(info, component.deployer());
     }

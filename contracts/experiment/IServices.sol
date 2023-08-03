@@ -8,6 +8,7 @@ import {IChainNft, NftId, toNftId} from "../registry/IChainNft.sol";
 interface IComponent {
 
     enum ComponentType {
+        Undefined,
         Oracle,
         Product,
         Riskpool
