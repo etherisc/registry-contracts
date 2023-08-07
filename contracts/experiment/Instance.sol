@@ -27,11 +27,11 @@ contract Instance is
 
 
     constructor(
-        address registryAddress,
+        address chainRegistryAddress, 
         address componentOwnerServiceAddress
     )
     {
-        _registry = ChainRegistry(registryAddress);
+        _registry = ChainRegistry(chainRegistryAddress);
         _componentOwnerService = IComponentOwnerService(componentOwnerServiceAddress);
         _deployer = msg.sender;
     }
