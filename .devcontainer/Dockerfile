@@ -39,6 +39,10 @@ RUN pip install "uvicorn[standard]"
 # install brownie
 RUN pip install eth-brownie
 
+# install signing libraries
+RUN pip install coincurve
+RUN pip install eip712-structs
+
 # [Optional] Uncomment this line to install global node packages.
 RUN npm install -g ganache solhint prettier prettier-plugin-solidity solhint-plugin-prettier
 

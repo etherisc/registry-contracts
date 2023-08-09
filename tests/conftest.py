@@ -20,6 +20,7 @@ from brownie import (
     StakingV01,
     StakingV02,
     StakingV03,
+    StakingMessageHelper,
 )
 
 from brownie.network import accounts
@@ -211,6 +212,10 @@ def chainRegistryV01(proxyAdmin, registryOwner) -> ChainRegistryV01:
     return registry
 
 #=== staking fixtures ==================================================#
+
+@pytest.fixture(scope="module")
+def messageHelper(stakingOwner) -> StakingMessageHelper:
+    return StakingMessageHelper.deploy({'from': stakingOwner})
 
 @pytest.fixture(scope="module")
 def stakingV01ImplementationBeta(theOutsider) -> StakingV01:

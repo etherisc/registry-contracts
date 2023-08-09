@@ -9,6 +9,8 @@ import {IChainRegistry, ObjectType} from "../registry/ChainRegistryV01.sol";
 import {NftId} from "../registry/IChainNft.sol";
 
 import {StakingV02} from "./StakingV02.sol";
+import {StakingMessageHelper} from "./StakingMessageHelper.sol";
+
 
 contract StakingV03 is
     StakingV02
@@ -19,6 +21,8 @@ contract StakingV03 is
         Timestamp createdAt;
         Timestamp updatedAt;
     }
+
+    StakingMessageHelper private _messageHelper;
 
     mapping(NftId target => RewardInfo rewardRate) internal _targetRewardRate;
 
@@ -51,6 +55,14 @@ contract StakingV03 is
 
         // upgrade version
         _version = version();
+    }
+
+
+    function setMessageHelper(address stakingMessageHelper)
+        external
+        onlyOwner
+    {
+        _messageHelper = StakingMessageHelper(stakingMessageHelper);
     }
 
 
@@ -90,27 +102,51 @@ contract StakingV03 is
     }
 
 
+    function createStakeWithSignature(
+        address owner,
+        NftId target, 
+        uint256 dipAmount,
+        bytes32 signatureId,
+        bytes calldata signature
+    )
+        external
+        virtual
+        returns(NftId stakeId)
+    {
+        _messageHelper.processStakeSignature(
+            owner,
+            target,
+            dipAmount,
+            signatureId,
+            signature);
+
+        return _createStake(owner, target, dipAmount);
+    }
+
+
     function createStake(NftId target, uint256 dipAmount)
         external
         virtual override
         returns(NftId stakeId)
     {
-        // no validation here, validation is done via calling stake() at the end
-        address user = msg.sender;
-        stakeId = _registry.registerStake(target, user);
+        return _createStake(msg.sender, target, dipAmount);
+    }
 
-        StakeInfo storage info = _info[stakeId];
-        info.id = stakeId;
-        info.target = target;
-        info.stakeBalance = 0;
-        info.rewardBalance = 0;
-        info.createdAt = blockTimestamp();
-        info.lockedUntil = calculateLockingUntil(target);
-        info.version = version();
 
-        stake(stakeId, dipAmount);
+    function stake(NftId stakeId, uint256 dipAmount)
+        public
+        virtual override
+    {
+        _stake(msg.sender, stakeId, dipAmount);
+    }
 
-        emit LogStakingNewStakeCreated(target, user, stakeId);
+
+    function getMessageHelperAddress()
+        external
+        view
+        returns(address messageHelperAddress)
+    {
+        return address(_messageHelper);
     }
 
 
@@ -194,6 +230,54 @@ contract StakingV03 is
         UFixed yearFraction = itof(duration) / itof(YEAR_DURATION);
         UFixed rewardDuration = rate * yearFraction;
         rewardAmount = ftoi(itof(amount) * rewardDuration);
+    }
+
+
+    function _createStake(
+        address owner,
+        NftId target, 
+        uint256 dipAmount
+    )
+        internal
+        virtual
+        returns(NftId stakeId)
+    {
+        // no validation here, validation is done via calling stake() at the end
+        stakeId = _registry.registerStake(target, owner);
+
+        StakeInfo storage info = _info[stakeId];
+        info.id = stakeId;
+        info.target = target;
+        info.stakeBalance = 0;
+        info.rewardBalance = 0;
+        info.createdAt = blockTimestamp();
+        info.lockedUntil = calculateLockingUntil(target);
+        info.version = version();
+
+        _stake(owner, stakeId, dipAmount);
+
+        emit LogStakingNewStakeCreated(target, owner, stakeId);
+    }
+
+
+    function _stake(address owner, NftId stakeId, uint256 dipAmount)
+        internal
+        virtual
+    {
+        // input validation (stake needs to exist)
+        StakeInfo storage info = _info[stakeId];
+        require(info.createdAt > zeroTimestamp(), "ERROR:STK-150:STAKE_NOT_EXISTING");
+        require(dipAmount > 0, "ERROR:STK-151:STAKING_AMOUNT_ZERO");
+
+        // staking needs to be possible (might change over time)
+        require(isStakingSupported(info.target), "ERROR:STK-152:STAKING_NOT_SUPPORTED");
+
+        // update stake info
+        _updateRewards(info);
+        _increaseStakes(info, dipAmount);
+        _collectDip(owner, dipAmount);
+
+        emit LogStakingStaked(info.target, owner, stakeId, dipAmount, info.stakeBalance);
     }
 
 
