@@ -626,6 +626,16 @@ contract StakingV01 is
     }
 
 
+    function getMessageHelperAddress()
+        external
+        virtual override 
+        view 
+        returns(address messageHelperAddress)
+    {
+        return address(0);
+    }
+
+
     function maxRewardRate()
         external
         virtual override

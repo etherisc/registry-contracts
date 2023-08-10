@@ -197,6 +197,7 @@ contract StakingV03 is
 
     function getMessageHelperAddress()
         external
+        virtual override
         view
         returns(address messageHelperAddress)
     {

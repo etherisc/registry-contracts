@@ -66,6 +66,7 @@ interface IStaking is
     //--- view and pure functions ------------------//
 
     function getRegistry() external view returns(IChainRegistry);
+    function getMessageHelperAddress() external view returns(address messageHelperAddress);
 
     function maxRewardRate() external view returns(UFixed rate);
     function rewardRate() external view returns(UFixed rate);
