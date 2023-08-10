@@ -111,6 +111,7 @@ contract StakingV03 is
     )
         external
         virtual
+        override
         returns(NftId stakeId)
     {
         _messageHelper.processStakeSignature(

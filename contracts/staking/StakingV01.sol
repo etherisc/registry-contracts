@@ -274,6 +274,15 @@ contract StakingV01 is
         emit LogStakingNewStakeCreated(target, user, stakeId);
     }
 
+    function createStakeWithSignature(address, NftId, uint256, bytes32, bytes calldata) 
+        external 
+        virtual
+        returns(NftId) 
+    {
+        require(false, "ERROR:STK-120:NOT_SUPPORTED");
+    }
+
+
 
     function stake(NftId stakeId, uint256 dipAmount)
         public

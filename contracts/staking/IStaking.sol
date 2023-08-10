@@ -57,6 +57,7 @@ interface IStaking is
 
     function createStake(NftId target, uint256 dipAmount) external returns(NftId id);
     function stake(NftId id, uint256 dipAmount) external;
+    function createStakeWithSignature(address owner, NftId target, uint256 dipAmount, bytes32 signatureId, bytes calldata signature) external returns(NftId stakeId);
     function restake(NftId id, NftId newTarget) external;
     function unstake(NftId id, uint256 dipAmount) external;  
     function unstakeAndClaimRewards(NftId id) external;
