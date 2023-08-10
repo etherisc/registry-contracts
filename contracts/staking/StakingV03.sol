@@ -194,6 +194,7 @@ contract StakingV03 is
         public
         virtual
         view
+        override
         returns(UFixed rewardRate)
     {
         RewardInfo memory info = _targetRewardRate[target];

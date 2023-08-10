@@ -338,6 +338,15 @@ contract StakingV01 is
         return _rewardRate;
     }
 
+    function getTargetRewardRate(NftId)
+        public
+        virtual
+        view
+        returns(UFixed)
+    {
+        return _rewardRate;
+    }
+
 
     function rewardBalance()
         external
