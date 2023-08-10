@@ -157,12 +157,12 @@ contract StakingV03 is
         require(isStakingSupported(newTarget), "ERROR:STK-152:STAKING_NOT_SUPPORTED");
 
         // TODO bookkeeping: move all stakes + all avilable rewards as staking amount to new target
-        _updateRewards(info);
-        _increaseStakes(info, dipAmount);
-        _collectDip(user, dipAmount);
+        // _updateRewards(info);
+        // _increaseStakes(info, dipAmount);
+        // _collectDip(user, dipAmount);
 
         // TODO ad restaking leg entry
-        emit LogStakingStaked(info.target, user, stakeId, dipAmount, info.stakeBalance);
+        // emit LogStakingStaked(info.target, user, stakeId, dipAmount, info.stakeBalance);
     }
 
 
