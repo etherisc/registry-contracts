@@ -14,7 +14,7 @@ from brownie import (
     OwnableProxyAdmin,
     ChainNft,
     ChainRegistryV01,
-    StakingV01,
+    StakingV03,
 )
 
 from scripts.util import (
@@ -66,7 +66,7 @@ GAS_MOCK = {
 PROXY_ADMIN_CONTRACT = OwnableProxyAdmin
 NFT_CONTRACT = ChainNft
 REGISTRY_CONTRACT = ChainRegistryV01
-STAKING_CONTRACT = StakingV01
+STAKING_CONTRACT = StakingV03
 
 MOCK_INSTANCE_CONTRACT = MockInstance
 MOCK_REGISTRY_CONTRACT = MockInstanceRegistry
@@ -132,7 +132,7 @@ def link_to_product(
 ):
 
     print('1) obtaining staking and registry contracts')
-    staking = contract_from_address(StakingV01, staking_address)
+    staking = contract_from_address(StakingV03, staking_address)
     registry = contract_from_address(ChainRegistryV01, staking.getRegistry())
 
     print('2) obtaining product and token contracts')
