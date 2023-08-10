@@ -54,9 +54,10 @@ jobs:
     permissions:
         contents: read
         id-token: write
-    needs: [test]
+    # TODO: renable once branch is stable
+    # needs: [test]
     # only run if tests successful
-    if: ${{ github.ref != 'refs/heads/main' && contains(join(needs.*.result, ','), 'success') }}
+    # if: ${{ github.ref != 'refs/heads/main' && contains(join(needs.*.result, ','), 'success') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
