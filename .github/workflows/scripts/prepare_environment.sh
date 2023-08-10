@@ -39,3 +39,7 @@ echo "ensurepath finished"
 pipx install eth-brownie
 echo "eth-brownie installed"
 
+# install signing libraries
+pipx install coincurve
+pipx install eip712-structs
+
