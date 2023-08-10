@@ -40,6 +40,7 @@ interface IStaking is
     event LogStakingNewStakeCreated(NftId target, address user, NftId id);
     event LogStakingStaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
     event LogStakingUnstaked(NftId target, address user, NftId id, uint256 amount, uint256 newBalance);
+    event LogStakingRestaked(NftId oldTarget, NftId newTrget, address user, NftId stakeId, uint256 stakingAmount);
 
     event LogStakingRewardsUpdated(NftId id, uint256 amount, uint256 newBalance);
     event LogStakingRewardsClaimed(NftId id, uint256 amount, uint256 newBalance);
@@ -56,6 +57,7 @@ interface IStaking is
 
     function createStake(NftId target, uint256 dipAmount) external returns(NftId id);
     function stake(NftId id, uint256 dipAmount) external;
+    function restake(NftId id, NftId newTarget) external;
     function unstake(NftId id, uint256 dipAmount) external;  
     function unstakeAndClaimRewards(NftId id) external;
     function claimRewards(NftId id) external;
@@ -75,7 +77,6 @@ interface IStaking is
     function getStakingWallet() external view returns(address stakingWallet);
     function getDip() external view returns(IERC20Metadata);
 
-    function isStakeOwner(NftId id, address user) external view returns(bool isOwner);
     function getInfo(NftId id) external view returns(StakeInfo memory info);
 
     function stakes(NftId target) external view returns(uint256 dipAmount);

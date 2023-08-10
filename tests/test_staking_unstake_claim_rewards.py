@@ -187,10 +187,6 @@ def test_stake_transfer_and_unstake(
     evt = staking_tx.events['LogStakingStaked']
     nft_id = evt['id']
 
-    # check ownership via staking contract
-    assert stakingV01.isStakeOwner(nft_id, staker) is True
-    assert stakingV01.isStakeOwner(nft_id, staker2) is False
-
     # check ownership directly on registry
     assert chainRegistryV01.ownerOf(nft_id) == staker
     assert chainRegistryV01.ownerOf(nft_id) != staker2
@@ -208,10 +204,6 @@ def test_stake_transfer_and_unstake(
     assert evt['from'] == staker
     assert evt['to'] == staker2
     assert evt['tokenId'] == nft_id
-
-    # check ownership via staking contract
-    assert stakingV01.isStakeOwner(nft_id, staker) is False
-    assert stakingV01.isStakeOwner(nft_id, staker2) is True
 
     # check ownership directly on registry
     assert chainRegistryV01.ownerOf(nft_id) == staker2

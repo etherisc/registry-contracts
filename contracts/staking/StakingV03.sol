@@ -143,28 +143,48 @@ contract StakingV03 is
 
     function restake(NftId stakeId, NftId newTarget)
         external
-        virtual
+        virtual override
+        onlyStakeOwner(stakeId)        
     {
-        // input validation (stake needs to exist)
+        // only owner may restake
         address owner = msg.sender;
-        require(owner == _registry.ownerOf(stakeId), "ERROR:STK-150:NOT_STAKE_OWNER");
 
-        // TODO ensure unstaking is possible
-        StakeInfo storage info = _info[stakeId];
-        require(info.createdAt > zeroTimestamp(), "ERROR:STK-150:STAKE_NOT_EXISTING");
+        // ensure unstaking is possible
+        require(isUnstakingAvailable(stakeId), "ERROR:STK-150:UNSTAKING_NOT_SUPPORTED");
 
         // staking needs to be possible (might change over time)
-        require(isStakingSupported(newTarget), "ERROR:STK-152:STAKING_NOT_SUPPORTED");
+        require(isStakingSupported(newTarget), "ERROR:STK-151:STAKING_NOT_SUPPORTED");
 
-        // TODO bookkeeping: move all stakes + all avilable rewards as staking amount to new target
-        // _updateRewards(info);
-        // _increaseStakes(info, dipAmount);
-        // _collectDip(user, dipAmount);
+        // update rewards of old stake
+        StakeInfo storage oldInfo = _info[stakeId];
+        _updateRewards(oldInfo);
 
-        // TODO ad restaking leg entry
-        // emit LogStakingStaked(info.target, user, stakeId, dipAmount, info.stakeBalance);
+        // calculate new staking amount
+        uint256 newStakingAmount = oldInfo.stakeBalance + oldInfo.rewardBalance;
+
+        // adapt old info
+        oldInfo.stakeBalance = 0;
+        oldInfo.rewardBalance = 0;
+        oldInfo.updatedAt = blockTimestamp();
+
+        // add/create new info
+        stakeId = _registry.registerStake(newTarget, owner);
+        StakeInfo storage newInfo = _info[stakeId];
+        newInfo.id = stakeId;
+        newInfo.target = newTarget;
+        newInfo.stakeBalance = newStakingAmount;
+        newInfo.rewardBalance = 0;
+        newInfo.createdAt = blockTimestamp();
+        newInfo.lockedUntil = calculateLockingUntil(newTarget);
+        newInfo.version = version();
+
+        // adapt reward balance / reserves
+        _rewardReserves -= oldInfo.rewardBalance;
+        _rewardBalance -= oldInfo.rewardBalance;
+
+        // restaking leg entry
+        emit LogStakingRestaked(oldInfo.target, newInfo.target, owner, stakeId, newStakingAmount);
     }
-
 
     function getMessageHelperAddress()
         external
@@ -175,18 +195,18 @@ contract StakingV03 is
     }
 
 
-    function isUnstakingAvailable(NftId stake)
+    function isUnstakingAvailable(NftId stakeId)
         public
         virtual
         view 
         returns(bool isAvailable)
     {
-        Timestamp lockedUntil = _info[stake].lockedUntil;
-        if(lockedUntil == zeroTimestamp()) {
-            return false;
+        StakeInfo memory info = _info[stakeId];
+        if(info.lockedUntil > zeroTimestamp() && blockTimestamp() >= info.lockedUntil) {
+            return true;
         }
 
-        return blockTimestamp() >= lockedUntil;
+        return isUnstakingSupported(info.target);
     }
 
 
@@ -225,21 +245,21 @@ contract StakingV03 is
     }
 
 
-    function calculateRewardsIncrement(StakeInfo memory stake)
+    function calculateRewardsIncrement(StakeInfo memory info)
         public 
         virtual override
         view
         returns(uint256 rewardsAmount)
     {
         /* solhint-disable not-rely-on-time */
-        require(block.timestamp >= toInt(stake.updatedAt), "ERROR:STK-200:UPDATED_AT_IN_THE_FUTURE");
-        uint256 timeSinceLastUpdate = block.timestamp - toInt(stake.updatedAt);
+        require(block.timestamp >= toInt(info.updatedAt), "ERROR:STK-200:UPDATED_AT_IN_THE_FUTURE");
+        uint256 timeSinceLastUpdate = block.timestamp - toInt(info.updatedAt);
         /* solhint-enable not-rely-on-time */
 
         // TODO potentially reduce time depending on the time when the bundle has been closed
 
-        UFixed rewardRate = getTargetRewardRate(stake.target);
-        rewardsAmount = calculateRewards(stake.stakeBalance, timeSinceLastUpdate, rewardRate);
+        UFixed rewardRate = getTargetRewardRate(info.target);
+        rewardsAmount = calculateRewards(info.stakeBalance, timeSinceLastUpdate, rewardRate);
     }
 
 
