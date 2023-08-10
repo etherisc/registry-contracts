@@ -160,9 +160,18 @@ contract StakingV03 is
         StakeInfo storage oldInfo = _info[stakeId];
         _updateRewards(oldInfo);
 
+        // remove stake balance from old target
+        _targetStakeBalance[oldInfo.target] -= oldInfo.stakeBalance;
+
         // calculate new staking amount
         uint256 newStakingAmount = oldInfo.stakeBalance + oldInfo.rewardBalance;
 
+        // update stake, reward balance and reward reserves
+        require(_rewardReserves >= oldInfo.rewardBalance, "ERROR:STK-152:REWRD_RESERVES_INSUFFICIENT");
+        _rewardReserves -= oldInfo.rewardBalance;
+        _rewardBalance -= oldInfo.rewardBalance;
+        _stakeBalance += oldInfo.rewardBalance;
+ 
         // adapt old info
         oldInfo.stakeBalance = 0;
         oldInfo.rewardBalance = 0;
@@ -179,9 +188,8 @@ contract StakingV03 is
         newInfo.lockedUntil = calculateLockingUntil(newTarget);
         newInfo.version = version();
 
-        // adapt reward balance / reserves
-        _rewardReserves -= oldInfo.rewardBalance;
-        _rewardBalance -= oldInfo.rewardBalance;
+        // add staking amount to new target
+        _targetStakeBalance[newInfo.target] += newStakingAmount;
 
         // restaking leg entry
         emit LogStakingRestaked(oldInfo.target, newInfo.target, owner, stakeId, newStakingAmount);

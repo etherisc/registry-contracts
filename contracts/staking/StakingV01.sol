@@ -42,8 +42,8 @@ contract StakingV01 is
     uint256 internal _rewardBalance; // current balance of accumulated rewards 
     uint256 internal _rewardReserves; // available funds to fund reward payments
 
-    uint256 private _stakeBalance; // current balance of staked dips
-    address private _stakingWallet; // address that holds staked dips and reward reserves
+    uint256 internal _stakeBalance; // current balance of staked dips
+    address internal _stakingWallet; // address that holds staked dips and reward reserves
 
     // keep track of object types supported for staking
     mapping(ObjectType targetType => bool isSupported) internal _stakingSupported;

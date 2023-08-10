@@ -239,6 +239,138 @@ def test_unstake_v3(
     assert dip.balanceOf(staker) == 2 * staking_amount + rewards + rewards_increment
 
 
+def test_restake(
+    stakingProxyAdmin: OwnableProxyAdmin,
+    mockInstance: MockInstance,
+    mockRegistry: MockInstanceRegistry,
+    usd2: USD2,
+    proxyAdmin: OwnableProxyAdmin,
+    proxyAdminOwner: Account,
+    chainRegistryV01: ChainRegistryV01,
+    registryOwner: Account,
+    dip: DIP,
+    instanceOperator: Account,
+    stakingV01: StakingV03,
+    stakingOwner: Account,
+    staker: Account,
+    theOutsider: Account
+):
+
+    registry = contract_from_address(ChainRegistryV01, stakingV01.getRegistry())
+
+    # set default reward rate to 12.5%
+    apr_12_5 = stakingV01.toRate(125, -3)
+    stakingV01.setRewardRate(apr_12_5, {'from': stakingOwner})
+
+    # provide some reward reserves
+    reward_reserves_amount = 1000*10**dip.decimals()
+    dip.approve(stakingV01, reward_reserves_amount, {'from': instanceOperator})
+    stakingV01.refillRewardReserves(reward_reserves_amount, {'from': instanceOperator})
+
+    bundle_lifetime = 100 * 24 * 3600
+    bundle_nft = create_mock_bundle_setup(
+        mockInstance,
+        mockRegistry,
+        usd2,
+        proxyAdmin,
+        proxyAdminOwner,
+        chainRegistryV01,
+        registryOwner,
+        theOutsider,
+        bundle_lifetime = bundle_lifetime)
+
+    bundle_nft2 = create_mock_bundle_setup(
+        mockInstance,
+        mockRegistry,
+        usd2,
+        proxyAdmin,
+        proxyAdminOwner,
+        chainRegistryV01,
+        registryOwner,
+        theOutsider,
+        bundle_lifetime = 2*bundle_lifetime,
+        bundle_id = 2,
+        is_first_bundle = False)
+    
+    assert bundle_nft > 0
+    assert bundle_nft2 > 0
+    assert bundle_nft != bundle_nft2
+
+    # attempt to stake
+    staking_amount = 5000 * 10 ** dip.decimals()
+    prepare_staker(staker, 2 * staking_amount, dip, instanceOperator, stakingV01)
+
+    # check balances before staking
+    assert dip.balanceOf(staker) == 2 * staking_amount
+    assert dip.balanceOf(stakingV01.getStakingWallet()) == reward_reserves_amount
+
+    staking_tx = stakingV01.createStake(
+        bundle_nft,
+        staking_amount,
+        {'from': staker })
+
+    assert 'LogStakingNewStakeCreated' in staking_tx.events
+    stake_id = staking_tx.events['LogStakingNewStakeCreated']['id']
+
+    assert stakingV01.stakes(bundle_nft) == staking_amount
+    assert stakingV01.stakes(bundle_nft2) == 0
+
+    # get balances
+    staking_balance1 = stakingV01.stakeBalance()
+    reward_reserves1 = stakingV01.rewardReserves()
+    total_balance1 = staking_balance1 + reward_reserves1
+    wallet_balance1 = dip.balanceOf(stakingV01.getStakingWallet())
+    assert total_balance1 == wallet_balance1
+
+    # attempt to trigger restaking by somebody else than owner
+    with brownie.reverts("ERROR:STK-010:USER_NOT_OWNER"):
+        stakingV01.restake(stake_id, bundle_nft2, {'from': theOutsider})
+
+    # attempt to restake too early
+    with brownie.reverts("ERROR:STK-150:UNSTAKING_NOT_SUPPORTED"):
+        stakingV01.restake(stake_id, bundle_nft2, {'from': staker})
+
+    sleep_time = bundle_lifetime + 1
+    chain.sleep(sleep_time)
+    chain.mine(1)
+
+    # check that bundle stakes remain the same
+    assert stakingV01.stakes(bundle_nft) == staking_amount
+    assert stakingV01.stakes(bundle_nft2) == 0
+
+    # attempt to restake to something else than a bundle
+    with brownie.reverts("ERROR:STK-151:STAKING_NOT_SUPPORTED"):
+        stakingV01.restake(stake_id, stake_id, {'from': staker})
+
+    info = stakingV01.getInfo(stake_id)
+    stake_balance = info.dict()['stakeBalance']
+    reward_balance = info.dict()['rewardBalance'] + stakingV01.calculateRewardsIncrement(info)
+    restake_amount = stake_balance + reward_balance
+
+    # restake as designed/intended
+    restake_tx = stakingV01.restake(stake_id, bundle_nft2, {'from': staker})
+
+    assert 'LogStakingRestaked' in restake_tx.events
+    stake_id2 = restake_tx.events['LogStakingRestaked']['stakeId']
+
+    # check that bundle stakes have been properly updated
+    assert stakingV01.stakes(bundle_nft) == 0
+    assert abs(stakingV01.stakes(bundle_nft2) - restake_amount)/10**dip.decimals() < 10**-4
+
+    # get balances after restake
+    staking_balance2 = stakingV01.stakeBalance()
+    reward_reserves2 = stakingV01.rewardReserves()
+    total_balance2 = staking_balance2 + reward_reserves2
+    wallet_balance2 = dip.balanceOf(stakingV01.getStakingWallet())
+
+    assert reward_reserves1 > reward_reserves2
+    assert staking_balance1 < staking_balance2
+    assert reward_reserves1 - reward_reserves2 == staking_balance2 - staking_balance1
+
+    assert total_balance2 == wallet_balance2
+    assert total_balance2 == total_balance1
+
+
 def test_target_reward_rate(
     mockInstance: MockInstance,
     mockRegistry: MockInstanceRegistry,
@@ -331,13 +463,14 @@ def create_mock_bundle_setup(
     chainRegistryV01: ChainRegistryV01,
     registryOwner: Account,
     theOutsider: Account,
-    bundle_lifetime = 14 * 24 * 3600
+    bundle_lifetime = 14 * 24 * 3600,
+    bundle_id = 1,
+    is_first_bundle = True
 ) -> int:
     # setup attributes
     chain_id = chainRegistryV01.toChain(mockInstance.getChainId())
     instance_id = mockInstance.getInstanceId()
     riskpool_id = 1
-    bundle_id = 1
     bundle_name = 'my test bundle'
     bundle_funding = 10000 * 10 ** usd2.decimals()
     bundle_expiry_at = unix_timestamp() + bundle_lifetime
@@ -363,25 +496,28 @@ def create_mock_bundle_setup(
         bundle_funding)
 
     # register token
-    tx_token = chainRegistryV01.registerToken(
-            chain_id,
-            usd2,
+    if is_first_bundle:
+        tx_token = chainRegistryV01.registerToken(
+                chain_id,
+                usd2,
+                '',
+                {'from': registryOwner})
+
+    # register instance
+    if is_first_bundle:
+        tx_instance = chainRegistryV01.registerInstance(
+            mockRegistry,
+            'mockRegistry TEST',
             '',
             {'from': registryOwner})
 
-    # register instance
-    tx_instance = chainRegistryV01.registerInstance(
-        mockRegistry,
-        'mockRegistry TEST',
-        '',
-        {'from': registryOwner})
-
     # register riskpool
-    tx_riskpool = chainRegistryV01.registerComponent(
-        instance_id,
-        riskpool_id,
-        '',
-        {'from': registryOwner})
+    if is_first_bundle:
+        tx_riskpool = chainRegistryV01.registerComponent(
+            instance_id,
+            riskpool_id,
+            '',
+            {'from': registryOwner})
 
     # register bundle
     tx_bundle = chainRegistryV01.registerBundle(
