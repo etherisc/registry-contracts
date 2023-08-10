@@ -141,6 +141,31 @@ contract StakingV03 is
     }
 
 
+    function restake(NftId stakeId, NftId newTarget)
+        external
+        virtual
+    {
+        // input validation (stake needs to exist)
+        address owner = msg.sender;
+        require(owner == _registry.ownerOf(stakeId), "ERROR:STK-150:NOT_STAKE_OWNER");
+
+        // TODO ensure unstaking is possible
+        StakeInfo storage info = _info[stakeId];
+        require(info.createdAt > zeroTimestamp(), "ERROR:STK-150:STAKE_NOT_EXISTING");
+
+        // staking needs to be possible (might change over time)
+        require(isStakingSupported(newTarget), "ERROR:STK-152:STAKING_NOT_SUPPORTED");
+
+        // TODO bookkeeping: move all stakes + all avilable rewards as staking amount to new target
+        _updateRewards(info);
+        _increaseStakes(info, dipAmount);
+        _collectDip(user, dipAmount);
+
+        // TODO ad restaking leg entry
+        emit LogStakingStaked(info.target, user, stakeId, dipAmount, info.stakeBalance);
+    }
+
+
     function getMessageHelperAddress()
         external
         view
