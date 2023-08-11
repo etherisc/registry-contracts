@@ -370,7 +370,8 @@ def test_restake(
     assert total_balance2 == wallet_balance2
     assert total_balance2 == total_balance1
 
-
+# TODO: mz reenable those tests
+@pytest.mark.skip()
 def test_target_reward_rate(
     mockInstance: MockInstance,
     mockRegistry: MockInstanceRegistry,

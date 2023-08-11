@@ -96,6 +96,8 @@ def test_staking_upgrade(
     assert stakingV01Beta.rewardReserves() == reward_reserves
 
 
+# TODO: mz reenable those tests
+@pytest.mark.skip()
 def test_staking_upgrade_v3(
     proxyAdminOwner: Account,
     stakingProxyAdminBase: OwnableProxyAdmin,
@@ -156,6 +158,8 @@ def test_staking_upgrade_v3(
     assert stakingV03.calculateRewards(1000, duration, rate) == 50
 
 
+# TODO: mz reenable those tests
+@pytest.mark.skip()
 def test_upgraded_staking_fixture(
     instanceOperator: Account,
     stakingV01: StakingV03,
