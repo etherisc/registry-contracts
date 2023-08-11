@@ -188,10 +188,10 @@ contract StakingV03 is
         virtual
     {
         // ensure unstaking is possible
-        require(isUnstakingAvailable(stakeId), "ERROR:STK-150:UNSTAKING_NOT_SUPPORTED");
+        require(isUnstakingAvailable(stakeId), "ERROR:STK-160:UNSTAKING_NOT_SUPPORTED");
 
         // staking needs to be possible (might change over time)
-        require(isStakingSupported(newTarget), "ERROR:STK-151:STAKING_NOT_SUPPORTED");
+        require(isStakingSupported(newTarget), "ERROR:STK-161:STAKING_NOT_SUPPORTED");
 
         // update rewards of old stake
         StakeInfo storage oldInfo = _info[stakeId];
@@ -204,7 +204,7 @@ contract StakingV03 is
         uint256 newStakingAmount = oldInfo.stakeBalance + oldInfo.rewardBalance;
 
         // update stake, reward balance and reward reserves
-        require(_rewardReserves >= oldInfo.rewardBalance, "ERROR:STK-152:REWRD_RESERVES_INSUFFICIENT");
+        require(_rewardReserves >= oldInfo.rewardBalance, "ERROR:STK-162:REWRD_RESERVES_INSUFFICIENT");
         _rewardReserves -= oldInfo.rewardBalance;
         _rewardBalance -= oldInfo.rewardBalance;
         _stakeBalance += oldInfo.rewardBalance;
