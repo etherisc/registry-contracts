@@ -274,6 +274,7 @@ contract StakingV01 is
         emit LogStakingNewStakeCreated(target, user, stakeId);
     }
 
+
     function createStakeWithSignature(address, NftId, uint256, bytes32, bytes calldata) 
         external 
         virtual
@@ -282,6 +283,13 @@ contract StakingV01 is
         require(false, "ERROR:STK-120:NOT_SUPPORTED");
     }
 
+
+    function restakeWithSignature(address owner, NftId stakeId, NftId newTarget, bytes32 signatureId, bytes calldata signature)
+        external
+        virtual
+    {
+        require(false, "ERROR:STK-121:NOT_SUPPORTED");
+    }
 
 
     function stake(NftId stakeId, uint256 dipAmount)

@@ -49,15 +49,15 @@ def test_reward_rate(
         s.setRewardRate(rr40, {'from': theOutsider})
 
     # check max reward rate restriction 
-    with brownie.reverts('ERROR:STK-100:REWARD_EXCEEDS_MAX_VALUE'):
+    with brownie.reverts('ERROR:RRH-010:REWARD_EXCEEDS_MAX_VALUE'):
         s.setRewardRate(rr40, {'from': stakingOwner})
 
     # check happy path
     set_tx = s.setRewardRate(rr30, {'from': stakingOwner})
 
-    assert 'LogStakingRewardRateSet' in set_tx.events
-    evt = dict(set_tx.events['LogStakingRewardRateSet'])
-    assert evt['user'] == s.owner()
+    assert 'LogDefaultRewardRateSet' in set_tx.events
+    evt = dict(set_tx.events['LogDefaultRewardRateSet'])
+    assert evt['user'] == s
     assert evt['oldRewardRate'] == 0
     assert evt['newRewardRate'] == rr30
 

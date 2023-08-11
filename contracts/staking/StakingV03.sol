@@ -10,6 +10,7 @@ import {NftId} from "../registry/IChainNft.sol";
 
 import {StakingV02} from "./StakingV02.sol";
 import {StakingMessageHelper} from "./StakingMessageHelper.sol";
+import {RewardHelper} from "./RewardHelper.sol";
 
 
 contract StakingV03 is
@@ -22,7 +23,8 @@ contract StakingV03 is
         Timestamp updatedAt;
     }
 
-    StakingMessageHelper private _messageHelper;
+    StakingMessageHelper internal _messageHelper;
+    RewardHelper internal _rewardHelper;
 
     mapping(NftId target => RewardInfo rewardRate) internal _targetRewardRate;
 
@@ -66,28 +68,39 @@ contract StakingV03 is
     }
 
 
-    function setTargetRewardRate(NftId target, UFixed newRewardRate)
+    function setRewardHelper(address rewardHelper)
         external
-        virtual
         onlyOwner
     {
-        require(_registry.exists(target), "ERROR:STK-310:TARGET_NOT_EXISTING");
-        require(newRewardRate <= _rewardRateMax, "ERROR:STK-311:REWARD_EXCEEDS_MAX_VALUE");
-
-        RewardInfo storage info = _targetRewardRate[target];        
-        UFixed oldRewardRate = info.rewardRate;
-
-        info.rewardRate = newRewardRate;
-        info.updatedAt = blockTimestamp();
-
-        if(info.createdAt == zeroTimestamp()) {
-            info.createdAt = blockTimestamp();
-            oldRewardRate = _rewardRate;
-        }
-
-        emit LogTargetRewardRateSet(msg.sender, target, oldRewardRate, newRewardRate);
+        _rewardHelper = RewardHelper(rewardHelper);
     }
 
+
+    function setRewardRate(UFixed newRewardRate) external virtual override onlyOwner {
+        _rewardRate = newRewardRate;
+        _rewardHelper.setRewardRate(newRewardRate);
+    }
+
+
+    function setTargetRewardRate(NftId target, UFixed newRewardRate) external virtual onlyOwner {
+        _rewardHelper.setTargetRewardRate(target, newRewardRate);
+    }
+
+    function maxRewardRate() external virtual override view returns (UFixed) {
+        return _rewardRateMax;
+    }
+
+    function rewardRate() external virtual override view returns (UFixed) {
+        return _rewardHelper.rewardRate();
+    }
+
+    function getTargetRewardRate(NftId target) public virtual override view returns(UFixed) {
+        return _rewardHelper.getTargetRewardRate(target);
+    }
+
+    // function calculateRewards(uint256 amount, uint256 duration) public view virtual override returns(uint256 rewardAmount) {
+    //     return _rewardHelper.calculateRewards(amount, duration, _rewardHelper.rewardRate());
+    // }
 
     function updateRewards(NftId stakeId)
         external
@@ -110,8 +123,7 @@ contract StakingV03 is
         bytes calldata signature
     )
         external
-        virtual
-        override
+        virtual override
         returns(NftId stakeId)
     {
         _messageHelper.processStakeSignature(
@@ -142,6 +154,27 @@ contract StakingV03 is
     }
 
 
+    function restakeWithSignature(
+        address owner,
+        NftId stakeId, 
+        NftId newTarget,
+        bytes32 signatureId,
+        bytes calldata signature
+    )
+        external
+        virtual override
+    {
+        _messageHelper.processRestakeSignature(
+            owner,
+            stakeId,
+            newTarget,
+            signatureId,
+            signature);
+
+        return _restake(owner, stakeId, newTarget);
+    }
+
+
     function restake(NftId stakeId, NftId newTarget)
         external
         virtual override
@@ -150,6 +183,14 @@ contract StakingV03 is
         // only owner may restake
         address owner = msg.sender;
 
+        return _restake(owner, stakeId, newTarget);
+    }
+
+
+    function _restake(address owner, NftId stakeId, NftId newTarget)
+        internal
+        virtual
+    {
         // ensure unstaking is possible
         require(isUnstakingAvailable(stakeId), "ERROR:STK-150:UNSTAKING_NOT_SUPPORTED");
 
@@ -220,22 +261,22 @@ contract StakingV03 is
     }
 
 
-    function getTargetRewardRate(NftId target)
-        public
-        virtual
-        view
-        override
-        returns(UFixed rewardRate)
-    {
-        RewardInfo memory info = _targetRewardRate[target];
+    // function getTargetRewardRate(NftId target)
+    //     public
+    //     virtual
+    //     view
+    //     override
+    //     returns(UFixed rewardRate)
+    // {
+    //     RewardInfo memory info = _targetRewardRate[target];
 
-        if(info.createdAt > zeroTimestamp()) {
-            return info.rewardRate;
-        }
+    //     if(info.createdAt > zeroTimestamp()) {
+    //         return info.rewardRate;
+    //     }
 
-        // fallback if no target specific rate is defined
-        return _rewardRate;
-    }
+    //     // fallback if no target specific rate is defined
+    //     return _rewardRate;
+    // }
 
 
     function calculateLockingUntil(NftId target)
@@ -268,25 +309,29 @@ contract StakingV03 is
 
         // TODO potentially reduce time depending on the time when the bundle has been closed
 
-        UFixed rewardRate = getTargetRewardRate(info.target);
-        rewardsAmount = calculateRewards(info.stakeBalance, timeSinceLastUpdate, rewardRate);
+        UFixed rate = getTargetRewardRate(info.target);
+        rewardsAmount = _rewardHelper.calculateRewards(info.stakeBalance, timeSinceLastUpdate, rate);
     }
 
+// FAILED tests/test_staking.py::test_reward_rate - AssertionError: Unexpected revert string 'ERROR:RRH-010:REWARD_EXCEEDS_MAX_VALUE'
+// FAILED tests/test_staking_upgrade.py::test_staking_upgrade_v3 - ValueError: calculateRewards Sequence has incorrect length, expected 2 but got 3
+// FAILED tests/test_staking_upgrade.py::test_upgraded_staking_fixture - ValueError: calculateRewards Sequence has incorrect length, expected 2 but got 3
+// FAILED tests/test_staking_v3.py::test_target_reward_rate - AssertionError: assert '0x0051Edd9bb1fD366EDd0Ed7906C34Fe7c8519b8D' == <LocalAccount '0xc4...
 
-    function calculateRewards(
-        uint256 amount,
-        uint256 duration,
-        UFixed rate
-    ) 
-        public 
-        virtual
-        view
-        returns(uint256 rewardAmount) 
-    {
-        UFixed yearFraction = itof(duration) / itof(YEAR_DURATION);
-        UFixed rewardDuration = rate * yearFraction;
-        rewardAmount = ftoi(itof(amount) * rewardDuration);
-    }
+    // function calculateRewards(
+    //     uint256 amount,
+    //     uint256 duration,
+    //     UFixed rate
+    // ) 
+    //     public 
+    //     virtual
+    //     view
+    //     returns(uint256 rewardAmount) 
+    // {
+    //     UFixed yearFraction = itof(duration) / itof(YEAR_DURATION);
+    //     UFixed rewardDuration = rate * yearFraction;
+    //     rewardAmount = ftoi(itof(amount) * rewardDuration);
+    // }
 
 
     function _createStake(

@@ -21,6 +21,7 @@ from brownie import (
     StakingV02,
     StakingV03,
     StakingMessageHelper,
+    RewardHelper,
 )
 
 from brownie.network import accounts
@@ -317,12 +318,18 @@ def stakingV01(
     stakingV01Beta, # IMPORTANT: is needed to enforce complete/working setup based on v01 impl
     stakingV01Implementation,
     stakingProxyAdmin, 
+    stakingOwner,
     proxyAdminOwner,
     theOutsider
 ) -> StakingV03:
     stakingProxyAdmin.upgrade(stakingV01Implementation, {'from': proxyAdminOwner})
 
-    return contract_from_address(StakingV03, stakingProxyAdmin.getProxy())
+    staking = contract_from_address(StakingV03, stakingProxyAdmin.getProxy())
+    rewardHelper = RewardHelper.deploy({'from': stakingOwner})
+    rewardHelper.transferOwnership(staking, {'from': stakingOwner})
+    staking.setRewardHelper(rewardHelper, {'from': stakingOwner})
+
+    return staking
 
 
 #=== gif instance fixtures ====================================================#
