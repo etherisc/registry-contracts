@@ -7,28 +7,14 @@ import {Versionable} from "../shared/Versionable.sol";
 import {VersionedOwnable} from "../shared/VersionedOwnable.sol";
 
 import {ChainId} from "../shared/IBaseTypes.sol";
+
 import {ChainRegistryV01} from "./ChainRegistryV01.sol";
+import {IInstanceServiceFacade, IComponent} from "./IInstanceServiceFacade.sol";
+import {NftId} from "./IChainNft.sol";
 
 contract ChainRegistryV02 is
     ChainRegistryV01
 {
-
-    struct InstanceInfo {
-        ChainId chain;
-        bytes32 instanceId;
-        address instanceRegistry;
-    }
-
-    struct ComponentInfo {
-        bytes32 instanceId;
-        uint256 componentId;
-    }
-
-    struct BundleInfo {
-        bytes32 instanceId;
-        uint256 componentId;
-        uint256 bundleId;
-    }
 
     // IMPORTANT 1. version needed for upgradable versions
     // _activate is using this to check if this is a new version
@@ -40,9 +26,9 @@ contract ChainRegistryV02 is
         returns(Version)
     {
         return toVersion(
-            toVersionPart(0),
             toVersionPart(1),
-            toVersionPart(1));
+            toVersionPart(1),
+            toVersionPart(0));
     }
 
     // IMPORTANT 2. activate implementation needed
@@ -57,5 +43,52 @@ contract ChainRegistryV02 is
 
         // upgrade version
         _version = version();
+    }
+
+
+    function extendBundleLifetime(NftId id, uint256 lifetimeExtension)
+        external
+        virtual override
+    {
+        // check id exists and refers to bundle
+        NftInfo memory info = _info[id];
+        require(info.objectType == BUNDLE, "ERROR:CRG-400:NOT_BUNDLE");
+
+        // check that call is made from associated riskpool
+        (
+            bytes32 instanceId,
+            uint256 riskpoolId,
+            uint256 bundleId,
+            address token,
+            string memory displayName,
+            uint256 expiryAt
+        ) = _decodeBundleData(info.data);
+
+        IInstanceServiceFacade instanceService = getInstanceServiceFacade(instanceId);
+        IComponent component = instanceService.getComponent(riskpoolId);
+        require(msg.sender == address(component), "ERROR:CRG-401:CALLER_NOT_RISKPOOL");
+
+        uint256 newExpiryAt = expiryAt + lifetimeExtension;
+        bytes memory newData = _encodeBundleData(
+            instanceId, 
+            riskpoolId, 
+            bundleId, 
+            token, 
+            displayName, 
+            newExpiryAt);
+
+        _updateObjectData(id, newData);
+    }
+
+
+    function _updateObjectData(NftId id, bytes memory newData)
+        internal
+        virtual
+    {
+        NftInfo storage info = _info[id];
+        info.data = newData;
+        info.updatedIn = blockNumber();
+
+        emit LogChainRegistryObjectDataUpdated(id, msg.sender);
     }
 }

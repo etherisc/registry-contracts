@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+import {NftId} from "../registry/IChainNft.sol";
+import {IChainRegistry} from "../registry/IChainRegistry.sol";
 import {IInstanceServiceFacade, IComponent} from "../registry/IInstanceServiceFacade.sol";
 import {MockInstanceRegistry} from "./MockInstanceRegistry.sol";
 
@@ -22,11 +24,17 @@ contract MockInstance is
     mapping(uint256 componentId => ComponentInfo info) private _component;
     mapping(uint256 bundleId => Bundle bundle) private _bundle;
     MockInstanceRegistry private _registry;
+    IChainRegistry private _chainRegistry;
 
 
     constructor() Ownable() { 
         _registry = new MockInstanceRegistry();
         _registry.setInstanceServiceAddress(address(this));
+    }
+
+
+    function setChainRegistry(address chainRegistryAddress) external {
+        _chainRegistry = IChainRegistry(chainRegistryAddress);
     }
 
 
@@ -66,6 +74,16 @@ contract MockInstance is
     }
 
 
+    function extendBundleLifetime(
+        NftId bundleNftId,
+        uint256 lifetimeExtension
+    )
+        external
+    {
+        _chainRegistry.extendBundleLifetime(bundleNftId, lifetimeExtension);
+    }
+
+
     function getRegistry()
         external
         view
@@ -91,7 +109,8 @@ contract MockInstance is
 
     // solhint-disable-next-line no-empty-blocks
     function getComponent(uint256 componentId) external override view returns(IComponent component) {
-        // eventually implement 
+        require(_component[componentId].id > 0, "ERROR:DIS-009:COMPONENT_UNKNOWN");
+        return IComponent(address(this));
     }
 
     function getComponentType(uint256 componentId) external override view returns(ComponentType componentType) {
