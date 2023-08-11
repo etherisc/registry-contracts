@@ -21,6 +21,7 @@ from brownie import (
     OwnableProxyAdmin,
     ChainRegistryV01,
     StakingV01,
+    StakingV03,
     StakingMessageHelper,
 )
 
@@ -46,7 +47,7 @@ class Stake(EIP712Struct):
 
 # EIP712_RESTAKE_TYPE = "Restake(uint96 oldTarget,uint96 newTarget,bytes32 signatureId)"
 class Restake(EIP712Struct):
-    oldTarget = Uint(96)
+    stakeId = Uint(96)
     newTarget = Uint(96)
     signatureId = Bytes(32)
 
@@ -69,10 +70,10 @@ def create_stake_signature(target, dipAmount, signatureId, contractAddress, owne
     return calculate_signature(signable_bytes, owner)
 
 
-def create_restake_signature(oldTarget, newTarget, signatureId, contractAddress, owner):
+def create_restake_signature(stakeId, newTarget, signatureId, contractAddress, owner):
     # prepare messsage
     message = Restake()
-    message['oldTarget'] = oldTarget
+    message['stakeId'] = stakeId
     message['newTarget'] = newTarget
     message['signatureId'] = signatureId
 
@@ -106,7 +107,7 @@ def isolation(fn_isolation):
     pass
 
 
-def test_signature_and_signer(
+def test_signature_and_signer_for_staking(
         mockInstance,
         mockRegistry,
         usd2,
@@ -152,6 +153,41 @@ def test_signature_and_signer(
     assert staker != messageHelper.getSigner(digest, signature)
 
     digest = messageHelper.getStakeDigest(target, dipAmount, s2b32('some-other-signature'))
+    assert staker != messageHelper.getSigner(digest, signature)
+
+
+def test_signature_and_signer_for_restaking(
+        mockInstance,
+        mockRegistry,
+        usd2,
+        dip,
+        proxyAdmin,
+        proxyAdminOwner,
+        chainRegistryV01,
+        registryOwner,
+        theOutsider,
+        messageHelper, 
+        staker
+):
+    # prepare re-staking parameters
+    stakeId = 1234
+    newTarget = 5678
+    signatureId = s2b32('unique-restaking-id')
+
+    signature = create_restake_signature(stakeId, newTarget, signatureId, messageHelper.address, staker)
+    digest = messageHelper.getRestakeDigest(stakeId, newTarget, signatureId)
+
+    # happy path case
+    assert staker == messageHelper.getSigner(digest, signature)
+
+    # failure cases: any change in message digest attributes leads to an address that does not match the staker
+    digest = messageHelper.getRestakeDigest(stakeId + 1, newTarget, signatureId)
+    assert staker != messageHelper.getSigner(digest, signature)
+
+    digest = messageHelper.getRestakeDigest(stakeId, newTarget - 13, signatureId)
+    assert staker != messageHelper.getSigner(digest, signature)
+
+    digest = messageHelper.getRestakeDigest(stakeId, newTarget, s2b32('some-other-signature'))
     assert staker != messageHelper.getSigner(digest, signature)
 
 
@@ -255,6 +291,132 @@ def test_stake_bundle_gasless(
     assert info['version'] == stakingV01.version()
 
 
+def test_restake_gasless(
+    stakingProxyAdmin: OwnableProxyAdmin,
+    mockInstance: MockInstance,
+    mockRegistry: MockInstanceRegistry,
+    usd2: USD2,
+    proxyAdmin: OwnableProxyAdmin,
+    proxyAdminOwner: Account,
+    chainRegistryV01: ChainRegistryV01,
+    registryOwner: Account,
+    dip: DIP,
+    instanceOperator: Account,
+    stakingV01: StakingV03,
+    stakingOwner: Account,
+    staker: Account,
+    theOutsider: Account
+):
+
+    # setup up message helper
+    messageHelper = StakingMessageHelper.deploy({'from': stakingOwner})
+    stakingV01.setMessageHelper(messageHelper, {'from': stakingOwner})
+
+    # registry = contract_from_address(ChainRegistryV01, stakingV01.getRegistry())
+
+    # set default reward rate to 12.5%
+    apr_12_5 = stakingV01.toRate(125, -3)
+    stakingV01.setRewardRate(apr_12_5, {'from': stakingOwner})
+
+    # provide some reward reserves
+    reward_reserves_amount = 1000*10**dip.decimals()
+    dip.approve(stakingV01, reward_reserves_amount, {'from': instanceOperator})
+    stakingV01.refillRewardReserves(reward_reserves_amount, {'from': instanceOperator})
+
+    bundle_lifetime = 100 * 24 * 3600
+    bundle_nft = create_mock_bundle_setup(
+        mockInstance,
+        mockRegistry,
+        usd2,
+        proxyAdmin,
+        proxyAdminOwner,
+        chainRegistryV01,
+        registryOwner,
+        theOutsider,
+        bundle_lifetime = bundle_lifetime)
+
+    bundle_nft2 = create_mock_bundle_setup(
+        mockInstance,
+        mockRegistry,
+        usd2,
+        proxyAdmin,
+        proxyAdminOwner,
+        chainRegistryV01,
+        registryOwner,
+        theOutsider,
+        bundle_lifetime = 2*bundle_lifetime,
+        bundle_id = 2,
+        is_first_bundle = False)
+    
+    assert bundle_nft > 0
+    assert bundle_nft2 > 0
+    assert bundle_nft != bundle_nft2
+
+    # attempt to stake
+    staking_amount = 5000 * 10 ** dip.decimals()
+    prepare_staker(staker, 2 * staking_amount, dip, instanceOperator, stakingV01)
+
+    # check balances before staking
+    assert dip.balanceOf(staker) == 2 * staking_amount
+    assert dip.balanceOf(stakingV01.getStakingWallet()) == reward_reserves_amount
+
+    staking_tx = stakingV01.createStake(
+        bundle_nft,
+        staking_amount,
+        {'from': staker })
+
+    assert 'LogStakingNewStakeCreated' in staking_tx.events
+    stake_id = staking_tx.events['LogStakingNewStakeCreated']['id']
+
+    # get balances
+    staking_balance1 = stakingV01.stakeBalance()
+    reward_reserves1 = stakingV01.rewardReserves()
+    total_balance1 = staking_balance1 + reward_reserves1
+    wallet_balance1 = dip.balanceOf(stakingV01.getStakingWallet())
+    assert total_balance1 == wallet_balance1
+
+    sleep_time = bundle_lifetime + 1
+    chain.sleep(sleep_time)
+    chain.mine(1)
+
+    info = stakingV01.getInfo(stake_id)
+    stake_balance = info.dict()['stakeBalance']
+    reward_balance = info.dict()['rewardBalance'] + stakingV01.calculateRewardsIncrement(info)
+    restake_amount = stake_balance + reward_balance
+
+    # gasless restaking
+    signatureId = s2b32('unique-restake-chars') # this can make the restake signature unique even when other stake attributes are used multiple times
+    signature = create_restake_signature(stake_id, bundle_nft2, signatureId, stakingV01.getMessageHelperAddress(), staker)
+
+    restake_tx = stakingV01.restakeWithSignature(
+        staker,
+        stake_id, 
+        bundle_nft2, 
+        signatureId,
+        signature,
+        {'from': theOutsider})
+
+    assert 'LogStakingRestaked' in restake_tx.events
+    stake_id2 = restake_tx.events['LogStakingRestaked']['stakeId']
+
+    # check that bundle stakes have been properly updated
+    assert stakingV01.stakes(bundle_nft) == 0
+    assert abs(stakingV01.stakes(bundle_nft2) - restake_amount)/10**dip.decimals() < 10**-4
+
+    # get balances after restake
+    staking_balance2 = stakingV01.stakeBalance()
+    reward_reserves2 = stakingV01.rewardReserves()
+    total_balance2 = staking_balance2 + reward_reserves2
+    wallet_balance2 = dip.balanceOf(stakingV01.getStakingWallet())
+
+    assert reward_reserves1 > reward_reserves2
+    assert staking_balance1 < staking_balance2
+    assert reward_reserves1 - reward_reserves2 == staking_balance2 - staking_balance1
+
+    assert total_balance2 == wallet_balance2
+    assert total_balance2 == total_balance1
+
+
 def prepare_staker(
     staker,
     staking_amount,
@@ -275,13 +437,14 @@ def create_mock_bundle_setup(
     chainRegistryV01: ChainRegistryV01,
     registryOwner: Account,
     theOutsider: Account,
-    bundle_lifetime = 14 * 24 * 3600
+    bundle_lifetime = 14 * 24 * 3600,
+    bundle_id = 1,
+    is_first_bundle = True
 ) -> int:
     # setup attributes
     chain_id = chainRegistryV01.toChain(mockInstance.getChainId())
     instance_id = mockInstance.getInstanceId()
     riskpool_id = 1
-    bundle_id = 1
     bundle_name = 'my test bundle'
     bundle_funding = 10000 * 10 ** usd2.decimals()
     bundle_expiry_at = unix_timestamp() + bundle_lifetime
@@ -306,26 +469,27 @@ def create_mock_bundle_setup(
         bundle_state_active,
         bundle_funding)
 
-    # register token
-    tx_token = chainRegistryV01.registerToken(
-            chain_id,
-            usd2,
+    if is_first_bundle:
+        # register token
+        tx_token = chainRegistryV01.registerToken(
+                chain_id,
+                usd2,
+                '',
+                {'from': registryOwner})
+
+        # register instance
+        tx_instance = chainRegistryV01.registerInstance(
+            mockRegistry,
+            'mockRegistry TEST',
             '',
             {'from': registryOwner})
 
-    # register instance
-    tx_instance = chainRegistryV01.registerInstance(
-        mockRegistry,
-        'mockRegistry TEST',
-        '',
-        {'from': registryOwner})
-
-    # register riskpool
-    tx_riskpool = chainRegistryV01.registerComponent(
-        instance_id,
-        riskpool_id,
-        '',
-        {'from': registryOwner})
+        # register riskpool
+        tx_riskpool = chainRegistryV01.registerComponent(
+            instance_id,
+            riskpool_id,
+            '',
+            {'from': registryOwner})
 
     # register bundle
     tx_bundle = chainRegistryV01.registerBundle(

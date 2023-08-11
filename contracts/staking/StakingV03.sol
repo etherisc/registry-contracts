@@ -292,11 +292,6 @@ contract StakingV03 is
         rewardsAmount = _rewardHelper.calculateRewards(info.stakeBalance, timeSinceLastUpdate, rate);
     }
 
-// FAILED tests/test_staking.py::test_reward_rate - AssertionError: Unexpected revert string 'ERROR:RRH-010:REWARD_EXCEEDS_MAX_VALUE'
-// FAILED tests/test_staking_upgrade.py::test_staking_upgrade_v3 - ValueError: calculateRewards Sequence has incorrect length, expected 2 but got 3
-// FAILED tests/test_staking_upgrade.py::test_upgraded_staking_fixture - ValueError: calculateRewards Sequence has incorrect length, expected 2 but got 3
-// FAILED tests/test_staking_v3.py::test_target_reward_rate - AssertionError: assert '0x0051Edd9bb1fD366EDd0Ed7906C34Fe7c8519b8D' == <LocalAccount '0xc4...
-
 
     function _createStake(
         address owner,
