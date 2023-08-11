@@ -352,7 +352,6 @@ contract StakingV01 is
 
     //--- view and pure functions ------------------//
 
-
     function rewardRate()
         external
         virtual override
@@ -361,6 +360,7 @@ contract StakingV01 is
     {
         return _rewardRate;
     }
+
 
     function getTargetRewardRate(NftId)
         public

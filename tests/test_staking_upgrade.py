@@ -17,6 +17,7 @@ from brownie import (
     StakingV01,
     StakingV02,
     StakingV03,
+    StakingMessageHelper,
 )
 
 from scripts.const import ZERO_ADDRESS
@@ -96,8 +97,6 @@ def test_staking_upgrade(
     assert stakingV01Beta.rewardReserves() == reward_reserves
 
 
-# TODO: mz reenable those tests
-@pytest.mark.skip()
 def test_staking_upgrade_v3(
     proxyAdminOwner: Account,
     stakingProxyAdminBase: OwnableProxyAdmin,
@@ -105,6 +104,7 @@ def test_staking_upgrade_v3(
     stakingV01ImplementationBeta: StakingV01,
     stakingV02Implementation: StakingV02,
     stakingV03Implementation: StakingV03,
+    messageHelper: StakingMessageHelper,
     stakingOwner: Account,
     dip: interface.IERC20Metadata,
     instanceOperator: Account,
@@ -139,10 +139,13 @@ def test_staking_upgrade_v3(
     duration = stakingV01Base.YEAR_DURATION()
     stakingV03 = contract_from_address(StakingV03, stakingV01Base)
 
-    # # check that V02 reverts
-    # with brownie.reverts():
-    #     stakingV03.calculateRewards(1000, duration, rate)
+    # check that V02 reverts
+    mh = StakingMessageHelper.deploy({'from': stakingOwner})
+    with brownie.reverts():
+        stakingV03.setMessageHelper(mh, {'from': stakingOwner})
 
+    assert stakingV03.getMessageHelperAddress() == '0x0000000000000000000000000000000000000000'
+    
     # upgrade to V03
     stakingProxyAdminBase.upgrade(stakingV03Implementation, {'from': proxyAdminOwner})
 
@@ -155,11 +158,10 @@ def test_staking_upgrade_v3(
     assert (major, minor, patch) == (1, 1, 0)
 
     # check that V03 passes
-    assert stakingV03.calculateRewards(1000, duration, rate) == 50
+    assert stakingV03.setMessageHelper(mh, {'from': stakingOwner})
+    assert stakingV03.getMessageHelperAddress() == mh
 
 
-# TODO: mz reenable those tests
-@pytest.mark.skip()
 def test_upgraded_staking_fixture(
     instanceOperator: Account,
     stakingV01: StakingV03,
@@ -183,12 +185,17 @@ def test_upgraded_staking_fixture(
     assert stakingV01.rewardReserves() == reward_reserves
 
     # do some stuff with reward rate
-    stakingV01.setRewardRate(stakingV01.toRate(125, -3), {'from': stakingOwner})
+    target_id = 42
+    default_rate = stakingV01.toRate(125, -3)
+    stakingV01.setRewardRate(default_rate, {'from': stakingOwner})
     assert stakingV01.rewardRate() / 10**stakingV01.decimals() == 0.125
     assert stakingV01.calculateRewards(1000, stakingV01.YEAR_DURATION()) == 125
+    assert stakingV01.getTargetRewardRate(target_id) == default_rate
 
     # test some new functionality from version 03
     # check reward rate calculation
-    rate = stakingV01.toRate(5, -2)
-    duration = stakingV01.YEAR_DURATION()
-    assert stakingV01.calculateRewards(1000, duration, rate) == 50
+    target_rate = stakingV01.toRate(234, -3)
+    assert default_rate < target_rate
+
+    stakingV01.setTargetRewardRate(target_id, target_rate, {'from': stakingOwner})
+    assert stakingV01.getTargetRewardRate(target_id) == target_rate

@@ -98,10 +98,6 @@ contract StakingV03 is
         return _rewardHelper.getTargetRewardRate(target);
     }
 
-    // function calculateRewards(uint256 amount, uint256 duration) public view virtual override returns(uint256 rewardAmount) {
-    //     return _rewardHelper.calculateRewards(amount, duration, _rewardHelper.rewardRate());
-    // }
-
     function updateRewards(NftId stakeId)
         external
         virtual
@@ -236,6 +232,7 @@ contract StakingV03 is
         emit LogStakingRestaked(oldInfo.target, newInfo.target, owner, stakeId, newStakingAmount);
     }
 
+
     function getMessageHelperAddress()
         external
         virtual override
@@ -259,24 +256,6 @@ contract StakingV03 is
 
         return isUnstakingSupported(info.target);
     }
-
-
-    // function getTargetRewardRate(NftId target)
-    //     public
-    //     virtual
-    //     view
-    //     override
-    //     returns(UFixed rewardRate)
-    // {
-    //     RewardInfo memory info = _targetRewardRate[target];
-
-    //     if(info.createdAt > zeroTimestamp()) {
-    //         return info.rewardRate;
-    //     }
-
-    //     // fallback if no target specific rate is defined
-    //     return _rewardRate;
-    // }
 
 
     function calculateLockingUntil(NftId target)
@@ -317,21 +296,6 @@ contract StakingV03 is
 // FAILED tests/test_staking_upgrade.py::test_staking_upgrade_v3 - ValueError: calculateRewards Sequence has incorrect length, expected 2 but got 3
 // FAILED tests/test_staking_upgrade.py::test_upgraded_staking_fixture - ValueError: calculateRewards Sequence has incorrect length, expected 2 but got 3
 // FAILED tests/test_staking_v3.py::test_target_reward_rate - AssertionError: assert '0x0051Edd9bb1fD366EDd0Ed7906C34Fe7c8519b8D' == <LocalAccount '0xc4...
-
-    // function calculateRewards(
-    //     uint256 amount,
-    //     uint256 duration,
-    //     UFixed rate
-    // ) 
-    //     public 
-    //     virtual
-    //     view
-    //     returns(uint256 rewardAmount) 
-    // {
-    //     UFixed yearFraction = itof(duration) / itof(YEAR_DURATION);
-    //     UFixed rewardDuration = rate * yearFraction;
-    //     rewardAmount = ftoi(itof(amount) * rewardDuration);
-    // }
 
 
     function _createStake(

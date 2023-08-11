@@ -370,8 +370,7 @@ def test_restake(
     assert total_balance2 == wallet_balance2
     assert total_balance2 == total_balance1
 
-# TODO: mz reenable those tests
-@pytest.mark.skip()
+
 def test_target_reward_rate(
     mockInstance: MockInstance,
     mockRegistry: MockInstanceRegistry,
@@ -426,7 +425,7 @@ def test_target_reward_rate(
     assert 'LogTargetRewardRateSet' in tx.events
 
     evt = tx.events['LogTargetRewardRateSet']
-    assert evt['user'] == stakingOwner
+    assert evt['user'] == stakingV01
     assert evt['target'] == bundle_nft
     assert evt['oldRewardRate'] == default_rate
     assert evt['newRewardRate'] == bundle_rate
