@@ -17,7 +17,7 @@ contract StakingMessageHelper is
     string public constant EIP712_STAKE_TYPE = "Stake(uint96 target,uint256 dipAmount,bytes32 signatureId)";
     bytes32 private constant EIP712_STAKE_TYPE_HASH = keccak256(abi.encodePacked(EIP712_STAKE_TYPE));
 
-    string public constant EIP712_RESTAKE_TYPE = "Restake(uint96 oldTarget,uint96 newTarget,bytes32 signatureId)";
+    string public constant EIP712_RESTAKE_TYPE = "Restake(uint96 stakeId,uint96 newTarget,bytes32 signatureId)";
     bytes32 private constant EIP712_RESTAKE_TYPE_HASH = keccak256(abi.encodePacked(EIP712_RESTAKE_TYPE));
 
 
@@ -47,14 +47,14 @@ contract StakingMessageHelper is
 
     function processRestakeSignature(
         address owner,
-        NftId oldTarget,
+        NftId stakeId,
         NftId newTarget,
         bytes32 signatureId, // ensures unique signatures even when all other attributes are equal
         bytes calldata signature
     )
         external 
     {
-        bytes32 digest = getRestakeDigest(oldTarget, newTarget, signatureId);
+        bytes32 digest = getRestakeDigest(stakeId, newTarget, signatureId);
         address signer = getSigner(digest, signature);
 
         _processSignature(owner, signer ,signature);
@@ -82,7 +82,7 @@ contract StakingMessageHelper is
 
 
     function getRestakeDigest(
-        NftId oldTarget,
+        NftId stakeId,
         NftId newTarget,
         bytes32 signatureId
     )
@@ -93,7 +93,7 @@ contract StakingMessageHelper is
         bytes32 structHash = keccak256(
             abi.encode(
                 EIP712_RESTAKE_TYPE_HASH,
-                oldTarget,
+                stakeId,
                 newTarget,
                 signatureId));
 
