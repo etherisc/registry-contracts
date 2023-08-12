@@ -13,6 +13,7 @@ from brownie import (
     MockInstance,
     OwnableProxyAdmin,
     ChainRegistryV01,
+    ChainRegistryV02,
     ChainNft,
 )
 
@@ -39,9 +40,10 @@ def test_registry_facade_fixture(
     registryOwner: Account,
     theOutsider: Account
 ):
-    r = chainRegistryV01
+    r = upgrade_chain_registry(chainRegistryV01, proxyAdmin, proxyAdminOwner)
     fro = {'from': registryOwner}
 
+    mockInstance.setChainRegistry(r)
     r_facade = contract_from_address(interface.IChainRegistryFacade, r)
 
     r_facade.owner() == registryOwner
@@ -116,3 +118,19 @@ def test_registry_facade_fixture(
 
     # check get bundle nft
     assert r_facade.getBundleNftId(instance_id, bundle_id) == bundle_nft
+
+    data_before = r_facade.decodeBundleData(bundle_nft).dict()
+
+    # check extend bundle lifetime
+    lifetime_extension = 42 * 24 * 3600
+    mockInstance.extendBundleLifetime(bundle_nft, lifetime_extension, {'from': proxyAdminOwner})
+
+    data_after = r_facade.decodeBundleData(bundle_nft).dict()
+    assert data_after['expiryAt']-data_before['expiryAt'] == lifetime_extension
+
+
+def upgrade_chain_registry(chainRegistryV01, proxyAdmin, proxyAdminOwner):
+    v2_implementation = ChainRegistryV02.deploy({'from': proxyAdminOwner})
+    proxyAdmin.upgrade(v2_implementation, {'from': proxyAdminOwner})
+
+    return contract_from_address(ChainRegistryV02, chainRegistryV01)

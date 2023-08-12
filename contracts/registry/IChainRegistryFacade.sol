@@ -36,7 +36,9 @@ interface IChainRegistryFacade {
     function toChain(uint256 chainId) external pure returns(bytes5 chain);
 
     function objects(bytes5 chain, uint8 objectType) external view returns(uint256 numberOfObjects);
-    function exists(uint96 nftId) external view returns(bool);
+    function getNftId(bytes5 chain, uint8 objectType, uint256 idx) external view returns(uint96 nftId);
+    function exists(uint96 id) external view returns(bool);
+    function ownerOf(uint96 id) external view returns(address nftOwner);
 
     function getInstanceNftId(bytes32 instanceId) external view returns(uint96 nftId);
     function getComponentNftId(bytes32 instanceId, uint256 componentId) external view returns(uint96 nftId);
@@ -51,4 +53,34 @@ interface IChainRegistryFacade {
             uint16 minor,
             uint16 patch
         );
+
+
+    function decodeComponentData(uint96 id)
+        external
+        view
+        returns(
+            bytes32 instanceId,
+            uint256 componentId,
+            address token);
+
+
+    function decodeBundleData(uint96 id)
+        external
+        view
+        returns(
+            bytes32 instanceId,
+            uint256 riskpoolId,
+            uint256 bundleId,
+            address token,
+            string memory displayName,
+            uint256 expiryAt);
+
+
+    function decodeStakeData(uint96 id)
+        external
+        view
+        returns(
+            uint96 target,
+            uint8 targetType);
+
 }

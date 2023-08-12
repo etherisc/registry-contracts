@@ -327,7 +327,7 @@ def test_restake(
         stakingV01.restake(stake_id, bundle_nft2, {'from': theOutsider})
 
     # attempt to restake too early
-    with brownie.reverts("ERROR:STK-150:UNSTAKING_NOT_SUPPORTED"):
+    with brownie.reverts("ERROR:STK-160:UNSTAKING_NOT_SUPPORTED"):
         stakingV01.restake(stake_id, bundle_nft2, {'from': staker})
 
     sleep_time = bundle_lifetime + 1
@@ -339,7 +339,7 @@ def test_restake(
     assert stakingV01.stakes(bundle_nft2) == 0
 
     # attempt to restake to something else than a bundle
-    with brownie.reverts("ERROR:STK-151:STAKING_NOT_SUPPORTED"):
+    with brownie.reverts("ERROR:STK-161:STAKING_NOT_SUPPORTED"):
         stakingV01.restake(stake_id, stake_id, {'from': staker})
 
     info = stakingV01.getInfo(stake_id)
