@@ -88,6 +88,7 @@ interface IStaking is
     function isStakingSupportedForType(ObjectType targetType) external view returns(bool isSupported);
     function isStakingSupported(NftId target) external view returns(bool isSupported);
     function isUnstakingSupported(NftId target) external view returns(bool isSupported);
+    function isUnstakingAvailable(NftId stakeId) external view returns(bool isAvailable);
 
     function calculateRewardsIncrement(StakeInfo memory stakeInfo) external view returns(uint256 rewardsAmount);
     function calculateRewards(uint256 amount, uint256 duration) external view returns(uint256 rewardAmount);

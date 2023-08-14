@@ -245,7 +245,7 @@ contract StakingV03 is
 
     function isUnstakingAvailable(NftId stakeId)
         public
-        virtual
+        virtual override
         view 
         returns(bool isAvailable)
     {

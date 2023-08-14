@@ -292,6 +292,17 @@ contract StakingV01 is
     }
 
 
+    function isUnstakingAvailable(NftId stakeId)
+        public
+        virtual override
+        view 
+        returns(bool isAvailable)
+    {
+        require(false, "ERROR:STK-122:NOT_SUPPORTED");
+    }
+
+
+
     function stake(NftId stakeId, uint256 dipAmount)
         public
         virtual override
