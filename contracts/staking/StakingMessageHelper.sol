@@ -26,6 +26,7 @@ contract StakingMessageHelper is
 
     constructor()
         EIP712(EIP712_DOMAIN_NAME, EIP712_DOMAIN_VERSION)
+    // solhint-disable-next-line no-empty-blocks
     { }
 
 

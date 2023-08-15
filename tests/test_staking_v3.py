@@ -353,6 +353,20 @@ def test_restake(
     assert 'LogStakingRestaked' in restake_tx.events
     stake_id2 = restake_tx.events['LogStakingRestaked']['stakeId']
 
+    # check info of new stake
+    info = stakingV01.getInfo(stake_id).dict()
+    info2 = stakingV01.getInfo(stake_id2).dict()
+
+    assert info2['id'] == stake_id2
+    assert info2['target'] == bundle_nft2
+    assert info2['rewardBalance'] == 0
+    assert abs(info2['stakeBalance'] - restake_amount)/10**dip.decimals() < 10**-4
+    assert info2['createdAt'] == info['updatedAt']
+    assert info2['createdAt'] == info2['updatedAt']
+
+    assert stakingV01.calculateRewardsIncrement(stakingV01.getInfo(stake_id)) == 0
+    assert float(stakingV01.calculateRewardsIncrement(stakingV01.getInfo(stake_id2))) < 10**-4
+
     # check that bundle stakes have been properly updated
     assert stakingV01.stakes(bundle_nft) == 0
     assert abs(stakingV01.stakes(bundle_nft2) - restake_amount)/10**dip.decimals() < 10**-4

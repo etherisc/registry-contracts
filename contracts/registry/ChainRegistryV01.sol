@@ -339,10 +339,7 @@ contract ChainRegistryV01 is
     }
 
 
-    function extendBundleLifetime(
-        NftId id,
-        uint256 lifetimeExtension
-    )
+    function extendBundleLifetime(NftId, uint256)
         external
         virtual override
     { 

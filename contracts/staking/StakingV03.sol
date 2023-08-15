@@ -222,6 +222,7 @@ contract StakingV03 is
         newInfo.stakeBalance = newStakingAmount;
         newInfo.rewardBalance = 0;
         newInfo.createdAt = blockTimestamp();
+        newInfo.updatedAt = blockTimestamp();
         newInfo.lockedUntil = calculateLockingUntil(newTarget);
         newInfo.version = version();
 

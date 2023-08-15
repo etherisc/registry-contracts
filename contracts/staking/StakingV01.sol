@@ -283,20 +283,25 @@ contract StakingV01 is
         require(false, "ERROR:STK-120:NOT_SUPPORTED");
     }
 
+    function restake(NftId, NftId)
+        external
+        virtual override
+    {
+        require(false, "ERROR:STK-123:NOT_SUPPORTED");
+    }
 
-    function restakeWithSignature(address owner, NftId stakeId, NftId newTarget, bytes32 signatureId, bytes calldata signature)
+    function restakeWithSignature(address, NftId, NftId, bytes32, bytes calldata)
         external
         virtual
     {
         require(false, "ERROR:STK-121:NOT_SUPPORTED");
     }
 
-
-    function isUnstakingAvailable(NftId stakeId)
+    function isUnstakingAvailable(NftId)
         public
         virtual override
         view 
-        returns(bool isAvailable)
+        returns(bool)
     {
         require(false, "ERROR:STK-122:NOT_SUPPORTED");
     }
@@ -323,12 +328,6 @@ contract StakingV01 is
 
         emit LogStakingStaked(info.target, user, stakeId, dipAmount, info.stakeBalance);
     }
-
-
-    function restake(NftId id, NftId newTarget)
-        external
-        virtual override
-    {}
 
 
 
