@@ -153,9 +153,9 @@ def test_staking_upgrade_v3(
     assert stakingProxyAdminBase.getProxy() == stakingV01Base
     assert stakingProxyAdminBase.getImplementation() == stakingV03Implementation
 
-    assert stakingV01Base.version() == 1 * 2**32 + 1 * 2**16 + 0 * 2**0
+    assert stakingV01Base.version() == 1 * 2**32 + 1 * 2**16 + 1 * 2**0
     (major, minor, patch) = stakingV01Base.versionParts()
-    assert (major, minor, patch) == (1, 1, 0)
+    assert (major, minor, patch) == (1, 1, 1)
 
     # check that V03 passes
     assert stakingV03.setMessageHelper(mh, {'from': stakingOwner})
@@ -171,7 +171,7 @@ def test_upgraded_staking_fixture(
 ):
     # check version
     (major, minor, patch) = stakingV01.versionParts()
-    assert (major, minor, patch) == (1, 1, 0)
+    assert (major, minor, patch) == (1, 1, 1)
 
     # test some random existing unchanged functionalities by version 02/03
     # do some stuff with reward reserves

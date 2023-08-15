@@ -41,7 +41,7 @@ contract StakingV03 is
         return toVersion(
             toVersionPart(1),
             toVersionPart(1),
-            toVersionPart(0));
+            toVersionPart(1));
     }
 
 
