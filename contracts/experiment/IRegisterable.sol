@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import {NftId} from "../registry/IChainNft.sol";
 import {ObjectType} from "./ChainRegistry.sol";
 
-interface IRegisterable {
+interface IRegisterableOld {
 
     struct RegisterableInfo {
         NftId id;

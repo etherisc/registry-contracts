@@ -3,10 +3,10 @@ pragma solidity ^0.8.19;
 
 import {NftId} from "../registry/IChainNft.sol";
 import {ObjectType} from "./ChainRegistry.sol";
-import {IRegisterable} from "./IRegisterable.sol";
+import {IRegisterableOld} from "./IRegisterable.sol";
 
 
-contract Registerable is IRegisterable {
+contract RegisterableOld is IRegisterableOld {
 
     address private _deployer;
     ObjectType private _type;
@@ -34,8 +34,8 @@ contract Registerable is IRegisterable {
 
     function isRegisterable() external pure returns(bool) { return true; }
 
-    function getInfo() external view returns(IRegisterable.RegisterableInfo memory) {
-        return IRegisterable.RegisterableInfo(_id, _type, _uri, _data, _deployer);
+    function getInfo() external view returns(IRegisterableOld.RegisterableInfo memory) {
+        return IRegisterableOld.RegisterableInfo(_id, _type, _uri, _data, _deployer);
     }
 
     function id() external override view returns(NftId) {

@@ -4,9 +4,11 @@ import brownie
 from brownie import(
     accounts,
     interface,
+    AccessOwnerService,
     ComponentOwnerServiceNext,
     InstanceNext,
-    ProductNext
+    ProductNext,
+    Registry
 )
 
 from scripts.util import contract_from_address
@@ -18,15 +20,21 @@ def isolation(fn_isolation):
     pass
 
 
-def test_setup_simple(
+def test_setup(
+    registryOwner,
     instanceOperator,
     productOwner
 ):
-    instance = deploy_instance(instanceOperator)
+    registry = deploy_registry(registryOwner)
+    instance = deploy_instance(registry, instanceOperator)
     product = deploy_product(instance, productOwner)
 
-    product_id = 1 # expected product id
-    product_type = 1 # expected component type
+    instance_id = 1 # exoecgted instance id
+    instance_type = registry.INSTANCE()
+
+    product_id = 2 # expected product id
+    product_type = registry.PRODUCT() # expected component type
+
     state_active = 1
     state_locked = 2
 
@@ -52,6 +60,21 @@ def test_setup_simple(
     assert False
 
 
+def deploy_instance(registry, instance_owner) -> InstanceNext:
+    access_owner_service = AccessOwnerService.deploy({'from': instance_owner})
+    component_owner_service = ComponentOwnerServiceNext.deploy({'from': instance_owner})
+
+    instance = InstanceNext.deploy(
+        registry,
+        access_owner_service,
+        component_owner_service, 
+        {'from': instance_owner})
+
+    instance.register({'from': instance_owner})
+
+    return instance
+
+
 def deploy_product(instance, product_owner) -> ProductNext:
     product = ProductNext.deploy(instance, {'from': product_owner})
     product.register({'from': product_owner})
@@ -59,11 +82,10 @@ def deploy_product(instance, product_owner) -> ProductNext:
     return product
 
 
-def deploy_instance(instance_owner) -> InstanceNext:
-    component_owner_service = ComponentOwnerServiceNext.deploy({'from': instance_owner})
-    instance = InstanceNext.deploy(component_owner_service, {'from': instance_owner})
+def deploy_registry(registry_owner) -> Registry:
+    registry = Registry.deploy({'from': registry_owner})
 
-    return instance
+    return registry
 
 
 def get_instance_owner():

@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-interface IComponent {
 
-    enum CType {
-        Undefined,
-        Product,
-        Oracle,
-        Riskpool
-    }
+import {IOwnable, IRegistryLinked, IRegisterable} from "../../registry/IRegistry.sol";
+import {IInstanceNext} from "../IInstanceNext.sol";
+
+interface IComponent {
 
     enum CState {
         Undefined,
@@ -19,23 +16,23 @@ interface IComponent {
     struct ComponentInfo {
         uint256 id;
         address cAddress;
-        CType cType;
+        uint256 cType;
         CState state;
     }
 }
 
 
-interface IComponentContract is IComponent {
-
-    function register()
-        external
-        returns(uint256 componentId);
-
-    function getId() external view returns(uint256 id);
-    function getType() external view returns(CType cType);
-    function getInstanceAddress() external view returns(address instance);
-
+interface IInstanceLinked {
+    function setInstance(address instance) external;
+    function getInstance() external view returns(IInstanceNext instance);
 }
+
+
+interface IComponentContract is
+    IRegisterable,
+    IInstanceLinked,
+    IComponent
+{ }
 
 
 interface IComponentOwnerServiceNext {
@@ -61,7 +58,11 @@ interface IComponentOwnerServiceNext {
 }
 
 
-interface IComponentModule is IComponent {
+interface IComponentModule is
+    IOwnable,
+    IRegistryLinked,
+    IComponent
+{
 
     function setComponentInfo(ComponentInfo memory info)
         external
@@ -71,6 +72,11 @@ interface IComponentModule is IComponent {
         external
         view
         returns(ComponentInfo memory info);
+
+    function getComponentOwner(uint256 id)
+        external
+        view
+        returns(address owner);
 
     function getComponentId(address componentAddress)
         external

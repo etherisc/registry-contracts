@@ -1,60 +1,86 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import {IComponent, IComponentContract, IComponentModule, IComponentOwnerServiceNext} from "./IComponent.sol";
-import {IInstanceNext} from "./IInstanceNext.sol";
+import {IRegistry, IRegisterable, IRegistryLinked} from "../../registry/IRegistry.sol";
+import {Registerable} from "../../registry/Registry.sol";
+import {IInstanceNext} from "../IInstanceNext.sol";
+
+import {IInstanceLinked, IComponent, IComponentContract, IComponentModule, IComponentOwnerServiceNext} from "./IComponent.sol";
 
 
-contract ProductNext is IComponentContract {
+contract InstanceLinked is 
+    IInstanceLinked
+{
+    IInstanceNext internal _instance;
 
-    CType private _type;
-    IInstanceNext private _instance;
+    constructor() {
+        _instance = IInstanceNext(address(0));
+    }
 
-    constructor(IInstanceNext instance) {
-        _type = CType.Product;
-        _instance = instance;
+    function setInstance(address instance) public override {
+        require(address(_instance) == address(0), "ERROR:RGL-001:INSTANCE_ALREADY_SET");
+        _instance = IInstanceNext(instance);
+    }
+
+    function getInstance() external view override returns(IInstanceNext instance) {
+        return _instance;
+    }
+}
+
+contract ProductNext is
+    Registerable,
+    InstanceLinked,
+    IComponentContract
+{
+
+    address private _deployer;
+
+    constructor(address instance)
+        InstanceLinked()
+    {
+        setInstance(instance);
+        setRegistry(address(_instance.getRegistry()));
     }
 
     function register()
-        external
+        public
         override
         // TODO restrict registery to deployer
         // TODO restrict to deployers with proper role
         returns(uint256 componentId)
     {
+        require(address(_registry) != address(0), "ERROR:PRD-001:REGISTRY_ZERO");
+        require(_registry.isRegistered(address(_instance)), "ERROR:PRD-002:INSTANCE_NOT_REGISTERED");
+
+        componentId = _registry.register(address(this));
         IComponentOwnerServiceNext cos = _instance.getComponentOwnerService();
         componentId = cos.register(_instance, this);
     }
 
-    function getId() external view returns(uint256 id) {
-        return _instance.getComponentId(address(this));
-    }
-
-    function getType() external view returns(CType cType) {
-        return _type;
-    }
-
-    function getInstanceAddress() external view returns(address) {
-        return address(_instance);
+    function getType() external view override returns(uint256) {
+        return _registry.PRODUCT();
     }
 }
 
-contract ComponentModule is IComponentModule {
+abstract contract ComponentModule is 
+    IRegistryLinked,
+    IComponentModule
+{
 
     mapping(uint256 id => ComponentInfo info) private _info;
     mapping(address cAddress => uint256 id) private _idByAddress;
     uint256 [] private _ids;
     uint256 private _idNext;
 
-    ComponentOwnerServiceNext private _componentOwnerServiceNext;
+    ComponentOwnerServiceNext private _ownerService;
 
-    modifier onlyController() {
-        require(address(_componentOwnerServiceNext) == msg.sender, "ERROR:CMP-001:NOT_ComponentOwnerServiceNext");
+    modifier onlyComponentOwnerService() {
+        require(address(_ownerService) == msg.sender, "ERROR:CMP-001:NOT_OWNER_SERVICE");
         _;
     }
 
     constructor(address componentOwnerService) {
-        _componentOwnerServiceNext = ComponentOwnerServiceNext(componentOwnerService);
+        _ownerService = ComponentOwnerServiceNext(componentOwnerService);
         _idNext = 0;
     }
 
@@ -64,12 +90,12 @@ contract ComponentModule is IComponentModule {
         view
         returns(IComponentOwnerServiceNext)
     {
-        return _componentOwnerServiceNext;
+        return _ownerService;
     }
 
     function setComponentInfo(ComponentInfo memory info)
         external
-        onlyController
+        onlyComponentOwnerService
         returns(uint256 id)
     {
         // check if new component
@@ -95,6 +121,14 @@ contract ComponentModule is IComponentModule {
         returns(ComponentInfo memory)
     {
         return _info[id];
+    }
+
+    function getComponentOwner(uint256 id)
+        external
+        view
+        returns(address owner)
+    {
+
     }
 
     function getComponentId(address componentAddress)
@@ -142,6 +176,16 @@ contract ComponentOwnerServiceNext is
     IComponentOwnerServiceNext
 {
 
+    modifier onlyComponentOwner(IComponentModule module, uint256 id) {
+        IRegistry registry = module.getRegistry();
+        require(
+            msg.sender == registry.getOwner(id),
+            "ERROR:AOS-001:NOT_COMPONENT_OWNER"
+        );
+        _;
+    }
+
+
     function register(
         IComponentModule module, 
         IComponentContract component
@@ -172,7 +216,7 @@ contract ComponentOwnerServiceNext is
     )
         external
         override
-        // TODO add owner of this product
+        onlyComponentOwner(module, id)
     {
         ComponentInfo memory info = module.getComponentInfo(id);
         require(info.id > 0, "ERROR_COMPONENT_UNKNOWN");
@@ -191,7 +235,7 @@ contract ComponentOwnerServiceNext is
     )
         external
         override
-        // TODO add owner of this product
+        onlyComponentOwner(module, id)
     {
         ComponentInfo memory info = module.getComponentInfo(id);
         require(info.id > 0, "ERROR_COMPONENT_UNKNOWN");
