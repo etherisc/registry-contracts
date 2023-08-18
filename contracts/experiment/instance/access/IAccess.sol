@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import {IOwnable} from "../../registry/IRegistry.sol";
+import {IOwnable, IRegistryLinked} from "../../registry/IRegistry.sol";
 
 interface IAccess {
 
@@ -13,34 +13,31 @@ interface IAccess {
 }
 
 
-interface IAccessOwnerService is IAccess {
-
-    function createRole(IAccessModule module, string memory roleName) 
+interface IAccessModule is 
+    IOwnable,
+    IAccess,
+    IRegistryLinked
+{
+    function createRole(string memory roleName)
         external
         returns(bytes32 role);
 
-    function disableRole(IAccessModule module, bytes32 role) 
-        external;        
-
-    function enableRole(IAccessModule module, bytes32 role) 
+    function enableRole(bytes32 role)
         external;       
 
-    function grantRole(IAccessModule module, bytes32 role, address member) 
+    function disableRole(bytes32 role)
         external;       
 
-    // function revokeRole(IAccessModule module, bytes32 role, address member) 
-    //     external;       
-}
+    function grantRole(bytes32 role, address member)
+        external;       
 
+    function revokeRole(bytes32 role, address member)
+        external;       
 
-interface IAccessModule is 
-    IOwnable,
-    IAccess
-{
-
-    function setRoleInfo(RoleInfo memory info)
+    function hasRole(bytes32 role, address member)
         external
-        returns(bytes32 roleId);
+        view
+        returns(bool);
 
     function getRoleInfo(bytes32 role)
         external
@@ -48,6 +45,16 @@ interface IAccessModule is
         returns(RoleInfo memory info);
 
     function getRole(uint256 idx)
+        external
+        view
+        returns(bytes32 role);
+
+    function getRoleForName(string memory roleName)
+        external
+        pure
+        returns(bytes32 role);
+
+    function getComponentTypeRole(uint256 cType)
         external
         view
         returns(bytes32 role);
@@ -66,15 +73,4 @@ interface IAccessModule is
         external
         view
         returns(address roleMembers);
-
-    function grantRole(bytes32 role, address member)
-        external;       
-
-    function revokeRole(bytes32 role, address member)
-        external;       
-
-    function getAccessOwnerService()
-        external
-        view
-        returns(IAccessOwnerService);
 }

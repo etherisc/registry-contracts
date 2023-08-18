@@ -37,24 +37,9 @@ interface IComponentContract is
 
 interface IComponentOwnerServiceNext {
 
-    function register(
-        IComponentModule module, 
-        IComponentContract component
-    )
-        external
-        returns(uint256 id);
-    
-    function lock(
-        IComponentModule module, 
-        uint256 id
-    )
-        external;
-    
-    function unlock(
-        IComponentModule module, 
-        uint256 id
-    )
-        external;
+    function register(IComponentContract component) external returns(uint256 id);
+    function lock(IComponentContract component) external;
+    function unlock(IComponentContract component) external;
 }
 
 

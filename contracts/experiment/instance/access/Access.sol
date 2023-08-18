@@ -1,57 +1,152 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-// role admin handling of oz doesn't fit module/controller pattern
+// role admin handling of oz doesn't fit nft ownability
 // import {AccessControlEnumerable} from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import {IAccessModule, IAccessOwnerService} from "./IAccess.sol";
+import {IAccessModule} from "./IAccess.sol";
 
 
 abstract contract AccessModule is
     IAccessModule
 {
+    string constant public PRODUCT_OWNER = "ProductOwner";
+    string constant public ORACLE_OWNER = "OracleOwner";
+    string constant public POOL_OWNER = "PoolOwner";
+
     using EnumerableSet for EnumerableSet.AddressSet;
 
     mapping(bytes32 role => RoleInfo info) private _info;
     bytes32 [] private _roles;
 
+    bytes32 _productOwnerRole;
+    bytes32 _oracleOwnerRole;
+    bytes32 _poolOwnerRole;
+
     mapping(bytes32 role => mapping(address member => bool isMember)) private _isRoleMember;
     mapping(bytes32 role => EnumerableSet.AddressSet) private _roleMembers;
 
-    IAccessOwnerService private _ownerService;
-
-    modifier onlyAccessOwnerService() {
-        require(address(_ownerService) == msg.sender, "ERROR:ACM-001:NOT_OWNER_SERVICE");
+    modifier onlyOwner() {
+        require(msg.sender == this.getOwner(), "ERROR:ACM-001:NOT_OWNER");
         _;
     }
 
-    constructor(address ownerServiceAddress) {
-        _ownerService = IAccessOwnerService(ownerServiceAddress);
+    constructor() {
+        _productOwnerRole = _createRole(PRODUCT_OWNER);
+        _oracleOwnerRole = _createRole(ORACLE_OWNER);
+        _poolOwnerRole = _createRole(POOL_OWNER);
     }
 
 
-    function setRoleInfo(RoleInfo memory info)
+    function getComponentTypeRole(uint256 cType)
         external
+        view
         override
-        onlyAccessOwnerService
         returns(bytes32 role)
     {
-        role = info.id;
-
-        if(role == bytes32(0)) {
-            role = keccak256(abi.encode(info.name));
-            // TODO check that this is a new role id
-
-            info.id = role;
-            _roles.push(role);
-
-            // TODO add logging
+        if(cType == this.getRegistry().PRODUCT()) {
+            return _productOwnerRole;
         }
+        if(cType == this.getRegistry().POOL()) {
+            return _poolOwnerRole;
+        }
+        if(cType == this.getRegistry().ORACLE()) {
+            return _oracleOwnerRole;
+        }
+    }
 
-        _info[role] = info;
 
-        // TODO add logging
+    function createRole(string memory roleName) 
+        external
+        override
+        onlyOwner
+        returns(bytes32 role)
+    {
+        return _createRole(roleName);
+    }
+
+    function _createRole(string memory roleName) 
+        internal
+        returns(bytes32 role)
+    {
+        RoleInfo memory info = RoleInfo(
+            0,
+            roleName,
+            true
+        );
+
+        role = _setRoleInfo(info);
+
+        
+    }
+
+    // TODO move to module
+    function disableRole(bytes32 role) 
+        external
+        override
+        onlyOwner
+    {
+        RoleInfo memory info = _info[role];
+        require(info.id == role, "ERROR:AOS-001:ROLE_DOES_NOT_EXIST");
+
+        info.isActive = false;
+        _setRoleInfo(info);
+
+        
+    }   
+
+    // TODO move to module
+    function enableRole(bytes32 role) 
+        external
+        override       
+        onlyOwner
+    {
+        RoleInfo memory info = _info[role];
+        require(info.id == role, "ERROR:AOS-002:ROLE_DOES_NOT_EXIST");
+
+        info.isActive = true;
+        _setRoleInfo(info);
+
+        
+    }   
+
+    function grantRole(bytes32 role, address member) 
+        external
+        override     
+        onlyOwner
+    {
+        require(_info[role].id == role, "ERROR:ACM-010:ROLE_NOT_EXISTING");
+        require(_info[role].isActive, "ERROR:ACM-011:ROLE_NOT_ACTIVE");
+
+        _isRoleMember[role][member] = true;
+        _roleMembers[role].add(member);
+
+        
+    }
+
+
+    function revokeRole(bytes32 role, address member) 
+        external
+        override     
+        onlyOwner
+    {
+        require(_info[role].id == role, "ERROR:ACM-020:ROLE_NOT_EXISTING");
+
+        _isRoleMember[role][member] = false;
+        _roleMembers[role].remove(member);
+
+        
+    }
+
+
+    function hasRole(bytes32 role, address member)
+        external
+        view
+        override
+        returns(bool)
+    {
+        return _isRoleMember[role][member];
     }
 
 
@@ -102,113 +197,34 @@ abstract contract AccessModule is
         return _roleMembers[role].at(idx);
     }
 
-    function grantRole(bytes32 role, address member) 
-        external
-        override     
-        onlyAccessOwnerService
-    {
-        require(_info[role].id == role, "ERROR:ACM-010:ROLE_NOT_EXISTING");
-        require(_info[role].isActive, "ERROR:ACM-011:ROLE_NOT_ACTIVE");
-
-        _isRoleMember[role][member] = true;
-        _roleMembers[role].add(member);
-
-        // TODO add logging
-    }
-
-    function revokeRole(bytes32 role, address member) 
-        external
-        override     
-        onlyAccessOwnerService
-    {
-        require(_info[role].id == role, "ERROR:ACM-020:ROLE_NOT_EXISTING");
-
-        _isRoleMember[role][member] = false;
-        _roleMembers[role].remove(member);
-
-        // TODO add logging
-    }
-
-    function getAccessOwnerService()
-        external
+    function getRoleForName(string memory roleName)
+        public
         override
-        view
-        returns(IAccessOwnerService)
-    {
-        return _ownerService;
-    }
-   
-}
-
-
-contract AccessOwnerService is
-    IAccessOwnerService
-{
-
-    modifier onlyModuleOwner(IAccessModule module) {
-        require(
-            msg.sender == module.getOwner(),
-            "ERROR:AOS-001:NOT_MODULE_OWNER"
-        );
-        _;
-    }
-
-    function createRole(IAccessModule module, string memory roleName) 
-        external
-        override
-        onlyModuleOwner(module)
+        pure
         returns(bytes32 role)
     {
-        RoleInfo memory info = RoleInfo(
-            0,
-            roleName,
-            true
-        );
-
-        role = module.setRoleInfo(info);
-
-        // TODO add logging
+        return keccak256(abi.encode(roleName));
     }
 
-    function disableRole(IAccessModule module, bytes32 role) 
-        external
-        override
-        onlyModuleOwner(module)
+
+    function _setRoleInfo(RoleInfo memory info)
+        internal
+        returns(bytes32 role)
     {
-        require(module.getRoleInfo(role).id == role, "ERROR:AOS-001:ROLE_DOES_NOT_EXIST");
+        role = info.id;
 
-        RoleInfo memory info = module.getRoleInfo(role);
-        info.isActive = true;
-        module.setRoleInfo(info);
+        if(role == bytes32(0)) {
+            role = getRoleForName(info.name);
+            // TODO check that this is a new role id
 
-        // TODO add logging
-    }   
+            info.id = role;
+            _roles.push(role);
 
-    function enableRole(IAccessModule module, bytes32 role) 
-        external
-        override       
-        onlyModuleOwner(module)
-    {
-        require(module.getRoleInfo(role).id == role, "ERROR:AOS-002:ROLE_DOES_NOT_EXIST");
+            
+        }
 
-        RoleInfo memory info = module.getRoleInfo(role);
-        info.isActive = false;
-        module.setRoleInfo(info);
+        _info[role] = info;
 
-        // TODO add logging
-    }   
-
-    function grantRole(IAccessModule module, bytes32 role, address member) 
-        external
-        override
-        onlyModuleOwner(module)
-    {
-        require(module.getRoleInfo(role).id == role, "ERROR:AOS-003:ROLE_DOES_NOT_EXIST");
-        require(module.getRoleInfo(role).isActive, "ERROR:AOS-004:ROLE_NOT_ACTIVE");
-
-        module.grantRole(role, member);
-
-        // TODO add logging
+        
     }
-
 }

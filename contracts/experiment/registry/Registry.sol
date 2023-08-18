@@ -44,26 +44,27 @@ abstract contract Registerable is
     }
 
     // getType needs to be implemented by concrete contract
+    // getData needs to be implemented by concrete contract
     // register needs to be implemented by concrete contract
 
     function isRegisterable() external pure override returns(bool) {
         return true;
     }
 
-    function getInitialOwner() external view override returns(address deployer) {
+    function getInitialOwner() public view override returns(address deployer) {
         return _initialOwner;
     }
 
-    function isRegistered() external view override returns(bool) {
-        return _registry.getId(address(this)) > 0;
+    function isRegistered() public view override returns(bool) {
+        return _registry.getNftId(address(this)) > 0;
     }
 
-    function getId() external view override returns(uint256 id) {
-        return _registry.getId(address(this));
+    function getNftId() public view override returns(uint256 id) {
+        return _registry.getNftId(address(this));
     }
 
-    function getOwner() external view override returns(address owner) {
-        uint256 id = _registry.getId(address(this));
+    function getOwner() public view override returns(address owner) {
+        uint256 id = _registry.getNftId(address(this));
         return _registry.getOwner(id);
     }
 
@@ -91,6 +92,8 @@ contract Registry is IRegistry {
 
     function INSTANCE() external pure override returns(uint256) { return 10; }
     function PRODUCT() external pure override returns(uint256) { return 20; }
+    function ORACLE() external pure override returns(uint256) { return 30; }
+    function POOL() external pure override returns(uint256) { return 40; }
 
     function register(address object) external override returns(uint256 id) {
         require(_idByAddress[object] == 0, "ERROR:REG-001:ALREADY_REGISTERED");
@@ -122,7 +125,7 @@ contract Registry is IRegistry {
     }
 
 
-    function getId(address object) external view override returns(uint256 id) {
+    function getNftId(address object) external view override returns(uint256 id) {
         return _idByAddress[object];
     }
 

@@ -15,10 +15,11 @@ interface IRegisterable is
     IRegistryLinked
 {
 
-    function register() external returns(uint256 id);
+    function register() external returns(uint256 nftId);
     
-    function getId() external view returns(uint256 id);
+    function getNftId() external view returns(uint256 nftId);
     function getType() external view returns(uint256 objectType);
+    function getData() external view returns(bytes memory data);
     function isRegisterable() external pure returns(bool);
     function getInitialOwner() external view returns(address initialOwner);
 
@@ -29,7 +30,7 @@ interface IRegisterable is
 interface IRegistry {
 
     struct RegistryInfo {
-        uint256 id;
+        uint256 nftId;
         uint256 objectType;
         address objectAddress;
         address initialOwner;
@@ -37,13 +38,15 @@ interface IRegistry {
 
     function INSTANCE() external pure returns(uint256);
     function PRODUCT() external pure returns(uint256);
+    function ORACLE() external pure returns(uint256);
+    function POOL() external pure returns(uint256);
 
-    function register(address object) external returns(uint256 id);
-    function transfer(uint256 id, address newOwner) external;
+    function register(address objectAddress) external returns(uint256 nftId);
+    function transfer(uint256 nftId, address newOwner) external;
 
-    function getId(address object) external view returns(uint256 id);
-    function getInfo(uint256 id) external view returns(RegistryInfo memory info);
-    function getOwner(uint256 id) external view returns(address);
+    function getNftId(address objectAddress) external view returns(uint256 nftId);
+    function getInfo(uint256 nftId) external view returns(RegistryInfo memory info);
+    function getOwner(uint256 nftId) external view returns(address ownerAddress);
 
-    function isRegistered(address object) external view returns(bool);
+    function isRegistered(address objectAddress) external view returns(bool);
 }
