@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.19;
 
-import {IRegistry, IRegisterable, IRegistryLinked} from "../../registry/IRegistry.sol";
-import {Registerable} from "../../registry/Registry.sol";
-import {IInstanceNext} from "../IInstanceNext.sol";
+import {IRegistry, IRegisterable, IRegistryLinked} from "../registry/IRegistry.sol";
+import {Registerable} from "../registry/Registry.sol";
+import {IInstanceNext} from "../instance/IInstanceNext.sol";
 
-import {IInstanceLinked, IComponent, IComponentContract, IComponentModule, IComponentOwnerServiceNext} from "./IComponent.sol";
+import {IInstanceLinked, IComponent, IComponentContract, IComponentModule, IComponentOwnerServiceNext} from "../instance/component/IComponent.sol";
 
 
 contract InstanceLinked is 
