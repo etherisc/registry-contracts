@@ -1,0 +1,474 @@
+{
+    "storage": [
+        {
+            "astId": 5539,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_versionHistory",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_userDefinedValueType(Version)3871,t_struct(VersionInfo)5432_storage)"
+        },
+        {
+            "astId": 5543,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_versions",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_userDefinedValueType(Version)3871)dyn_storage"
+        },
+        {
+            "astId": 10677,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint8"
+        },
+        {
+            "astId": 10680,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "2",
+            "type": "t_bool"
+        },
+        {
+            "astId": 10880,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "__gap",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_array(t_uint256)50_storage"
+        },
+        {
+            "astId": 10355,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_owner",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_address"
+        },
+        {
+            "astId": 10475,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "__gap",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_array(t_uint256)49_storage"
+        },
+        {
+            "astId": 6853,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_dip",
+            "offset": 0,
+            "slot": "103",
+            "type": "t_contract(IERC20Metadata)10245"
+        },
+        {
+            "astId": 6856,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_rewardRate",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_userDefinedValueType(UFixed)4062"
+        },
+        {
+            "astId": 6859,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_rewardRateMax",
+            "offset": 0,
+            "slot": "105",
+            "type": "t_userDefinedValueType(UFixed)4062"
+        },
+        {
+            "astId": 6861,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_rewardBalance",
+            "offset": 0,
+            "slot": "106",
+            "type": "t_uint256"
+        },
+        {
+            "astId": 6863,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_rewardReserves",
+            "offset": 0,
+            "slot": "107",
+            "type": "t_uint256"
+        },
+        {
+            "astId": 6865,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_stakeBalance",
+            "offset": 0,
+            "slot": "108",
+            "type": "t_uint256"
+        },
+        {
+            "astId": 6867,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_stakingWallet",
+            "offset": 0,
+            "slot": "109",
+            "type": "t_address"
+        },
+        {
+            "astId": 6872,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_stakingSupported",
+            "offset": 0,
+            "slot": "110",
+            "type": "t_mapping(t_userDefinedValueType(ObjectType)4840,t_bool)"
+        },
+        {
+            "astId": 6878,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_info",
+            "offset": 0,
+            "slot": "111",
+            "type": "t_mapping(t_userDefinedValueType(NftId)3414,t_struct(StakeInfo)9819_storage)"
+        },
+        {
+            "astId": 6883,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_targetStakeBalance",
+            "offset": 0,
+            "slot": "112",
+            "type": "t_mapping(t_userDefinedValueType(NftId)3414,t_uint256)"
+        },
+        {
+            "astId": 6891,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_stakingRate",
+            "offset": 0,
+            "slot": "113",
+            "type": "t_mapping(t_userDefinedValueType(ChainId)3559,t_mapping(t_address,t_userDefinedValueType(UFixed)4062))"
+        },
+        {
+            "astId": 6894,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_registry",
+            "offset": 0,
+            "slot": "114",
+            "type": "t_contract(IChainRegistry)5295"
+        },
+        {
+            "astId": 6897,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_registryConstant",
+            "offset": 0,
+            "slot": "115",
+            "type": "t_contract(ChainRegistryV01)3406"
+        },
+        {
+            "astId": 6900,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_version",
+            "offset": 20,
+            "slot": "115",
+            "type": "t_userDefinedValueType(Version)3871"
+        },
+        {
+            "astId": 37,
+            "contract": "contracts/staking/StakingV03.sol:StakingV03",
+            "label": "_targetRewardRate",
+            "offset": 0,
+            "slot": "116",
+            "type": "t_mapping(t_userDefinedValueType(NftId)3414,t_struct(RewardInfo)31_storage)"
+        }
+    ],
+    "types": {
+        "t_address": {
+            "encoding": "inplace",
+            "label": "address",
+            "numberOfBytes": "20"
+        },
+        "t_array(t_uint256)49_storage": {
+            "base": "t_uint256",
+            "encoding": "inplace",
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+        },
+        "t_array(t_uint256)50_storage": {
+            "base": "t_uint256",
+            "encoding": "inplace",
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+        },
+        "t_array(t_userDefinedValueType(Version)3871)dyn_storage": {
+            "base": "t_userDefinedValueType(Version)3871",
+            "encoding": "dynamic_array",
+            "label": "Version[]",
+            "numberOfBytes": "32"
+        },
+        "t_bool": {
+            "encoding": "inplace",
+            "label": "bool",
+            "numberOfBytes": "1"
+        },
+        "t_contract(ChainRegistryV01)3406": {
+            "encoding": "inplace",
+            "label": "contract ChainRegistryV01",
+            "numberOfBytes": "20"
+        },
+        "t_contract(IChainRegistry)5295": {
+            "encoding": "inplace",
+            "label": "contract IChainRegistry",
+            "numberOfBytes": "20"
+        },
+        "t_contract(IERC20Metadata)10245": {
+            "encoding": "inplace",
+            "label": "contract IERC20Metadata",
+            "numberOfBytes": "20"
+        },
+        "t_mapping(t_address,t_userDefinedValueType(UFixed)4062)": {
+            "encoding": "mapping",
+            "key": "t_address",
+            "label": "mapping(address => UFixed)",
+            "numberOfBytes": "32",
+            "value": "t_userDefinedValueType(UFixed)4062"
+        },
+        "t_mapping(t_userDefinedValueType(ChainId)3559,t_mapping(t_address,t_userDefinedValueType(UFixed)4062))": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(ChainId)3559",
+            "label": "mapping(ChainId => mapping(address => UFixed))",
+            "numberOfBytes": "32",
+            "value": "t_mapping(t_address,t_userDefinedValueType(UFixed)4062)"
+        },
+        "t_mapping(t_userDefinedValueType(NftId)3414,t_struct(RewardInfo)31_storage)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(NftId)3414",
+            "label": "mapping(NftId => struct StakingV03.RewardInfo)",
+            "numberOfBytes": "32",
+            "value": "t_struct(RewardInfo)31_storage"
+        },
+        "t_mapping(t_userDefinedValueType(NftId)3414,t_struct(StakeInfo)9819_storage)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(NftId)3414",
+            "label": "mapping(NftId => struct IStaking.StakeInfo)",
+            "numberOfBytes": "32",
+            "value": "t_struct(StakeInfo)9819_storage"
+        },
+        "t_mapping(t_userDefinedValueType(NftId)3414,t_uint256)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(NftId)3414",
+            "label": "mapping(NftId => uint256)",
+            "numberOfBytes": "32",
+            "value": "t_uint256"
+        },
+        "t_mapping(t_userDefinedValueType(ObjectType)4840,t_bool)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(ObjectType)4840",
+            "label": "mapping(ObjectType => bool)",
+            "numberOfBytes": "32",
+            "value": "t_bool"
+        },
+        "t_mapping(t_userDefinedValueType(Version)3871,t_struct(VersionInfo)5432_storage)": {
+            "encoding": "mapping",
+            "key": "t_userDefinedValueType(Version)3871",
+            "label": "mapping(Version => struct IVersionable.VersionInfo)",
+            "numberOfBytes": "32",
+            "value": "t_struct(VersionInfo)5432_storage"
+        },
+        "t_struct(RewardInfo)31_storage": {
+            "encoding": "inplace",
+            "label": "struct StakingV03.RewardInfo",
+            "members": [
+                {
+                    "astId": 24,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "rewardRate",
+                    "offset": 0,
+                    "slot": "0",
+                    "type": "t_userDefinedValueType(UFixed)4062"
+                },
+                {
+                    "astId": 27,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "createdAt",
+                    "offset": 0,
+                    "slot": "1",
+                    "type": "t_userDefinedValueType(Timestamp)3642"
+                },
+                {
+                    "astId": 30,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "updatedAt",
+                    "offset": 5,
+                    "slot": "1",
+                    "type": "t_userDefinedValueType(Timestamp)3642"
+                }
+            ],
+            "numberOfBytes": "64"
+        },
+        "t_struct(StakeInfo)9819_storage": {
+            "encoding": "inplace",
+            "label": "struct IStaking.StakeInfo",
+            "members": [
+                {
+                    "astId": 9799,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "id",
+                    "offset": 0,
+                    "slot": "0",
+                    "type": "t_userDefinedValueType(NftId)3414"
+                },
+                {
+                    "astId": 9802,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "target",
+                    "offset": 12,
+                    "slot": "0",
+                    "type": "t_userDefinedValueType(NftId)3414"
+                },
+                {
+                    "astId": 9804,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "stakeBalance",
+                    "offset": 0,
+                    "slot": "1",
+                    "type": "t_uint256"
+                },
+                {
+                    "astId": 9806,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "rewardBalance",
+                    "offset": 0,
+                    "slot": "2",
+                    "type": "t_uint256"
+                },
+                {
+                    "astId": 9809,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "createdAt",
+                    "offset": 0,
+                    "slot": "3",
+                    "type": "t_userDefinedValueType(Timestamp)3642"
+                },
+                {
+                    "astId": 9812,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "updatedAt",
+                    "offset": 5,
+                    "slot": "3",
+                    "type": "t_userDefinedValueType(Timestamp)3642"
+                },
+                {
+                    "astId": 9815,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "version",
+                    "offset": 10,
+                    "slot": "3",
+                    "type": "t_userDefinedValueType(Version)3871"
+                },
+                {
+                    "astId": 9818,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "lockedUntil",
+                    "offset": 16,
+                    "slot": "3",
+                    "type": "t_userDefinedValueType(Timestamp)3642"
+                }
+            ],
+            "numberOfBytes": "128"
+        },
+        "t_struct(VersionInfo)5432_storage": {
+            "encoding": "inplace",
+            "label": "struct IVersionable.VersionInfo",
+            "members": [
+                {
+                    "astId": 5421,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "version",
+                    "offset": 0,
+                    "slot": "0",
+                    "type": "t_userDefinedValueType(Version)3871"
+                },
+                {
+                    "astId": 5423,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "implementation",
+                    "offset": 6,
+                    "slot": "0",
+                    "type": "t_address"
+                },
+                {
+                    "astId": 5425,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "activatedBy",
+                    "offset": 0,
+                    "slot": "1",
+                    "type": "t_address"
+                },
+                {
+                    "astId": 5428,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "activatedIn",
+                    "offset": 20,
+                    "slot": "1",
+                    "type": "t_userDefinedValueType(Blocknumber)3825"
+                },
+                {
+                    "astId": 5431,
+                    "contract": "contracts/staking/StakingV03.sol:StakingV03",
+                    "label": "activatedAt",
+                    "offset": 24,
+                    "slot": "1",
+                    "type": "t_userDefinedValueType(Timestamp)3642"
+                }
+            ],
+            "numberOfBytes": "64"
+        },
+        "t_uint256": {
+            "encoding": "inplace",
+            "label": "uint256",
+            "numberOfBytes": "32"
+        },
+        "t_uint8": {
+            "encoding": "inplace",
+            "label": "uint8",
+            "numberOfBytes": "1"
+        },
+        "t_userDefinedValueType(Blocknumber)3825": {
+            "encoding": "inplace",
+            "label": "Blocknumber",
+            "numberOfBytes": "4"
+        },
+        "t_userDefinedValueType(ChainId)3559": {
+            "encoding": "inplace",
+            "label": "ChainId",
+            "numberOfBytes": "5"
+        },
+        "t_userDefinedValueType(NftId)3414": {
+            "encoding": "inplace",
+            "label": "NftId",
+            "numberOfBytes": "12"
+        },
+        "t_userDefinedValueType(ObjectType)4840": {
+            "encoding": "inplace",
+            "label": "ObjectType",
+            "numberOfBytes": "1"
+        },
+        "t_userDefinedValueType(Timestamp)3642": {
+            "encoding": "inplace",
+            "label": "Timestamp",
+            "numberOfBytes": "5"
+        },
+        "t_userDefinedValueType(UFixed)4062": {
+            "encoding": "inplace",
+            "label": "UFixed",
+            "numberOfBytes": "32"
+        },
+        "t_userDefinedValueType(Version)3871": {
+            "encoding": "inplace",
+            "label": "Version",
+            "numberOfBytes": "6"
+        }
+    },
+    "params": {
+        "file_name": "contracts/staking/StakingV03.sol",
+        "unify": false,
+        "solc": "/home/vscode/.solcx/solc-v0.8.19",
+        "remappings": "@openzeppelin-upgradeable=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts-upgradeable@4.8.2 @openzeppelin=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.8.2"
+    }
+}

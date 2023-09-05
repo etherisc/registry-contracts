@@ -52,6 +52,7 @@ interface IChainRegistry is
 
     event LogChainRegistryObjectRegistered(NftId id, ChainId chain, ObjectType objectType, ObjectState state, address to);
     event LogChainRegistryObjectStateSet(NftId id, ObjectState stateNew, ObjectState stateOld, address setBy);
+    event LogChainRegistryObjectDataUpdated(NftId id, address updatedBy);
 
     //--- state changing functions ------------------//
 
@@ -95,6 +96,9 @@ interface IChainRegistry is
     )
         external
         returns(NftId id);
+
+
+    function extendBundleLifetime(NftId id, uint256 lifetimeExtension) external;
 
 
     function setObjectState(NftId id, ObjectState state) external;

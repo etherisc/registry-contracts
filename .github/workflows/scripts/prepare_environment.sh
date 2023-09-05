@@ -36,6 +36,11 @@ python3 -m pip install --user pipx
 echo "pipx installed"
 python3 -m pipx ensurepath 
 echo "ensurepath finished"
-pipx install eth-brownie
+python -m pip install --upgrade pip
+pip install eth-brownie
 echo "eth-brownie installed"
+
+# install signing libraries
+pip install coincurve
+pip install eip712-structs
 

@@ -1,0 +1,74 @@
+{
+    "storage": [
+        {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8"
+        },
+        {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool"
+        },
+        {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)7325f_storage"
+        },
+        {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address"
+        },
+        {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)7325f_storage"
+        },
+        {
+            "label": "_one",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_uint8"
+        }
+    ],
+    "types": {
+        "t_address": {
+            "encoding": "inplace",
+            "label": "address",
+            "numberOfBytes": "20"
+        },
+        "t_array(t_uint256)7325f_storage": {
+            "base": "t_uint256",
+            "encoding": "inplace",
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+        },
+        "t_bool": {
+            "encoding": "inplace",
+            "label": "bool",
+            "numberOfBytes": "1"
+        },
+        "t_uint256": {
+            "encoding": "inplace",
+            "label": "uint256",
+            "numberOfBytes": "32"
+        },
+        "t_uint8": {
+            "encoding": "inplace",
+            "label": "uint8",
+            "numberOfBytes": "1"
+        }
+    },
+    "params": {
+        "file_name": "contracts/test/TestUpgradableV01.sol",
+        "unify": true,
+        "solc": "/home/vscode/.solcx/solc-v0.8.19",
+        "remappings": "@openzeppelin-upgradeable=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts-upgradeable@4.8.2 @openzeppelin=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.8.2"
+    }
+}

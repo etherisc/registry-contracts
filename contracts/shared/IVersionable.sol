@@ -24,6 +24,15 @@ interface IVersionable {
     function activate(address implementation, address activatedBy) external;
     function isActivated(Version _version) external view returns(bool);
 
+    function toVersionParts(Version _version)
+        external
+        pure
+        returns(
+            VersionPart major,
+            VersionPart minor,
+            VersionPart patch
+        );
+    
     // returns current version (ideally immutable)
     function version() external pure returns(Version);
     function versionParts()

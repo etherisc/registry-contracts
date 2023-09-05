@@ -172,6 +172,48 @@ brownie test -n 8
 brownie console
 ```
 
+## Check Storage Layout of Upgraded Contract
+
+### Create JSON Files
+
+Create JSON storage layout files using script `scripts/storage_layout.py`
+
+Start with files for `StakingV02.sol`.
+Comment out attribute `Timestamp lockedUntil` of `StakeInfo` to revert to the previous state of the contract.
+
+```bash
+python scripts/storage_layout.py contracts/staking/StakingV02.sol > tmp2a.json
+python scripts/storage_layout.py --unify contracts/staking/StakingV02.sol > tmp2b.json
+```
+
+Use a diff viewer to verify that all diffs between `tmp2a.json` and `tmp2b.json` are as expected.
+
+Comment in attribute `Timestamp lockedUntil` of `StakeInfo` again to the desired state for `StakingV03.sol`.
+
+```bash
+python scripts/storage_layout.py contracts/staking/StakingV03.sol > tmp3a.json
+python scripts/storage_layout.py --unify contracts/staking/StakingV03.sol > tmp3b.json
+```
+
+Use a diff viewer to verify that all diffs between `tmp3a.json` and `tmp3b.json` are as expected.
+
+Finally, use a diff viewer to verify all diffs between `tmp2b.json` and `tmp3b.json` and check that upgrading the smart contract from `StakingV02.sol` to `StakingV03.sol` does not contain incompatible storage layouts.
+
+
+
+### Storage Layout for StakingV03
+```
+/home/vscode/.solcx/solc-v0.8.19 @openzeppelin-upgradeable=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts-upgradeable@4.8.2 @openzeppelin=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.8.2 --storage-layout contracts/staking/StakingV03.sol > solc_layout_StakingV03.txt
+```
+
+### Storage Layout for StakingV02
+
+Need to undo addition of `lockedUntil` in `StakeInfo` before executing the command below
+```
+/home/vscode/.solcx/solc-v0.8.19 @openzeppelin-upgradeable=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts-upgradeable@4.8.2 @openzeppelin=/home/vscode/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.8.2 --storage-layout contracts/staking/StakingV02.sol > solc_layout_StakingV02.txt
+```
+
+
 ## TODO
 
 * combine staking getInfo(nftid) + get bundle info(nftid), via interface

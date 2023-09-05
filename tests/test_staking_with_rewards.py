@@ -123,6 +123,8 @@ def test_stake_bundle_happy_path(
     assert info['createdAt'] == created_at
     assert info['updatedAt'] == updated_at
 
+    # assert False
+
 
 def delta_is_tiny(a, b, epsilon=10 ** -10):
     return abs(1 - (a / b)) < 10 ** -10

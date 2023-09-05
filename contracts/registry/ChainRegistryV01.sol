@@ -213,7 +213,7 @@ contract ChainRegistryV01 is
         IStaking stakingContract = IStaking(stakingAddress);
 
         require(stakingContract.implementsIStaking(), "ERROR:CRG-052:STAKING_NOT_ISTAKING");
-        require(stakingContract.version() > zeroVersion(), "ERROR:STK-053:STAKING_VERSION_ZERO");
+        require(stakingContract.version() > zeroVersion(), "ERROR:CRG-053:STAKING_VERSION_ZERO");
 
         _staking = stakingContract;
     }
@@ -336,6 +336,14 @@ contract ChainRegistryV01 is
             ObjectState.Approved,
             "", // uri
             data);
+    }
+
+
+    function extendBundleLifetime(NftId, uint256)
+        external
+        virtual override
+    { 
+        require(false, "ERROR:CRG-054:NOT_IMPLEMENTED");
     }
 
 

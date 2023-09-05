@@ -42,8 +42,8 @@ contract StakingV01 is
     uint256 internal _rewardBalance; // current balance of accumulated rewards 
     uint256 internal _rewardReserves; // available funds to fund reward payments
 
-    uint256 private _stakeBalance; // current balance of staked dips
-    address private _stakingWallet; // address that holds staked dips and reward reserves
+    uint256 internal _stakeBalance; // current balance of staked dips
+    address internal _stakingWallet; // address that holds staked dips and reward reserves
 
     // keep track of object types supported for staking
     mapping(ObjectType targetType => bool isSupported) internal _stakingSupported;
@@ -83,7 +83,7 @@ contract StakingV01 is
 
 
     modifier onlyStakeOwner(NftId id) {
-        require(isStakeOwner(id, msg.sender), "ERROR:STK-010:USER_NOT_OWNER");
+        require(_registry.ownerOf(id) == msg.sender, "ERROR:STK-010:USER_NOT_OWNER");
         _;
     }
 
@@ -177,22 +177,22 @@ contract StakingV01 is
         virtual
         onlyOwner
     {
-        require(address(_registry) == address(0), "ERROR:CRG-050:REGISTRY_ALREADY_SET");
-        require(registryAddress != address(0), "ERROR:CRG-051:REGISTRY_ADDRESS_ZERO");
+        require(address(_registry) == address(0), "ERROR:STK-050:REGISTRY_ALREADY_SET");
+        require(registryAddress != address(0), "ERROR:STK-051:REGISTRY_ADDRESS_ZERO");
         IChainRegistry registryContract = IChainRegistry(registryAddress);
 
-        require(registryContract.implementsIChainRegistry(), "ERROR:STK-052:REGISTRY_NOT_ICHAINREGISTRY");
+        require(registryContract.implementsIChainRegistry(), "ERROR:STK-052:NOT_CHAINREGISTRY");
         require(registryContract.version() > zeroVersion(), "ERROR:STK-053:REGISTRY_VERSION_ZERO");
 
         _registry = registryContract;
         _registryConstant = ChainRegistryV01(registryAddress);
 
-        // explicit setting of staking support per object type
-        _stakingSupported[_registryConstant.PROTOCOL()] = false;
-        _stakingSupported[_registryConstant.INSTANCE()] = false;
-        _stakingSupported[_registryConstant.PRODUCT()] = false;
-        _stakingSupported[_registryConstant.ORACLE()] = false;
-        _stakingSupported[_registryConstant.RISKPOOL()] = false;
+        // setting of staking support per object type
+        // _stakingSupported[_registryConstant.PROTOCOL()] = false;
+        // _stakingSupported[_registryConstant.INSTANCE()] = false;
+        // _stakingSupported[_registryConstant.PRODUCT()] = false;
+        // _stakingSupported[_registryConstant.ORACLE()] = false;
+        // _stakingSupported[_registryConstant.RISKPOOL()] = false;
         _stakingSupported[_registryConstant.BUNDLE()] = true;
     }
 
@@ -275,6 +275,39 @@ contract StakingV01 is
     }
 
 
+    function createStakeWithSignature(address, NftId, uint256, bytes32, bytes calldata) 
+        external 
+        virtual
+        returns(NftId) 
+    {
+        require(false, "ERROR:STK-120:NOT_SUPPORTED");
+    }
+
+    function restake(NftId, NftId)
+        external
+        virtual override
+    {
+        require(false, "ERROR:STK-123:NOT_SUPPORTED");
+    }
+
+    function restakeWithSignature(address, NftId, NftId, bytes32, bytes calldata)
+        external
+        virtual
+    {
+        require(false, "ERROR:STK-121:NOT_SUPPORTED");
+    }
+
+    function isUnstakingAvailable(NftId)
+        public
+        virtual override
+        view 
+        returns(bool)
+    {
+        require(false, "ERROR:STK-122:NOT_SUPPORTED");
+    }
+
+
+
     function stake(NftId stakeId, uint256 dipAmount)
         public
         virtual override
@@ -295,6 +328,7 @@ contract StakingV01 is
 
         emit LogStakingStaked(info.target, user, stakeId, dipAmount, info.stakeBalance);
     }
+
 
 
     function unstake(NftId stakeId, uint256 amount)
@@ -328,10 +362,19 @@ contract StakingV01 is
 
     //--- view and pure functions ------------------//
 
-
     function rewardRate()
         external
         virtual override
+        view
+        returns(UFixed)
+    {
+        return _rewardRate;
+    }
+
+
+    function getTargetRewardRate(NftId)
+        public
+        virtual
         view
         returns(UFixed)
     {
@@ -396,16 +439,6 @@ contract StakingV01 is
         returns(IERC20Metadata dip)
     {
         return _dip;
-    }
-
-
-    function isStakeOwner(NftId stakeId, address user)
-        public
-        virtual override
-        view
-        returns(bool isOwner)
-    {
-        return _registry.ownerOf(stakeId) == user;
     }
 
 
@@ -476,7 +509,7 @@ contract StakingV01 is
         returns(uint256 rewardsAmount)
     {
         /* solhint-disable not-rely-on-time */
-        require(block.timestamp >= toInt(stakeInfo.updatedAt), "ERROR:STK-200:UPDATED_AT_IN_THE_FUTURE");
+        require(block.timestamp >= toInt(stakeInfo.updatedAt), "ERROR:STK-200:UPDATED_AT_IN_FUTURE");
         uint256 timeSinceLastUpdate = block.timestamp - toInt(stakeInfo.updatedAt);
         /* solhint-enable not-rely-on-time */
 
@@ -608,6 +641,16 @@ contract StakingV01 is
         returns(IChainRegistry)
     {
         return _registry;
+    }
+
+
+    function getMessageHelperAddress()
+        external
+        virtual override 
+        view 
+        returns(address messageHelperAddress)
+    {
+        return address(0);
     }
 
 

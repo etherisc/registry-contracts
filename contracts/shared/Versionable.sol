@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {Blocknumber, Timestamp, blockTimestamp} from "./IBaseTypes.sol";
 import {BaseTypes} from "./BaseTypes.sol";
-import {Version, VersionPart, toVersionParts, zeroVersion} from "./IVersionType.sol";
+import {Version, VersionPart, toVersionPart, versionToInt, zeroVersion} from "./IVersionType.sol";
 import {IVersionable} from "./IVersionable.sol";
 
 contract Versionable is 
@@ -70,6 +70,30 @@ contract Versionable is
 
     function isActivated(Version _version) public override view returns(bool) {
         return toInt(_versionHistory[_version].activatedIn) > 0;
+    }
+
+    function toVersionParts(Version _version)
+        public
+        virtual
+        pure
+        returns(
+            VersionPart major,
+            VersionPart minor,
+            VersionPart patch
+        )
+    {
+        uint versionInt = versionToInt(_version);
+        uint16 majorInt = uint16(versionInt >> 32);
+
+        versionInt -= majorInt << 32;
+        uint16 minorInt = uint16(versionInt >> 16);
+        uint16 patchInt = uint16(versionInt - (minorInt << 16));
+
+        return (
+            toVersionPart(majorInt),
+            toVersionPart(minorInt),
+            toVersionPart(patchInt)
+        );
     }
 
 
